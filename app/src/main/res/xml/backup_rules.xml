@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 11 ve altı (minSdk 26) için tam yedekleme kuralı; data_extraction_rules.xml ile aynı
+     kapsam: indeks verisi yedeğe girmez. -->
+<full-backup-content>
+    <exclude domain="database" />
+    <exclude domain="sharedpref" />
+    <exclude domain="file" />
+</full-backup-content>
