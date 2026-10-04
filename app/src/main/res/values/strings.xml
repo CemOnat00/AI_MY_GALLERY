@@ -6,6 +6,7 @@
     <string name="permission_grant_button">İzin ver</string>
     <string name="permission_open_settings_button">Ayarları aç</string>
     <string name="permission_granted_loading">Fotoğraflar sayılıyor…</string>
+    <string name="photo_count_error">Fotoğraflar okunamadı. Uygulamaya dönüldüğünde yeniden denenecek.</string>
     <plurals name="photo_count">
         <item quantity="one">%d fotoğraf bulundu</item>
         <item quantity="other">%d fotoğraf bulundu</item>

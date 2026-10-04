@@ -2,6 +2,7 @@ package com.ktu.aigaleri.ui
 
 import com.ktu.aigaleri.data.FakeMediaPhotoSource
 import com.ktu.aigaleri.data.MediaPhoto
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -90,5 +91,29 @@ class MainViewModelTest {
         vm.onResume(granted = true)
         assertEquals(MainUiState(PermissionState.NotRequested, null), vm.state.value)
         assertNull(vm.state.value.photoCount)
+    }
+
+    @Test
+    fun genericFailureWhileCounting_setsLoadError_keepsGranted() {
+        val vm = MainViewModel(FakeMediaPhotoSource(photos, failWith = IllegalStateException()))
+        vm.onResume(granted = true)
+        assertEquals(MainUiState(PermissionState.Granted, null, loadError = true), vm.state.value)
+    }
+
+    @Test
+    fun loadError_clearsOnSuccessfulRetry() {
+        val source = FakeMediaPhotoSource(photos, failWith = IllegalStateException())
+        val vm = MainViewModel(source)
+        vm.onResume(granted = true)
+        source.failWith = null
+        vm.onResume(granted = true)
+        assertEquals(MainUiState(PermissionState.Granted, 2, loadError = false), vm.state.value)
+    }
+
+    @Test
+    fun cancellationWhileCounting_isNotReportedAsError() {
+        val vm = MainViewModel(FakeMediaPhotoSource(photos, failWith = CancellationException()))
+        vm.onResume(granted = true)
+        assertEquals(false, vm.state.value.loadError)
     }
 }

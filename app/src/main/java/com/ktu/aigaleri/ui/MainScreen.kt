@@ -51,10 +51,10 @@ fun MainContent(state: MainUiState, onRequestPermission: () -> Unit, onOpenSetti
                     PermissionState.Granted -> {
                         val count = state.photoCount
                         Text(
-                            text = if (count == null) {
-                                stringResource(R.string.permission_granted_loading)
-                            } else {
-                                pluralStringResource(R.plurals.photo_count, count, count)
+                            text = when {
+                                state.loadError -> stringResource(R.string.photo_count_error)
+                                count == null -> stringResource(R.string.permission_granted_loading)
+                                else -> pluralStringResource(R.plurals.photo_count, count, count)
                             },
                             style = MaterialTheme.typography.titleMedium,
                         )

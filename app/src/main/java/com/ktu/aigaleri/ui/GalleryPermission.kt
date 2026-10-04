@@ -16,7 +16,16 @@ enum class PermissionState {
     PermanentlyDenied,
 }
 
-/** İzin akışının saf (Android'e bağımsız test edilebilir) mantığı. */
+/**
+ * İzin akışının saf (Android'e bağımsız test edilebilir) mantığı.
+ *
+ * Kapsam dışı: Android 14+ kısmi erişim (READ_MEDIA_VISUAL_USER_SELECTED). Kullanıcı "seçili
+ * fotoğraflar"ı seçerse `checkSelfPermission(READ_MEDIA_IMAGES)` false döner ve UI Denied gösterir;
+ * bu akış gerçek cihazda doğrulanmadı.
+ *
+ * Not: süreç yeniden başlayınca kalıcı red bilgisi tutulmaz, durum NotRequested olarak açılır; ilk
+ * istekte sistem diyalog göstermeden reddeder ve kalıcı red yeniden algılanır.
+ */
 object GalleryPermission {
     /** Android 13+ (API 33) READ_MEDIA_IMAGES, altında READ_EXTERNAL_STORAGE. */
     fun requiredPermission(sdkInt: Int = Build.VERSION.SDK_INT): String =

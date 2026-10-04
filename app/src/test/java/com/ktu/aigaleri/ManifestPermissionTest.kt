@@ -1,14 +1,21 @@
 package com.ktu.aigaleri
 
 import java.io.File
-import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /** T-003: manifest'te galeri izinleri doğru ve INTERNET yok. Çalışma dizini mobile/app. */
 class ManifestPermissionTest {
-    private val xml = File(System.getProperty("user.dir")!!, "src/main/AndroidManifest.xml").readText()
+    // Gradle çalışma dizini mobile/app'tir (diğer testler gibi user.dir); IDE'den mobile/ kökünden
+    // çalıştırılırsa da bulunsun diye app/ alt dizinine geri düşülür.
+    private val xml = run {
+        val root = File(System.getProperty("user.dir")!!)
+        listOf(File(root, "src/main/AndroidManifest.xml"), File(root, "app/src/main/AndroidManifest.xml"))
+            .first { it.exists() }
+            .readText()
+    }
 
     private fun tag(name: String): String? =
         Regex("<uses-permission[^>]*android:name=\"android.permission.$name\"[^>]*/>").find(xml)?.value
@@ -22,7 +29,7 @@ class ManifestPermissionTest {
     fun readExternalStorage_limitedToApi32() {
         val t = tag("READ_EXTERNAL_STORAGE")
         assertNotNull(t)
-        assertEquals(true, Regex("android:maxSdkVersion=\"32\"").containsMatchIn(t!!))
+        assertTrue(Regex("android:maxSdkVersion=\"32\"").containsMatchIn(t!!))
     }
 
     @Test

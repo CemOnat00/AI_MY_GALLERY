@@ -17,7 +17,7 @@ Metin kodlayıcı OpenAI CLIP ViT-B/32 metin uzayına damıtılmış çok dilli 
 | Özellik | Değer |
 |---|---|
 | Kaynak (metin) | https://huggingface.co/sentence-transformers/clip-ViT-B-32-multilingual-v1 (revizyon 58edf8cada9e398793dca955574a48cbb7f18be2). Repoda hazır `onnx/` klasörü var |
-| Kaynak (görüntü) | https://huggingface.co/Xenova/clip-vit-base-patch32 (`onnx/vision_model*.onnx`, openai/clip-vit-base-patch32 dönüşümü). Alternatif: immich-app/ViT-B-32__openai `visual/model.onnx` (aynı boyut) |
+| Kaynak (görüntü) | https://huggingface.co/Xenova/clip-vit-base-patch32 (revizyon d15189d7028b43f1d3e65039190477f6af591c2a; `onnx/vision_model*.onnx`, openai/clip-vit-base-patch32 dönüşümü). Alternatif: https://huggingface.co/immich-app/ViT-B-32__openai `visual/model.onnx` (revizyon a857c8de2c07bbcfa6646adfcf31b798845afa1e; fp32, 351.6 MB; fp16/int8 yok) |
 | Lisans | Metin: Apache-2.0 (kart etiketi, doğrulandı). Görüntü: OpenAI CLIP, MIT (github.com/openai/CLIP lisansı MIT, doğrulandı). Xenova repo'sunda lisans etiketi yok, kaynak modelin lisansının geçerli olduğu varsayımı; Xenova repo'sunun ayrıca lisans beyanı doğrulanamadı |
 | Giriş çözünürlüğü (görüntü) | 224x224; en kısa kenar 224'e bicubic yeniden boyutlandırma, merkez kırpma, mean [0.48145466, 0.4578275, 0.40821073], std [0.26862954, 0.26130258, 0.27577711] (preprocessor_config, doğrulandı) |
 | Metin girişi | WordPiece (distilbert-base-multilingual-cased, 119547 token sözlük, vocab.txt ~1 MB), `[CLS] ... [SEP]`, max 128 token, küçük harfe çevirme YOK (cased) |
