@@ -2,10 +2,17 @@ package com.ktu.aigaleri.domain
 
 /** İndeksleme çalıştırma biçimi. */
 enum class IndexMode {
-    /** Yalnızca indekslenmemiş (veya model sürümü eskimiş) fotoğrafları işler. */
+    /**
+     * Yalnızca eksik kayıtları, güncel [EmbeddingSpec.modelVersion] ile yazılmamış kayıtları,
+     * önceki başarısız denemeleri ve yarım kalmış bir [FULL] çalıştırmanın kalanını işler.
+     */
     INCREMENTAL,
 
-    /** Mevcut indeksi geçersiz sayıp tüm galeriyi yeniden işler ("yeniden indeksleme"). */
+    /**
+     * Tüm galeriyi yeniden işler ("yeniden indeksleme"). Önce silmez: kayıtlar fotoğraf bazında
+     * yerine yazılır. İptal veya hata halinde henüz yeniden yazılmamış eski kayıtlar korunur ve
+     * aramada kullanılmaya devam eder; iptal edilen FULL'dan sonra [INCREMENTAL] kalanı tamamlar.
+     */
     FULL,
 }
 
@@ -24,9 +31,14 @@ enum class IndexPhase {
 /**
  * [PhotoIndexer.index] akışının yaydığı ilerleme anlık görüntüsü.
  *
+ * Değişmezler ihlal edilirse [IllegalArgumentException] fırlatılır; bu bir programlama hatasıdır
+ * (implementasyon yanlış sayı üretmiştir), çalışma zamanı hata durumu değildir ve
+ * [IndexException] ile karıştırılmamalıdır.
+ *
  * @property total bu çalıştırmada işlenecek fotoğraf sayısı.
  * @property processed ele alınan fotoğraf sayısı (başarısızlar dahil).
- * @property failed [processed] içinde atlanan (hata veren) fotoğraf sayısı.
+ * @property failed [processed] içinde atlanan (hata veren) fotoğraf sayısı; yalnızca bu
+ *   çalıştırmayı sayar, kalıcı değildir.
  */
 data class IndexProgress(
     val phase: IndexPhase,

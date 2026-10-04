@@ -3,6 +3,7 @@ package com.ktu.aigaleri.domain
 import kotlin.math.sqrt
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.yield
 
 /** Test verisi: gerçek fotoğraf yerine etiket metni taşıyan sahte fotoğraf. */
 data class FakePhoto(val id: Long, val tags: String, val dateTaken: Long? = null) {
@@ -22,34 +23,54 @@ class FakeEmbedder(val spec: EmbeddingSpec) {
     }
 }
 
+/** Sahte indeks kaydı; [fullRun] kaydı yazan FULL çalıştırmanın numarası (0 = artımlı yazım). */
+class FakeRecord(
+    val photo: FakePhoto,
+    val vector: FloatArray,
+    val modelVersion: String,
+    val fullRun: Int,
+)
+
 /** Bellek içi sahte indeks; PhotoIndexer yazar, SearchRepository okur. */
 class FakeIndex {
-    val vectors = linkedMapOf<Long, FloatArray>()
-    val photos = linkedMapOf<Long, FakePhoto>()
+    val records = linkedMapOf<Long, FakeRecord>()
+
+    /** Başlatılmış son FULL çalıştırmanın numarası; bundan eski kayıtlar INCREMENTAL'da yenilenir. */
+    var latestFullRun = 0
 }
 
 class FakePhotoIndexer(
     override val embeddingSpec: EmbeddingSpec,
     private val gallery: List<FakePhoto>,
     private val index: FakeIndex,
-    private val failingIds: Set<Long> = emptySet(),
+    /** Her çalıştırmada bu kimlikli fotoğraflar hata verir (kalıcı işaretlenmez, yeniden denenir). */
+    val failingIds: MutableSet<Long> = mutableSetOf(),
+    private val permissionGranted: Boolean = true,
 ) : PhotoIndexer {
     private val embedder = FakeEmbedder(embeddingSpec)
 
     override fun index(mode: IndexMode): Flow<IndexProgress> = flow {
+        if (!permissionGranted) throw IndexException.PermissionMissing()
         emit(IndexProgress(IndexPhase.SCANNING, total = 0, processed = 0))
-        if (mode == IndexMode.FULL) {
-            index.vectors.clear()
-            index.photos.clear()
+        val run = if (mode == IndexMode.FULL) ++index.latestFullRun else 0
+        // FULL önce silmez; her fotoğraf yerine yazılır. INCREMENTAL eksik, eski sürüm, eski FULL
+        // numaralı ve (başarısız olduğu için hiç yazılmamış) kayıtları işler.
+        val todo = gallery.filter { photo ->
+            val rec = index.records[photo.id]
+            mode == IndexMode.FULL ||
+                rec == null ||
+                rec.modelVersion != embeddingSpec.modelVersion ||
+                rec.fullRun < index.latestFullRun
         }
-        val todo = gallery.filter { it.id !in index.vectors }
         var failed = 0
         todo.forEachIndexed { i, photo ->
             if (photo.id in failingIds) {
                 failed++
             } else {
-                index.vectors[photo.id] = embedder.embed(photo.tags)
-                index.photos[photo.id] = photo
+                index.records[photo.id] = FakeRecord(
+                    photo, embedder.embed(photo.tags), embeddingSpec.modelVersion,
+                    if (mode == IndexMode.FULL) run else index.latestFullRun,
+                )
             }
             emit(IndexProgress(IndexPhase.INDEXING, todo.size, i + 1, failed))
         }
@@ -58,20 +79,18 @@ class FakePhotoIndexer(
 }
 
 class FakeSearchRepository(
-    spec: EmbeddingSpec,
+    private val spec: EmbeddingSpec,
     private val index: FakeIndex,
 ) : SearchRepository {
     private val embedder = FakeEmbedder(spec)
 
     override suspend fun search(query: String, limit: Int): List<SearchResult> {
         require(limit > 0) { "limit > 0 olmalı" }
+        yield() // iptal noktası
         val q = embedder.embed(query)
-        return index.vectors.entries
-            .map { (id, vec) ->
-                val photo = index.photos.getValue(id)
-                SearchResult(id, photo.uri, dot(q, vec), photo.dateTaken)
-            }
-            .filter { it.score > 0f }
+        return index.records.values
+            .filter { it.modelVersion == spec.modelVersion } // eski sürüm kayıtları aramaya girmez
+            .map { SearchResult(it.photo.id, it.photo.uri, dot(q, it.vector), it.photo.dateTaken) }
             .sortedWith(compareByDescending<SearchResult> { it.score }.thenBy { it.photoId })
             .take(limit)
     }

@@ -22,7 +22,7 @@ activityCompose = "1.12.4"
 junit = "4.13.2"
 androidxTestExtJunit = "1.3.0"
 androidxTestRunner = "1.7.0"
-# Coroutines test: Flow/suspend birim testleri için (T-002 sonrası).
+# Coroutines test: Flow/suspend birim testleri için.
 coroutines = "1.11.0"
 
 [libraries]
@@ -45,7 +45,7 @@ androidx-room-testing = { group = "androidx.room", name = "room-testing", versio
 kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "coroutines" }
 # Birim testi.
 junit = { group = "junit", name = "junit", version.ref = "junit" }
-# Henüz kullanılmıyor, T-002 ve sonrası için: coroutine/Flow birim testleri.
+# Flow/suspend birim testleri (runTest); domain sözleşme testlerinde kullanılıyor.
 kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "coroutines" }
 # Henüz kullanılmıyor, T-002 ve sonrası için: cihaz testi (androidTest) altyapısı.
 androidx-test-ext-junit = { group = "androidx.test.ext", name = "junit", version.ref = "androidxTestExtJunit" }
