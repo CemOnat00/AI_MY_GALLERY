@@ -21,6 +21,13 @@ activityCompose = "1.12.4"
 # Navigation Compose: arama / büyük görünüm / indeks durumu ekranları arası geçiş ve geri yığını (T-009).
 # 2.9.x compileSdk 36 ile uyumlu; ağ veya analitik bileşeni içermez.
 navigationCompose = "2.9.7"
+# Lifecycle Runtime Compose: collectAsStateWithLifecycle (arka plandayken Flow toplamayı durdurur).
+# 2.9.4 zaten navigation/activity üzerinden çözülen sürümdür; yeni sürüm çekilmez.
+lifecycle = "2.9.4"
+# Coil 3: MediaStore content:// URI'lerinden boyuta uygun decode, EXIF yönü, bellek önbelleği (T-009).
+# YALNIZCA ağsız artefakt (coil-compose -> coil, coil-core); coil-network-*, okhttp ve ktor EKLENMEZ,
+# bu yüzden http(s) yükleme yeteneği yoktur. 3.5.0: compileSdk 36 ile uyumlu en yeni sürüm (3.6.x compileSdk 37 ister).
+coil = "3.4.0"
 # Test bağımlılıkları.
 junit = "4.13.2"
 androidxTestExtJunit = "1.3.0"
@@ -37,6 +44,10 @@ androidx-compose-ui = { group = "androidx.compose.ui", name = "ui" }
 androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3" }
 # Navigation Compose: NavHost/rota/geri yığını (T-009). Kendi basit yığınımızı yazmak yerine standart çözüm.
 androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }
+# Coil Compose: AsyncImage. Ağ artefaktı yok (bkz. coil sürüm yorumu); `:app:dependencies` ile okhttp/ktor yok doğrulandı.
+coil-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil" }
+# Lifecycle'a duyarlı StateFlow toplama (collectAsStateWithLifecycle).
+androidx-lifecycle-runtime-compose = { group = "androidx.lifecycle", name = "lifecycle-runtime-compose", version.ref = "lifecycle" }
 # Compose UI testi (androidTest, T-009): stateless ekranların derlenebilir/çalıştırılabilir testi; sürüm BOM'dan.
 androidx-compose-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
 # Yalnızca debug: ui-test-junit4'ün ComponentActivity'yi bildiren manifesti.

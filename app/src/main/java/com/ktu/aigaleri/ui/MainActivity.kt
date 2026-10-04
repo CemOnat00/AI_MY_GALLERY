@@ -43,7 +43,6 @@ class MainActivity : ComponentActivity() {
                 viewModel = viewModel,
                 searchViewModel = searchViewModel,
                 indexStatusViewModel = indexStatusViewModel,
-                imageLoader = deps.imageLoader,
                 onRequestPermission = { requestPermission.launch(permission) },
             )
         }

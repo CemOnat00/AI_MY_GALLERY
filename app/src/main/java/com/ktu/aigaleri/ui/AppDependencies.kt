@@ -6,7 +6,6 @@ import com.ktu.aigaleri.data.IndexState
 import com.ktu.aigaleri.data.MediaPhotoSource
 import com.ktu.aigaleri.data.MediaStorePhotoSource
 import com.ktu.aigaleri.domain.SearchRepository
-import com.ktu.aigaleri.ui.image.ImageLoader
 import com.ktu.aigaleri.ui.stub.StubIndexLauncher
 import com.ktu.aigaleri.ui.stub.StubSearchRepository
 import kotlinx.coroutines.flow.Flow
@@ -29,8 +28,6 @@ class AppDependencies private constructor(context: Context) {
 
     val searchRepository: SearchRepository = StubSearchRepository()
     val indexLauncher: IndexLauncher = StubIndexLauncher()
-
-    val imageLoader: ImageLoader by lazy { ImageLoader(appContext.contentResolver) }
 
     companion object {
         @Volatile private var instance: AppDependencies? = null

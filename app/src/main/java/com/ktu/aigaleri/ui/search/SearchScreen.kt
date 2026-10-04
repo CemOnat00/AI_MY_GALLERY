@@ -1,5 +1,6 @@
 package com.ktu.aigaleri.ui.search
 
+import android.net.Uri
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -28,8 +29,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.ktu.aigaleri.R
-import com.ktu.aigaleri.ui.image.AsyncPhoto
-import com.ktu.aigaleri.ui.image.ImageLoader
+import com.ktu.aigaleri.ui.image.PhotoImage
 
 const val TAG_QUERY_FIELD = "query_field"
 const val TAG_SEARCH_BUTTON = "search_button"
@@ -39,7 +39,6 @@ const val TAG_RESULT_GRID = "result_grid"
 @Composable
 fun SearchContent(
     state: SearchUiState,
-    imageLoader: ImageLoader,
     onQueryChange: (String) -> Unit,
     onSearch: () -> Unit,
     onOpenPhoto: (Long) -> Unit,
@@ -75,9 +74,8 @@ fun SearchContent(
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     items(status.results, key = { it.photoId }) { result ->
-                        AsyncPhoto(
-                            loader = imageLoader,
-                            uri = result.uri,
+                        PhotoImage(
+                            uri = Uri.parse(result.uri),
                             contentDescription = stringResource(R.string.photo_content_description),
                             modifier = Modifier.aspectRatio(1f).clickable { onOpenPhoto(result.photoId) },
                         )

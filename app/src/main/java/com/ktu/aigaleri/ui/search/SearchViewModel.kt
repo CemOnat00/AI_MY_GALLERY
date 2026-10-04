@@ -47,10 +47,6 @@ class SearchViewModel(private val repository: SearchRepository) : ViewModel() {
     /** İstem [MAX_QUERY_LENGTH] karakterle kısıtlanır (fazlası kesilir). */
     fun onQueryChange(text: String) = _state.update { it.copy(query = text.take(MAX_QUERY_LENGTH)) }
 
-    /** Büyük görünüm için: mevcut sonuçlar arasından kimliğe göre fotoğrafı bulur. */
-    fun findResult(photoId: Long): SearchResult? =
-        (_state.value.status as? SearchStatus.Success)?.results?.firstOrNull { it.photoId == photoId }
-
     fun search() {
         val query = _state.value.query.trim()
         if (query.isEmpty()) {

@@ -21,13 +21,15 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavController
+import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.ktu.aigaleri.R
-import com.ktu.aigaleri.ui.image.ImageLoader
 import com.ktu.aigaleri.ui.index.IndexStatusContent
 import com.ktu.aigaleri.ui.index.IndexStatusViewModel
 import com.ktu.aigaleri.ui.search.SearchContent
@@ -44,6 +46,17 @@ object Routes {
 }
 
 /**
+ * Geri yığınında önceki ekran varsa bir adım geri gider; kökteyse (veya çift dokunmada yığın zaten
+ * boşaldıysa) hiçbir şey yapmaz, böylece boş ekran/çökme olmaz.
+ */
+fun NavController.safeBack() {
+    if (previousBackStackEntry != null) popBackStack()
+}
+
+/** Tekrarlı dokunmada aynı ekranın üst üste eklenmesini önler. */
+private fun NavController.open(route: String) = navigate(route) { launchSingleTop = true }
+
+/**
  * Navigasyon kökü: arama (başlangıç) -> büyük görünüm / indeks durumu. Geri tuşu NavHost'un geri
  * yığınıyla çalışır; arama ekranında geri uygulamadan çıkar. İzin yokken arama ve indeks ekranları
  * izin açıklamasını ([MainContent]) gösterir, arama/indeks çağrısı yapılmaz.
@@ -53,63 +66,79 @@ fun MainScreen(
     viewModel: MainViewModel,
     searchViewModel: SearchViewModel,
     indexStatusViewModel: IndexStatusViewModel,
-    imageLoader: ImageLoader,
     onRequestPermission: () -> Unit,
 ) {
-    val state by viewModel.state.collectAsState()
+    val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
-    val openSettings = {
-        context.startActivity(
-            Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null)),
-        )
-    }
-    val granted = state.permission == PermissionState.Granted
-    val navController = rememberNavController()
     MaterialTheme {
         Surface(modifier = Modifier.fillMaxSize()) {
-            NavHost(
-                navController = navController,
-                startDestination = Routes.SEARCH,
-                modifier = Modifier.safeDrawingPadding(),
-            ) {
-                composable(Routes.SEARCH) {
-                    if (granted) {
-                        val searchState by searchViewModel.state.collectAsState()
-                        SearchContent(
-                            state = searchState,
-                            imageLoader = imageLoader,
-                            onQueryChange = searchViewModel::onQueryChange,
-                            onSearch = searchViewModel::search,
-                            onOpenPhoto = { navController.navigate(Routes.viewer(it)) },
-                            onOpenIndexStatus = { navController.navigate(Routes.INDEX_STATUS) },
-                        )
-                    } else {
-                        MainContent(state, onRequestPermission, openSettings)
-                    }
-                }
-                composable(
-                    Routes.VIEWER,
-                    arguments = listOf(navArgument(Routes.PHOTO_ARG) { type = NavType.LongType }),
-                ) { entry ->
-                    val photoId = entry.arguments?.getLong(Routes.PHOTO_ARG)
-                    PhotoViewerScreen(
-                        uri = photoId?.let { searchViewModel.findResult(it)?.uri },
-                        imageLoader = imageLoader,
-                        onBack = { navController.popBackStack() },
+            AppNavHost(
+                navController = rememberNavController(),
+                state = state,
+                searchViewModel = searchViewModel,
+                indexStatusViewModel = indexStatusViewModel,
+                onRequestPermission = onRequestPermission,
+                onOpenSettings = {
+                    context.startActivity(
+                        Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null)),
                     )
-                }
-                composable(Routes.INDEX_STATUS) {
-                    if (granted) {
-                        val indexState by indexStatusViewModel.state.collectAsState()
-                        IndexStatusContent(
-                            state = indexState,
-                            onReindex = indexStatusViewModel::reindex,
-                            onBack = { navController.popBackStack() },
-                        )
-                    } else {
-                        MainContent(state, onRequestPermission, openSettings)
-                    }
-                }
+                },
+                modifier = Modifier.safeDrawingPadding(),
+            )
+        }
+    }
+}
+
+/** Ekran grafı; [navController] dışarıdan verilir (androidTest'te geri davranışı sınanır). */
+@Composable
+fun AppNavHost(
+    navController: NavHostController,
+    state: MainUiState,
+    searchViewModel: SearchViewModel,
+    indexStatusViewModel: IndexStatusViewModel,
+    onRequestPermission: () -> Unit,
+    onOpenSettings: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val granted = state.permission == PermissionState.Granted
+    NavHost(navController = navController, startDestination = Routes.SEARCH, modifier = modifier) {
+        composable(Routes.SEARCH) {
+            if (granted) {
+                val searchState by searchViewModel.state.collectAsStateWithLifecycle()
+                SearchContent(
+                    state = searchState,
+                    onQueryChange = searchViewModel::onQueryChange,
+                    onSearch = searchViewModel::search,
+                    onOpenPhoto = { navController.open(Routes.viewer(it)) },
+                    onOpenIndexStatus = { navController.open(Routes.INDEX_STATUS) },
+                )
+            } else {
+                MainContent(state, onRequestPermission, onOpenSettings)
+            }
+        }
+        composable(
+            Routes.VIEWER,
+            arguments = listOf(navArgument(Routes.PHOTO_ARG) { type = NavType.LongType }),
+        ) { entry ->
+            PhotoViewerScreen(
+                photoId = entry.arguments?.getLong(Routes.PHOTO_ARG),
+                onBack = { navController.safeBack() },
+            )
+        }
+        composable(Routes.INDEX_STATUS) {
+            if (granted) {
+                val indexState by indexStatusViewModel.state.collectAsStateWithLifecycle()
+                val inProgress by indexStatusViewModel.reindexInProgress.collectAsStateWithLifecycle()
+                IndexStatusContent(
+                    state = indexState,
+                    reindexAvailable = indexStatusViewModel.reindexAvailable,
+                    reindexInProgress = inProgress,
+                    onReindex = indexStatusViewModel::reindex,
+                    onRetry = indexStatusViewModel::retry,
+                    onBack = { navController.safeBack() },
+                )
+            } else {
+                MainContent(state, onRequestPermission, onOpenSettings)
             }
         }
     }

@@ -11,7 +11,6 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -120,15 +119,5 @@ class SearchViewModelTest {
         gate.complete(Unit)
         // Eski arama iptal edildi; sonuç ezilmez.
         assertEquals(SearchStatus.Success(listOf(r2)), vm.state.value.status)
-    }
-
-    @Test
-    fun findResult_looksUpFromCurrentResults() {
-        val vm = SearchViewModel(FakeSearchRepository(results = listOf(r1, r2)))
-        assertNull(vm.findResult(1L))
-        vm.onQueryChange("kedi")
-        vm.search()
-        assertEquals(r2, vm.findResult(2L))
-        assertNull(vm.findResult(99L))
     }
 }

@@ -1,30 +1,32 @@
 package com.ktu.aigaleri.ui
 
-import android.content.Context
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.test.core.app.ApplicationProvider
-import com.ktu.aigaleri.ui.image.ImageLoader
+import com.ktu.aigaleri.domain.SearchResult
 import com.ktu.aigaleri.ui.search.SearchContent
 import com.ktu.aigaleri.ui.search.SearchStatus
 import com.ktu.aigaleri.ui.search.SearchUiState
+import com.ktu.aigaleri.ui.search.TAG_RESULT_GRID
 import com.ktu.aigaleri.ui.search.TAG_SEARCH_BUTTON
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
-/** Durumsuz arama ekranı testi. Emülatör yok; bu görevde yalnızca derlenir, çalıştırılmadı. */
+/**
+ * Durumsuz arama ekranı testleri. Emülatör yok: bu görevde yalnızca DERLENİR, ÇALIŞTIRILMADI.
+ */
 class SearchScreenTest {
     @get:Rule val rule = createComposeRule()
 
-    private val loader = ImageLoader(ApplicationProvider.getApplicationContext<Context>().contentResolver)
-
     private fun show(state: SearchUiState, onSearch: () -> Unit = {}) = rule.setContent {
-        SearchContent(state, loader, onQueryChange = {}, onSearch = onSearch, onOpenPhoto = {}, onOpenIndexStatus = {})
+        SearchContent(state, onQueryChange = {}, onSearch = onSearch, onOpenPhoto = {}, onOpenIndexStatus = {})
     }
 
     @Test
@@ -45,5 +47,28 @@ class SearchScreenTest {
     fun emptyStatus_showsExplanation() {
         show(SearchUiState(query = "kedi", status = SearchStatus.Empty))
         rule.onNodeWithText("Eşleşen fotoğraf bulunamadı", substring = true).assertExists()
+    }
+
+    @Test
+    fun errorStatus_showsExplanation() {
+        show(SearchUiState(query = "kedi", status = SearchStatus.Error))
+        rule.onNodeWithText("Arama sırasında bir hata oluştu", substring = true).assertExists()
+    }
+
+    @Test
+    fun loadingStatus_showsProgress_andDisablesSearch() {
+        show(SearchUiState(query = "kedi", status = SearchStatus.Loading))
+        rule.onNode(SemanticsMatcher.keyIsDefined(SemanticsProperties.ProgressBarRangeInfo)).assertExists()
+        rule.onNodeWithTag(TAG_SEARCH_BUTTON).assertIsNotEnabled()
+    }
+
+    @Test
+    fun successStatus_showsResultGrid() {
+        val results = listOf(
+            SearchResult(1L, "content://media/external/images/media/1", 0.9f),
+            SearchResult(2L, "content://media/external/images/media/2", 0.5f),
+        )
+        show(SearchUiState(query = "kedi", status = SearchStatus.Success(results)))
+        rule.onNodeWithTag(TAG_RESULT_GRID).assertExists()
     }
 }

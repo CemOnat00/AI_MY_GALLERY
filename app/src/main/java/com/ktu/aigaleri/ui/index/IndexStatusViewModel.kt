@@ -5,15 +5,22 @@ import androidx.lifecycle.viewModelScope
 import com.ktu.aigaleri.data.IndexState
 import com.ktu.aigaleri.domain.IndexMode
 import com.ktu.aigaleri.ui.IndexLauncher
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.conflate
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 /** İndeks durumu ekranının durumu. */
 sealed interface IndexStatusUiState {
@@ -38,25 +45,52 @@ fun IndexState?.toUiState(): IndexStatusUiState =
     if (this == null) IndexStatusUiState.NeverRun else IndexStatusUiState.Data(total, processed, lastRunAt)
 
 /**
- * İndeks durumunu Room Flow'undan okur (conflate + sample ile; her fotoğrafta güncelleme yağmurunu
- * UI'a yansıtmaz) ve "yeniden indeksle" isteğini [launcher]'a iletir.
+ * İndeks durumunu Room Flow'undan okur (sample ile; her fotoğrafta güncelleme yağmurunu UI'a
+ * yansıtmaz) ve "yeniden indeksle" isteğini [launcher]'a iletir.
+ *
+ * Çift dokunma koruması: istekten sonra [REINDEX_COOLDOWN_MS] boyunca [reindexInProgress] true
+ * kalır ve yeni istekler yok sayılır.
  */
-@OptIn(FlowPreview::class)
+@OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
 class IndexStatusViewModel(
-    indexState: Flow<IndexState?>,
+    private val indexState: Flow<IndexState?>,
     private val launcher: IndexLauncher,
 ) : ViewModel() {
-    val state: StateFlow<IndexStatusUiState> = indexState
-        .conflate()
-        .sample(SAMPLE_PERIOD_MS)
-        .map { it.toUiState() }
-        .catch { emit(IndexStatusUiState.Error) }
+    private val retryCount = MutableStateFlow(0)
+
+    val state: StateFlow<IndexStatusUiState> = retryCount
+        .flatMapLatest {
+            indexState
+                .sample(SAMPLE_PERIOD_MS)
+                .map { it.toUiState() }
+                .catch { emit(IndexStatusUiState.Error) }
+                .onStart { emit(IndexStatusUiState.Loading) }
+        }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), IndexStatusUiState.Loading)
 
+    /** İş hattı bağlı değilse (stub) UI butonu devre dışı bırakıp açıklar. */
+    val reindexAvailable: Boolean get() = launcher.isAvailable
+
+    private val _reindexInProgress = MutableStateFlow(false)
+    val reindexInProgress: StateFlow<Boolean> = _reindexInProgress.asStateFlow()
+
+    /** Hata durumunda Room akışını yeniden başlatır. */
+    fun retry() {
+        retryCount.update { it + 1 }
+    }
+
     /** Tüm galeriyi yeniden indeksleme isteği ([IndexMode.FULL]); iş arka planda yürür. */
-    fun reindex() = launcher.launch(IndexMode.FULL)
+    fun reindex() {
+        if (!launcher.isAvailable || !_reindexInProgress.compareAndSet(false, true)) return
+        launcher.launch(IndexMode.FULL)
+        viewModelScope.launch {
+            delay(REINDEX_COOLDOWN_MS)
+            _reindexInProgress.value = false
+        }
+    }
 
     companion object {
         const val SAMPLE_PERIOD_MS = 250L
+        const val REINDEX_COOLDOWN_MS = 2_000L
     }
 }
