@@ -11,4 +11,20 @@
         <item quantity="one">%d fotoğraf bulundu</item>
         <item quantity="other">%d fotoğraf bulundu</item>
     </plurals>
+    <string name="search_hint">Ne arıyorsun? (ör. plajda gülen çocuk)</string>
+    <string name="search_button">Ara</string>
+    <string name="search_idle">Aramak için bir istem yaz.</string>
+    <string name="search_empty">Eşleşen fotoğraf bulunamadı. Farklı bir istem dene veya indeksin hazır olduğunu kontrol et.</string>
+    <string name="search_error">Arama sırasında bir hata oluştu. Lütfen tekrar dene.</string>
+    <string name="photo_content_description">Fotoğraf</string>
+    <string name="image_load_failed">Görsel yüklenemedi</string>
+    <string name="viewer_not_found">Fotoğraf bulunamadı. Aramaya dönüp tekrar dene.</string>
+    <string name="back_button">Geri</string>
+    <string name="index_status_open">İndeks durumu</string>
+    <string name="index_never_run">İndeksleme henüz çalışmadı.</string>
+    <string name="index_status_error">İndeks durumu okunamadı.</string>
+    <string name="index_processed_of_total">%1$d / %2$d fotoğraf işlendi</string>
+    <string name="index_last_run">Son çalışma: %1$s</string>
+    <string name="index_last_run_none">Son çalışma: henüz yok</string>
+    <string name="reindex_button">Yeniden indeksle</string>
 </resources>

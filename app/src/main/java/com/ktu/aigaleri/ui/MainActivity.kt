@@ -10,13 +10,24 @@ import androidx.activity.viewModels
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
-import com.ktu.aigaleri.data.MediaStorePhotoSource
+import com.ktu.aigaleri.ui.index.IndexStatusViewModel
+import com.ktu.aigaleri.ui.search.SearchViewModel
 
 class MainActivity : ComponentActivity() {
     private val permission get() = GalleryPermission.requiredPermission()
 
+    private val deps by lazy { AppDependencies.get(applicationContext) }
+
     private val viewModel: MainViewModel by viewModels {
-        viewModelFactory { initializer { MainViewModel(MediaStorePhotoSource(applicationContext.contentResolver)) } }
+        viewModelFactory { initializer { MainViewModel(deps.photoSource) } }
+    }
+
+    private val searchViewModel: SearchViewModel by viewModels {
+        viewModelFactory { initializer { SearchViewModel(deps.searchRepository) } }
+    }
+
+    private val indexStatusViewModel: IndexStatusViewModel by viewModels {
+        viewModelFactory { initializer { IndexStatusViewModel(deps.indexState, deps.indexLauncher) } }
     }
 
     private val requestPermission =
@@ -30,6 +41,9 @@ class MainActivity : ComponentActivity() {
         setContent {
             MainScreen(
                 viewModel = viewModel,
+                searchViewModel = searchViewModel,
+                indexStatusViewModel = indexStatusViewModel,
+                imageLoader = deps.imageLoader,
                 onRequestPermission = { requestPermission.launch(permission) },
             )
         }
