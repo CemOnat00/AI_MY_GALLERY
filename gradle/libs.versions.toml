@@ -40,6 +40,9 @@ androidx-room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = 
 androidx-room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
 # Henüz kullanılmıyor, T-002 ve sonrası için: Room cihaz/migration testleri (androidTest).
 androidx-room-testing = { group = "androidx.room", name = "room-testing", version.ref = "room" }
+# Coroutines core: domain arayüzlerindeki Flow (IndexProgress) için; test kütüphanesiyle aynı sürüm.
+# Zaten Room/Activity üzerinden geçişli geliyor, ancak domain API'si doğrudan kullandığı için açıkça bildirildi.
+kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "coroutines" }
 # Birim testi.
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 # Henüz kullanılmıyor, T-002 ve sonrası için: coroutine/Flow birim testleri.
