@@ -19,6 +19,10 @@ abstract class AiGaleriDatabase : RoomDatabase() {
     companion object {
         const val DATABASE_NAME = "aigaleri.db"
 
+        /**
+         * Application'da tek kez çağır; birden fazla örnek Flow invalidation'larını birbirinden
+         * habersiz bırakır.
+         */
         fun create(context: Context): AiGaleriDatabase =
             Room.databaseBuilder(context.applicationContext, AiGaleriDatabase::class.java, DATABASE_NAME)
                 .build()

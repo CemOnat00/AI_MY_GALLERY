@@ -1,19 +1,27 @@
 package com.ktu.aigaleri.data
 
 import android.content.Context
+import android.database.sqlite.SQLiteConstraintException
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.produceIn
+import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertThrows
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 
-/** Room cihaz testi: ekle/oku, FK ile silme, parametreli sorgular. */
+/**
+ * Room cihaz testi: ekle/oku, FK ile silme, parametreli sorgular, Flow yeniden emit.
+ *
+ * Not: emülatör/cihaz yok, çalıştırılmadı; `compileDebugAndroidTestKotlin` ile derlendiği doğrulandı.
+ */
 @RunWith(AndroidJUnit4::class)
 class AiGaleriDatabaseTest {
     private lateinit var db: AiGaleriDatabase
@@ -57,8 +65,9 @@ class AiGaleriDatabaseTest {
 
     @Test
     fun embeddingWithoutPhoto_violatesForeignKey() {
-        val failed = runCatching { runBlocking { embeddings.upsert(embedding(42)) } }.exceptionOrNull()
-        assertEquals(true, failed is android.database.sqlite.SQLiteConstraintException)
+        assertThrows(SQLiteConstraintException::class.java) {
+            runBlocking { embeddings.upsert(embedding(42)) }
+        }
     }
 
     @Test
@@ -95,5 +104,37 @@ class AiGaleriDatabaseTest {
         db.indexStateDao().upsert(IndexState(total = 10, processed = 10, lastRunAt = 7L))
         val state = db.indexStateDao().observe().first()
         assertEquals(IndexState(IndexState.SINGLETON_ID, 10, 10, 7L), state)
+    }
+
+    @Test
+    fun indexStateObserve_reEmitsAfterUpdate() = runBlocking {
+        val channel = db.indexStateDao().observe().produceIn(this)
+        try {
+            withTimeout(5_000) {
+                assertNull(channel.receive())
+                db.indexStateDao().upsert(IndexState(total = 5, processed = 1, lastRunAt = null))
+                assertEquals(1, channel.receive()!!.processed)
+                db.indexStateDao().upsert(IndexState(total = 5, processed = 5, lastRunAt = 9L))
+                assertEquals(IndexState(IndexState.SINGLETON_ID, 5, 5, 9L), channel.receive())
+            }
+        } finally {
+            channel.cancel()
+        }
+    }
+
+    @Test
+    fun observeCount_reEmitsOnInsertAndDelete() = runBlocking {
+        val channel = photos.observeCount().produceIn(this)
+        try {
+            withTimeout(5_000) {
+                assertEquals(0, channel.receive())
+                photos.upsert(photo(1))
+                assertEquals(1, channel.receive())
+                photos.deleteAll()
+                assertEquals(0, channel.receive())
+            }
+        } finally {
+            channel.cancel()
+        }
     }
 }

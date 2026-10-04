@@ -44,7 +44,12 @@ interface PhotoEmbeddingDao {
     @Query("SELECT * FROM photo_embedding WHERE photoId = :photoId")
     suspend fun getByPhotoId(photoId: Long): PhotoEmbedding?
 
-    /** Arama için: verilen modelin tüm vektörleri, fotoğraf bilgisiyle birlikte. */
+    /**
+     * Arama için: verilen modelin tüm vektörleri, fotoğraf bilgisiyle birlikte.
+     *
+     * Bellek sınırı: sonuç tek seferde belleğe yüklenir. 512 boyutta 10 bin fotoğraf ≈ 20 MB,
+     * 50 bin ≈ 100 MB+ (uri her satırda tekrar yüklenir). Sayfalı okuma/önbellek kararı T-008'e aittir.
+     */
     @Query(
         "SELECT p.mediaStoreId AS photoId, p.uri AS uri, p.dateTaken AS dateTaken, e.vector AS vector " +
             "FROM photo_embedding e INNER JOIN photo p ON p.mediaStoreId = e.photoId " +
