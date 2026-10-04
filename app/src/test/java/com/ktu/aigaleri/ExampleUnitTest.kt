@@ -5,7 +5,7 @@ import org.junit.Test
 
 class ExampleUnitTest {
     @Test
-    fun applicationPackage_isExpected() {
-        assertEquals("com.ktu.aigaleri", MainPackage.NAME)
+    fun applicationId_isExpected() {
+        assertEquals("com.ktu.aigaleri", BuildConfig.APPLICATION_ID)
     }
 }

@@ -1,34 +1,52 @@
+# Bağımlılık gerekçeleri (architecture.md Bölüm 8: bağımlılık eklenmeden gerekçe belirtilir).
+# Tüm bağımlılıklar cihaz üstü çalışır; ağ/analitik/crash SDK'sı yoktur.
+# Gradle wrapper: 9.3.1 (JDK 24 ile uyumlu; gradle/wrapper/gradle-wrapper.properties, sha256 doğrulamalı).
+
 [versions]
+# Android Gradle Plugin 9.1: JDK 24 ve Gradle 9.3 ile uyumlu, Kotlin desteği yerleşik.
 agp = "9.1.0"
+# Kotlin: AGP 9.1'in yerleşik Kotlin sürümü; Compose compiler eklentisi aynı sürümde olmalı.
 kotlin = "2.2.10"
+# KSP: Room derleyicisi için (kapt yerine). 2.3.x Kotlin sürümünden bağımsız.
 ksp = "2.3.12"
+# Room: SQLite üzerinde cihaz üstü indeks (architecture.md Bölüm 3, 5).
 room = "2.8.5"
+# Compose BOM: UI araç seti (architecture.md Bölüm 3). Geri çekildi: 2026.09 (Compose 1.12) ve
+# core-ktx 1.19 compileSdk 37 ister; AGP 9.1 en fazla 36 önerir ve SDK 37 kurulu değil.
+# compileSdk/targetSdk 36 ile uyumlu en yeni çift: BOM 2026.02.01 + core-ktx 1.17.0.
 composeBom = "2026.02.01"
 coreKtx = "1.17.0"
+# Activity Compose: ComponentActivity.setContent ve enableEdgeToEdge için.
 activityCompose = "1.12.4"
-lifecycle = "2.10.0"
+# Test bağımlılıkları.
 junit = "4.13.2"
 androidxTestExtJunit = "1.3.0"
 androidxTestRunner = "1.7.0"
+# Coroutines test: Flow/suspend birim testleri için (T-002 sonrası).
 coroutines = "1.11.0"
 
 [libraries]
+# Uygulama: temel Kotlin uzantıları ve Compose girişi.
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
-androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycle" }
 androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
 androidx-compose-ui = { group = "androidx.compose.ui", name = "ui" }
-androidx-compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
-androidx-compose-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
 androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3" }
+# Yalnızca debug: Layout Inspector / tooling desteği.
+androidx-compose-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
+# Room: runtime + ktx (coroutine/Flow desteği) + KSP derleyicisi. Entity/DAO T-002 ve sonrasında.
 androidx-room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
 androidx-room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
 androidx-room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
+# Henüz kullanılmıyor, T-002 ve sonrası için: Room cihaz/migration testleri (androidTest).
 androidx-room-testing = { group = "androidx.room", name = "room-testing", version.ref = "room" }
+# Birim testi.
 junit = { group = "junit", name = "junit", version.ref = "junit" }
+# Henüz kullanılmıyor, T-002 ve sonrası için: coroutine/Flow birim testleri.
+kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "coroutines" }
+# Henüz kullanılmıyor, T-002 ve sonrası için: cihaz testi (androidTest) altyapısı.
 androidx-test-ext-junit = { group = "androidx.test.ext", name = "junit", version.ref = "androidxTestExtJunit" }
 androidx-test-runner = { group = "androidx.test", name = "runner", version.ref = "androidxTestRunner" }
-kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "coroutines" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
