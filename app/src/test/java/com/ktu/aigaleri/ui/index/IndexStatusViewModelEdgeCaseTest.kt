@@ -21,7 +21,6 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
-import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Test
 
@@ -47,30 +46,19 @@ class IndexStatusViewModelEdgeCaseTest {
 
     private fun TestScope.collectIn(vm: IndexStatusViewModel) = backgroundScope.launch { vm.state.collect { } }
 
-    /**
-     * BULGU DOĞRULAMASI (karakterizasyon): launcher.launch istisna fırlatırsa bayrak true'da kalır,
-     * cooldown coroutine'i hiç başlamaz ve sonraki tüm reindex() çağrıları sessizce yok sayılır.
-     * İstisna ayrıca çağıran (UI tıklama işleyicisi) tarafına sızar. Üretim kodu düzeltilince bu test
-     * güncellenmelidir (beklenen: bayrak false'a dönmeli).
-     */
+    /** launcher.launch istisna fırlatırsa bayrak geri alınır, istisna sızmaz, hata bayrağı set edilir. */
     @Test
-    fun reindex_launcherThrows_flagStaysTrueForever_KNOWN_ISSUE() = runTest {
+    fun reindex_launcherThrows_flagIsReset_errorShown_andRetryWorks() = runTest {
         val launcher = RecordingLauncher(failure = IllegalStateException("work enqueue failed"))
         val vm = IndexStatusViewModel(MutableStateFlow(null), launcher)
-        try {
-            vm.reindex()
-            fail("istisna çağırana sızmalı (mevcut davranış)")
-        } catch (e: IllegalStateException) {
-            // beklenen (mevcut davranış)
-        }
-        assertTrue(vm.reindexInProgress.value)
-        advanceTimeBy(cooldown * 10)
-        advanceUntilIdle()
-        assertTrue("bayrak asla sıfırlanmıyor", vm.reindexInProgress.value)
-        // Launcher düzelse bile yeniden indeksleme kalıcı olarak kilitli.
+        vm.reindex()
+        assertFalse(vm.reindexInProgress.value)
+        assertTrue(vm.reindexError.value)
         launcher.failure = null
         vm.reindex()
-        assertEquals(1, launcher.modes.size)
+        assertEquals(2, launcher.modes.size)
+        assertFalse(vm.reindexError.value)
+        assertTrue(vm.reindexInProgress.value)
     }
 
     @Test

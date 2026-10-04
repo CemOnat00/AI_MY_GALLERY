@@ -15,6 +15,14 @@ import kotlinx.coroutines.launch
 /** UI'daki basit istem uzunluk sınırı; asıl doğrulama T-007'de (architecture.md Bölüm 8). */
 const val MAX_QUERY_LENGTH = 200
 
+/** [text]'i [MAX_QUERY_LENGTH] UTF-16 birimine kısaltır; surrogate çiftini bölmez. */
+internal fun truncateQuery(text: String): String {
+    if (text.length <= MAX_QUERY_LENGTH) return text
+    var end = MAX_QUERY_LENGTH
+    if (text[end - 1].isHighSurrogate() && text[end].isLowSurrogate()) end--
+    return text.substring(0, end)
+}
+
 /** Arama sonucu durumu. */
 sealed interface SearchStatus {
     /** Henüz arama yapılmadı (veya istem boş). */
@@ -44,8 +52,12 @@ class SearchViewModel(private val repository: SearchRepository) : ViewModel() {
     val state: StateFlow<SearchUiState> = _state.asStateFlow()
     private var searchJob: Job? = null
 
-    /** İstem [MAX_QUERY_LENGTH] karakterle kısıtlanır (fazlası kesilir). */
-    fun onQueryChange(text: String) = _state.update { it.copy(query = text.take(MAX_QUERY_LENGTH)) }
+    /**
+     * İstem [MAX_QUERY_LENGTH] UTF-16 birimiyle kısıtlanır (fazlası kesilir). Kesme noktası bir
+     * surrogate çiftinin ortasına denk gelirse çiftin yüksek yarısı da atılır (yarım emoji kalmaz);
+     * yani sonuç en fazla [MAX_QUERY_LENGTH] birim, bazen bir eksik olur.
+     */
+    fun onQueryChange(text: String) = _state.update { it.copy(query = truncateQuery(text)) }
 
     fun search() {
         val query = _state.value.query.trim()

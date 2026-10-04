@@ -129,8 +129,10 @@ fun AppNavHost(
             if (granted) {
                 val indexState by indexStatusViewModel.state.collectAsStateWithLifecycle()
                 val inProgress by indexStatusViewModel.reindexInProgress.collectAsStateWithLifecycle()
+                val reindexError by indexStatusViewModel.reindexError.collectAsStateWithLifecycle()
                 IndexStatusContent(
                     state = indexState,
+                    reindexError = reindexError,
                     reindexAvailable = indexStatusViewModel.reindexAvailable,
                     reindexInProgress = inProgress,
                     onReindex = indexStatusViewModel::reindex,

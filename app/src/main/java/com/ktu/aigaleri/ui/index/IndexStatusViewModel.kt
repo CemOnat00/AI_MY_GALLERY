@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.ktu.aigaleri.data.IndexState
 import com.ktu.aigaleri.domain.IndexMode
 import com.ktu.aigaleri.ui.IndexLauncher
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.delay
@@ -74,6 +75,11 @@ class IndexStatusViewModel(
     private val _reindexInProgress = MutableStateFlow(false)
     val reindexInProgress: StateFlow<Boolean> = _reindexInProgress.asStateFlow()
 
+    private val _reindexError = MutableStateFlow(false)
+
+    /** Son yeniden indeksleme isteği başlatılamadıysa true; sonraki istekte sıfırlanır. */
+    val reindexError: StateFlow<Boolean> = _reindexError.asStateFlow()
+
     /** Hata durumunda Room akışını yeniden başlatır. */
     fun retry() {
         retryCount.update { it + 1 }
@@ -82,7 +88,18 @@ class IndexStatusViewModel(
     /** Tüm galeriyi yeniden indeksleme isteği ([IndexMode.FULL]); iş arka planda yürür. */
     fun reindex() {
         if (!launcher.isAvailable || !_reindexInProgress.compareAndSet(false, true)) return
-        launcher.launch(IndexMode.FULL)
+        _reindexError.value = false
+        try {
+            launcher.launch(IndexMode.FULL)
+        } catch (e: CancellationException) {
+            _reindexInProgress.value = false
+            throw e
+        } catch (e: Exception) {
+            // Başlatılamadı: bayrak geri alınır (kilitli kalmaz), UI'a genel hata bildirilir; ayrıntı loglanmaz.
+            _reindexInProgress.value = false
+            _reindexError.value = true
+            return
+        }
         viewModelScope.launch {
             delay(REINDEX_COOLDOWN_MS)
             _reindexInProgress.value = false

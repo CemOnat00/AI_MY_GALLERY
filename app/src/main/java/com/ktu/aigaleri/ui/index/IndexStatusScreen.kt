@@ -33,6 +33,7 @@ fun IndexStatusContent(
     onReindex: () -> Unit,
     onRetry: () -> Unit,
     onBack: () -> Unit,
+    reindexError: Boolean = false,
 ) {
     Column(
         modifier = Modifier.fillMaxSize().padding(24.dp),
@@ -66,6 +67,7 @@ fun IndexStatusContent(
             enabled = reindexAvailable && !reindexInProgress,
             modifier = Modifier.testTag(TAG_REINDEX_BUTTON),
         ) { Text(stringResource(R.string.reindex_button)) }
+        if (reindexError) Text(stringResource(R.string.reindex_failed), color = MaterialTheme.colorScheme.error)
         if (!reindexAvailable) Text(stringResource(R.string.reindex_unavailable), style = MaterialTheme.typography.bodySmall)
         OutlinedButton(onClick = onBack) { Text(stringResource(R.string.back_button)) }
     }

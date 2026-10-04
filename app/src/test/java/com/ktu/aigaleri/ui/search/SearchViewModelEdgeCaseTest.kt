@@ -64,6 +64,24 @@ class SearchViewModelEdgeCaseTest {
     }
 
     @Test
+    fun query_cutInsideSurrogatePair_dropsWholeEmoji() {
+        val vm = SearchViewModel(ImmediateRepository())
+        vm.onQueryChange("a" + "\uD83D\uDE00".repeat(100)) // 201 UTF-16 birimi; 200. sınır çiftin ortasında
+        val q = vm.state.value.query
+        assertEquals("a" + "\uD83D\uDE00".repeat(99), q)
+        assertTrue(q.length <= MAX_QUERY_LENGTH)
+        assertFalse(q.last().isHighSurrogate())
+    }
+
+    @Test
+    fun query_emojiEndingExactlyAtLimit_isKept() {
+        val vm = SearchViewModel(ImmediateRepository())
+        val text = "\uD83D\uDE00".repeat(100) + "x"
+        vm.onQueryChange(text)
+        assertEquals("\uD83D\uDE00".repeat(100), vm.state.value.query)
+    }
+
+    @Test
     fun query_201_isCutToFirst200() {
         val vm = SearchViewModel(ImmediateRepository())
         val text = "a".repeat(200) + "b"

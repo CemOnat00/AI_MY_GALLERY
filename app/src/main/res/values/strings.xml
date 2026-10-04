@@ -29,4 +29,5 @@
     <string name="reindex_button">Yeniden indeksle</string>
     <string name="reindex_unavailable">İndeksleme henüz bağlı değil; yeniden indeksleme şimdilik kullanılamıyor.</string>
     <string name="retry_button">Yeniden dene</string>
+    <string name="reindex_failed">Yeniden indeksleme başlatılamadı. Lütfen tekrar dene.</string>
 </resources>
