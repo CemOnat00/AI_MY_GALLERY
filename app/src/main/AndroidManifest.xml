@@ -1,8 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Bilerek izin yok: uygulama tamamen cihaz üstüdür (INTERNET eklenmez).
-         Galeri okuma izni galeri erişimi görevinde eklenecek. -->
+    <!-- Bilerek INTERNET izni yok: uygulama tamamen cihaz üstüdür.
+         Tek izin galeri okuma: Android 13+ READ_MEDIA_IMAGES, eski sürümlerde READ_EXTERNAL_STORAGE. -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
 
     <application
         android:allowBackup="false"

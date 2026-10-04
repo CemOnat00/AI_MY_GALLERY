@@ -1,3 +1,13 @@
 <resources>
     <string name="app_name">Ai-galeri</string>
+    <string name="permission_needed_message">Fotoğraflarını aramak için galeri erişimine izin vermen gerekiyor. Fotoğrafların cihazından çıkmaz.</string>
+    <string name="permission_denied_message">Galeri izni verilmedi. Arama yapabilmek için izin vermelisin.</string>
+    <string name="permission_permanently_denied_message">Galeri izni kalıcı olarak reddedildi. Ayarlar &gt; İzinler bölümünden fotoğraf erişimine izin ver.</string>
+    <string name="permission_grant_button">İzin ver</string>
+    <string name="permission_open_settings_button">Ayarları aç</string>
+    <string name="permission_granted_loading">Fotoğraflar sayılıyor…</string>
+    <plurals name="photo_count">
+        <item quantity="one">%d fotoğraf bulundu</item>
+        <item quantity="other">%d fotoğraf bulundu</item>
+    </plurals>
 </resources>
