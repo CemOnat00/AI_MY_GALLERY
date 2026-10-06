@@ -45,7 +45,7 @@ istem -> `QueryPreprocessor` (Türkçe küçük harf, kontrol karakteri atma, bo
 
 ## ORT telemetrisi
 
-onnxruntime-android AAR'ı Microsoft telemetri istemcisini içerir (`ai.onnxruntime.TelemetryInitializer` ContentProvider'ı, HttpClient, PowerInfoReceiver, ConnectivityCallback; cihaz kimliği/sistem bilgisi toplar, tmpdir'e önbellek yazar, INTERNET ve ACCESS_NETWORK_STATE izinlerini ekler). Kapatma: (1) manifestte provider ve iki izin `tools:node="remove"`; provider olmayınca yerel katman "Java HttpClient başlatılmadı" diyerek telemetriyi kullanılamaz sayar; (2) oturum açılırken `OrtEnvironment.setTelemetry(false)`. `MergedManifestTest` debug ve release birleşik manifestlerini izin/bileşen beyaz listesiyle denetler (test görevi `processDebugMainManifest`/`processReleaseMainManifest`'e bağlıdır). Sürüm yükseltmelerinde bu testin sonucuna bakılmalıdır.
+onnxruntime-android AAR'ı Microsoft telemetri istemcisini içerir (`ai.onnxruntime.TelemetryInitializer` ContentProvider'ı, HttpClient, PowerInfoReceiver, ConnectivityCallback; cihaz kimliği/sistem bilgisi toplar, tmpdir'e önbellek yazar, INTERNET ve ACCESS_NETWORK_STATE izinlerini ekler). Kapatma: (1) manifestte provider ve iki izin `tools:node="remove"`; provider olmayınca yerel katman, libonnxruntime.so içindeki dizeye göre ("Java HttpClient başlatılmadı"), telemetriyi kullanılamaz sayar; çalışma zamanında doğrulanmadı; (2) oturum açılırken `OrtEnvironment.setTelemetry(false)`. `MergedManifestTest` debug ve release birleşik manifestlerini izin/bileşen beyaz listesiyle denetler (test görevi `processDebugMainManifest`/`processReleaseMainManifest`'e bağlıdır). Sürüm yükseltmelerinde bu testin sonucuna bakılmalıdır.
 
 ## APK boyutu ve ABI (ileri aşama kararı)
 

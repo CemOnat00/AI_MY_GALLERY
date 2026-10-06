@@ -32,7 +32,7 @@ coil = "3.4.0"
 # bölüm 5.2). 1.30.0: araştırmada Maven Central'daki en son sürüm (2026-10-04), AAR 53 MB (dört ABI .so).
 # DİKKAT: AAR, Microsoft telemetri istemcisini içerir (ai.onnxruntime.TelemetryInitializer provider'ı + HttpClient,
 # PowerInfoReceiver, ConnectivityCallback; INTERNET/ACCESS_NETWORK_STATE izinleri; açılışta çalışır). KAPATILDI:
-# AndroidManifest.xml'de provider ve iki izin tools:node="remove" ile kaldırılır (yerel katman "Java HttpClient
+# AndroidManifest.xml'de provider ve iki izin tools:node="remove" ile kaldırılır (libonnxruntime.so içindeki dizeye göre yerel katman "Java HttpClient
 # başlatılmadı" diyerek telemetriyi devre dışı bırakır) ve oturum açılırken OrtEnvironment.setTelemetry(false) çağrılır.
 # MergedManifestTest debug ve release birleşik manifestini beyaz listeyle denetler. Kaldırmanın ORT yüklemesini
 # bozmadığı cihazda doğrulanamadı (cihaz yok).

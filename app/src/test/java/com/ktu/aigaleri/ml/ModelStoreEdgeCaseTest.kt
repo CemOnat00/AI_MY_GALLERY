@@ -15,7 +15,6 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Assume.assumeTrue
-import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -169,12 +168,7 @@ class ModelStoreEdgeCaseTest {
         assertFalse(File(modelsDir(), "m.bin.part").exists())
     }
 
-    /**
-     * BULGU (düşük): hedef klasör yazılamazsa FileOutputStream FileNotFoundException("Permission denied") fırlatır;
-     * ModelStore.copyVerified bunu "asset yok" sanıp ModelException.Missing'e çevirir (ModelStore.kt, catch FileNotFoundException).
-     * Beklenen: ModelException.Io. Üretim koduna dokunulmadığı için test @Ignore'dur; düzelince kaldırın.
-     */
-    @Ignore("BULGU: yazma izni hatası Missing olarak raporlanıyor (ModelStore.kt copyVerified)")
+    /** Hedef klasör yazılamazsa (FileOutputStream FileNotFoundException) Io döner; asset yokluğu Missing kalır. */
     @Test
     fun unwritableModelsDir_shouldBeIo_notMissing() {
         val data = bytes(70_000)

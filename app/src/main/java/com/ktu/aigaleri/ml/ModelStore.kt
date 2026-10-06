@@ -47,7 +47,9 @@ sealed class ModelException(message: String, cause: Throwable? = null) : Excepti
  * dosya yeniden hash'lenmez. Yarım kalmış `.part` her çağrıda temizlenir; işaretçisiz ama hedefi olan dosya
  * yeniden hash'lenir (kopya ile işaretçi arasında süreç öldüyse), tutmazsa silinip yeniden kopyalanır.
  *
- * Bloklayıcıdır; ana thread dışında çağrılmalıdır. Eşzamanlı çağrılar kilitle serileştirilir.
+ * Bloklayıcıdır; ana thread dışında çağrılmalıdır. Eşzamanlı çağrılar kilitle serileştirilir; kilit ÖRNEK
+ * başınadır: aynı klasörde iki örnek birbirini serileştirmez (aynı `.part` dosyasına yazabilir). Uygulamada
+ * tek örnek kullanılmalıdır (AppDependencies'te singleton).
  * İptal: `checkCancelled` her 64 KB'ta çağrılır; fırlatırsa `.part` silinir ve istisna aynen yayılır.
  */
 class ModelStore(
@@ -99,8 +101,20 @@ class ModelStore(
         val digest = MessageDigest.getInstance("SHA-256")
         var total = 0L
         try {
-            assets.open(model.assetPath).use { input ->
-                java.io.FileOutputStream(part).use { out ->
+            // Asset'in yokluğu (assets.open'ın FileNotFoundException'ı) ile hedef dosyanın açılamaması
+            // (yazma izni/disk, FileOutputStream'in FileNotFoundException'ı) ayrı raporlanır.
+            val input = try {
+                assets.open(model.assetPath)
+            } catch (e: FileNotFoundException) {
+                throw ModelException.Missing(model.assetPath)
+            }
+            input.use {
+                val out = try {
+                    java.io.FileOutputStream(part)
+                } catch (e: FileNotFoundException) {
+                    throw ModelException.Io(model.fileName, e)
+                }
+                out.use {
                     val buf = ByteArray(BUFFER_SIZE)
                     while (true) {
                         checkCancelled()
@@ -113,9 +127,6 @@ class ModelStore(
                     out.fd.sync()
                 }
             }
-        } catch (e: FileNotFoundException) {
-            part.delete()
-            throw ModelException.Missing(model.assetPath)
         } catch (e: IOException) {
             part.delete()
             throw ModelException.Io(model.fileName, e)
