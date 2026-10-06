@@ -15,6 +15,11 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DEST="${1:-$HERE/../app/src/main/assets/models}"
 mkdir -p "$DEST"
 
+# Ctrl-C/hata/çıkışta yarım dosyaları sil (.part ve geçici safetensors); tamamlanmış dosyalara dokunulmaz.
+cleanup() { rm -f "$DEST"/*.part "$DEST/.dense.safetensors"; }
+trap cleanup EXIT
+trap 'echo "iptal edildi" >&2; exit 130' INT TERM
+
 TEXT_REPO="sentence-transformers/clip-ViT-B-32-multilingual-v1"
 TEXT_REV="58edf8cada9e398793dca955574a48cbb7f18be2"
 VISION_REPO="Xenova/clip-vit-base-patch32"

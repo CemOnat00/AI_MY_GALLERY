@@ -1,5 +1,7 @@
 package com.ktu.aigaleri.ml
 
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame
@@ -50,6 +52,51 @@ class SingleSessionSlotTest {
         // Kapatıldıktan sonra yeniden açılır.
         val a2 = slot.withSession("a", { Fake("a") }) { it }
         assertTrue(a2 !== a && !a2.closed)
+    }
+
+    @Test
+    fun onClosed_runsOnEvictionCloseAndCloseAll() = runTest {
+        val slot = SingleSessionSlot()
+        var released = 0
+        slot.withSession("text", { Fake("t") }, onClosed = { released++ }) { }
+        slot.withSession("vision", { Fake("v") }, onClosed = { released += 10 }) { } // text evict edildi
+        assertEquals(1, released)
+        slot.closeAll()
+        assertEquals(11, released)
+    }
+
+    @Test
+    fun concurrentSessions_neverOverlapAndNeverCloseInUseSession() {
+        val slot = SingleSessionSlot()
+        val active = java.util.concurrent.atomic.AtomicInteger()
+        val maxActive = java.util.concurrent.atomic.AtomicInteger()
+        val closedWhileInUse = java.util.concurrent.atomic.AtomicInteger()
+        kotlinx.coroutines.runBlocking(kotlinx.coroutines.Dispatchers.Default) {
+            (0 until 40).map { i ->
+                async {
+                    val key = if (i % 2 == 0) "text" else "vision"
+                    slot.withSession(key, { Fake(key) }) { s ->
+                        maxActive.accumulateAndGet(active.incrementAndGet(), ::maxOf)
+                        Thread.sleep(2)
+                        if (s.closed) closedWhileInUse.incrementAndGet()
+                        active.decrementAndGet()
+                    }
+                }
+            }.awaitAll()
+        }
+        assertEquals(1, maxActive.get())
+        assertEquals(0, closedWhileInUse.get())
+    }
+
+    @Test
+    fun twoConcurrentCallsSameKey_shareOneSession() {
+        val slot = SingleSessionSlot()
+        val opens = java.util.concurrent.atomic.AtomicInteger()
+        kotlinx.coroutines.runBlocking(kotlinx.coroutines.Dispatchers.Default) {
+            listOf(async { slot.withSession("a", { opens.incrementAndGet(); Fake("a") }) { Thread.sleep(20) } },
+                async { slot.withSession("a", { opens.incrementAndGet(); Fake("a") }) { Thread.sleep(20) } }).awaitAll()
+        }
+        assertEquals(1, opens.get())
     }
 
     @Test

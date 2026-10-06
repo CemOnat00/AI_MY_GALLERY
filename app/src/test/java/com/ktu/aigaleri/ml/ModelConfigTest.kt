@@ -34,11 +34,22 @@ class ModelConfigTest {
     }
 
     @Test
-    fun sourceManifest_removesNetworkPermissionsInjectedByOrtAar() {
-        val xml = File(appDir, "src/main/AndroidManifest.xml").readText()
-        for (perm in listOf("android.permission.INTERNET", "android.permission.ACCESS_NETWORK_STATE")) {
-            assertTrue(perm, Regex("<uses-permission[^>]*$perm[^>]*tools:node=\"remove\"").containsMatchIn(xml))
+    fun sourceManifest_removesNetworkPermissionsAndTelemetryProviderInjectedByOrtAar() {
+        // Öznitelik sırasından bağımsız: DOM ile okunur.
+        val f = javax.xml.parsers.DocumentBuilderFactory.newInstance().apply { isNamespaceAware = true }
+        val doc = f.newDocumentBuilder().parse(File(appDir, "src/main/AndroidManifest.xml"))
+        val android = "http://schemas.android.com/apk/res/android"
+        val tools = "http://schemas.android.com/tools"
+        fun removed(tag: String): Set<String> = doc.getElementsByTagName(tag).let { nl ->
+            (0 until nl.length).map { nl.item(it) as org.w3c.dom.Element }
+                .filter { it.getAttributeNS(tools, "node") == "remove" }
+                .map { it.getAttributeNS(android, "name") }.toSet()
         }
+        assertEquals(
+            setOf("android.permission.INTERNET", "android.permission.ACCESS_NETWORK_STATE"),
+            removed("uses-permission"),
+        )
+        assertEquals(setOf("ai.onnxruntime.TelemetryInitializer"), removed("provider"))
     }
 
     @Test

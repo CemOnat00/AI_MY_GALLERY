@@ -30,7 +30,12 @@ lifecycle = "2.9.4"
 coil = "3.4.0"
 # ONNX Runtime Android: metin (ve T-006'da görüntü) kodlayıcıyı cihaz üstünde çalıştırır (T-007, model-research.md
 # bölüm 5.2). 1.30.0: araştırmada Maven Central'daki en son sürüm (2026-10-04), AAR 53 MB (dört ABI .so).
-# Yalnızca yerel çıkarım kütüphanesi; ağ/analitik/uzak servis bileşeni yoktur, INTERNET izni gerekmez.
+# DİKKAT: AAR, Microsoft telemetri istemcisini içerir (ai.onnxruntime.TelemetryInitializer provider'ı + HttpClient,
+# PowerInfoReceiver, ConnectivityCallback; INTERNET/ACCESS_NETWORK_STATE izinleri; açılışta çalışır). KAPATILDI:
+# AndroidManifest.xml'de provider ve iki izin tools:node="remove" ile kaldırılır (yerel katman "Java HttpClient
+# başlatılmadı" diyerek telemetriyi devre dışı bırakır) ve oturum açılırken OrtEnvironment.setTelemetry(false) çağrılır.
+# MergedManifestTest debug ve release birleşik manifestini beyaz listeyle denetler. Kaldırmanın ORT yüklemesini
+# bozmadığı cihazda doğrulanamadı (cihaz yok).
 # ABI filtresi/budama bu görevde yapılmaz (model-research.md 5.2, ileri aşama).
 onnxruntime = "1.30.0"
 # Test bağımlılıkları.

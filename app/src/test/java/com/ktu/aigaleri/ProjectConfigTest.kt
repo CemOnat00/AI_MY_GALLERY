@@ -4,7 +4,6 @@ import java.io.File
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
-import org.junit.Assume.assumeTrue
 import org.junit.Test
 
 /** T-001 kabul kriterleri: manifest, minSdk, bağımlılıklar, wrapper. Çalışma dizini mobile/app. */
@@ -33,16 +32,7 @@ class ProjectConfigTest {
         assertTrue(sourceManifest().contains("android:allowBackup=\"false\""))
     }
 
-    @Test
-    fun mergedManifest_hasNoInternetAndNoBackup_whenAvailable() {
-        val merged = File(appDir, "build/intermediates/merged_manifest/debug/processDebugMainManifest/AndroidManifest.xml")
-            .takeIf { it.exists() }
-            ?: File(appDir, "build/intermediates/merged_manifests/debug/processDebugManifest/AndroidManifest.xml")
-        assumeTrue("merged manifest yok (assemble henüz çalışmadı)", merged.exists())
-        val xml = manifest(merged)
-        assertFalse(usesPermissions(xml).any { it.endsWith("INTERNET") })
-        assertTrue(xml.contains("android:allowBackup=\"false\""))
-    }
+    // Birleşik manifest denetimi (debug ve release, sessiz atlamasız): MergedManifestTest.
 
     @Test
     fun buildScript_minSdk26_andPackage() {

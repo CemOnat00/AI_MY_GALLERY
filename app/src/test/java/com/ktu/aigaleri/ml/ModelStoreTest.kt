@@ -122,6 +122,21 @@ class ModelStoreTest {
     }
 
     @Test
+    fun cancellationMidCopy_removesPartFile_andPropagates() {
+        val assets = CountingAssets(mapOf("models/m.bin" to payload))
+        var calls = 0
+        class Cancelled : RuntimeException()
+        try {
+            store(assets).ensure(model()) { if (++calls == 2) throw Cancelled() }
+            fail()
+        } catch (_: Cancelled) {
+        }
+        assertEquals(emptyList<String>(), modelsDir().list()!!.toList())
+        // Sonraki çağrı temiz başlar.
+        assertArrayEquals(payload, store(assets).ensure(model()).readBytes())
+    }
+
+    @Test
     fun staleStalePartFile_isRemovedAndCopyProceeds() {
         modelsDir().mkdirs()
         File(modelsDir(), "m.bin.part").writeBytes(byteArrayOf(1, 2, 3))

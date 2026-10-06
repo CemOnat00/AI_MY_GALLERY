@@ -6,7 +6,6 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
-import org.junit.Assume.assumeTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -23,6 +22,18 @@ class OnnxTextEncoderTest {
         assertEquals(512, enc.embeddingSpec.dimension)
         assertTrue(enc.embeddingSpec.modelVersion.isNotBlank())
         assertEquals(ModelManifest.EMBEDDING_SPEC, enc.embeddingSpec)
+    }
+
+    @Test
+    fun missingModelFiles_surfaceAsModelException_notRawIoError() = runTest {
+        val missing = AssetOpener { throw java.io.FileNotFoundException(it) }
+        val enc = OnnxTextEncoder(ModelStore(tmp.root, missing), dispatcher = kotlinx.coroutines.Dispatchers.IO)
+        try {
+            enc.encode("gizli istem metni")
+            fail()
+        } catch (e: ModelException.Missing) {
+            assertTrue(!e.message!!.contains("gizli"))
+        }
     }
 
     @Test

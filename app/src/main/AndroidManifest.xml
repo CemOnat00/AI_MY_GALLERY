@@ -9,8 +9,10 @@
         android:name="android.permission.READ_EXTERNAL_STORAGE"
         android:maxSdkVersion="32" />
 
-    <!-- onnxruntime-android AAR manifesti INTERNET ve ACCESS_NETWORK_STATE ekler (T-007'de görüldü);
-         uygulama ağ kullanmaz, birleşik manifestten kaldırılır. -->
+    <!-- onnxruntime-android AAR manifesti INTERNET ve ACCESS_NETWORK_STATE izinlerini ve Microsoft telemetri
+         istemcisini başlatan TelemetryInitializer provider'ını ekler. Uygulama ağ ve telemetri kullanmaz;
+         hepsi birleşik manifestten kaldırılır (aşağıda provider, application içinde). Ek savunma: kodda
+         OrtEnvironment.setTelemetry(false). -->
     <uses-permission android:name="android.permission.INTERNET" tools:node="remove" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" tools:node="remove" />
 
@@ -22,6 +24,13 @@
         android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@style/Theme.AiGaleri">
+        <!-- ORT telemetrisi (HttpClient, PowerInfoReceiver, ConnectivityCallback, cihaz/sistem bilgisi):
+             provider olmadan yerel katman "Java HttpClient başlatılmadı" diyerek telemetriyi devre dışı bırakır. -->
+        <provider
+            android:name="ai.onnxruntime.TelemetryInitializer"
+            android:authorities="${applicationId}.onnxruntime_telemetry_initializer"
+            tools:node="remove" />
+
         <activity
             android:name=".ui.MainActivity"
             android:exported="true">

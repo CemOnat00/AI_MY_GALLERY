@@ -8,18 +8,28 @@ import kotlinx.coroutines.sync.withLock
  * (arama için metin, indeksleme için görüntü). Başka anahtarla istek gelirse önce açık olan kapatılır.
  * İş (blok) kilit altında çalışır; böylece oturum bir çıkarımın ortasında kapanmaz.
  * Oturum türünden bağımsızdır ([AutoCloseable]); ORT olmadan test edilebilir.
+ *
+ * Oturum kapanırken (başka anahtarla eviction, [close], [closeAll]) açılırken verilen `onClosed` geri
+ * çağrısı kilit altında çalışır; sahibi oturuma bağlı kaynaklarını (sözlük, ağırlık) bırakır.
  */
 class SingleSessionSlot {
     private val mutex = Mutex()
     private var currentKey: String? = null
     private var current: AutoCloseable? = null
+    private var currentOnClosed: (() -> Unit)? = null
 
     /** [key] oturumu açık değilse [open] ile açar (önceki farklı oturumu kapatarak) ve [block]'u çalıştırır. */
-    suspend fun <S : AutoCloseable, R> withSession(key: String, open: () -> S, block: (S) -> R): R =
+    suspend fun <S : AutoCloseable, R> withSession(
+        key: String,
+        open: () -> S,
+        onClosed: () -> Unit = {},
+        block: (S) -> R,
+    ): R =
         mutex.withLock {
             if (currentKey != key) {
                 closeLocked()
                 current = open()
+                currentOnClosed = onClosed
                 currentKey = key
             }
             @Suppress("UNCHECKED_CAST")
@@ -36,9 +46,15 @@ class SingleSessionSlot {
 
     private fun closeLocked() {
         val s = current
+        val cb = currentOnClosed
         current = null
         currentKey = null
-        s?.close()
+        currentOnClosed = null
+        try {
+            s?.close()
+        } finally {
+            cb?.invoke()
+        }
     }
 
     companion object {

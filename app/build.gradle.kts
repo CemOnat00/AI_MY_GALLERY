@@ -43,7 +43,15 @@ android {
     sourceSets {
         // Room şema dosyaları androidTest'te migration testi için kullanılır.
         getByName("androidTest").assets.directories.add("$projectDir/schemas")
+        // OnnxTextEncoderDeviceTest, Python referans vektörlerini (src/test/resources/ml) assets olarak okur.
+        getByName("androidTest").assets.directories.add("$projectDir/src/test/resources")
     }
+}
+
+// Birleşik manifest testi (MergedManifestTest) dosyaları okur; her unit test çalıştırmasında taze üretilsin
+// (bağımlılık manifestleri izin/provider sızdırabilir, ör. onnxruntime-android).
+tasks.matching { it.name.endsWith("UnitTest") && it.name.startsWith("test") }.configureEach {
+    dependsOn("processDebugMainManifest", "processReleaseMainManifest")
 }
 
 ksp {

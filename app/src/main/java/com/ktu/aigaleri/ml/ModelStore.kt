@@ -28,6 +28,13 @@ sealed class ModelException(message: String, cause: Throwable? = null) : Excepti
 
     class Io(val fileName: String, cause: Throwable) :
         ModelException("Model dosyası kopyalanamadı: $fileName", cause)
+
+    /**
+     * ONNX Runtime oturumu açılamadı veya çıkarım başarısız (OrtException, yerel kütüphane yüklenemedi).
+     * Ham ORT istisnası arayüze sızmaz; mesaj istemi/girdiyi içermez, ORT ayrıntısı yalnızca [cause]'tadır.
+     */
+    class Inference(val stage: String, cause: Throwable) :
+        ModelException("ONNX Runtime hatası ($stage)", cause)
 }
 
 /**
@@ -41,6 +48,7 @@ sealed class ModelException(message: String, cause: Throwable? = null) : Excepti
  * yeniden hash'lenir (kopya ile işaretçi arasında süreç öldüyse), tutmazsa silinip yeniden kopyalanır.
  *
  * Bloklayıcıdır; ana thread dışında çağrılmalıdır. Eşzamanlı çağrılar kilitle serileştirilir.
+ * İptal: `checkCancelled` her 64 KB'ta çağrılır; fırlatırsa `.part` silinir ve istisna aynen yayılır.
  */
 class ModelStore(
     filesDir: File,
@@ -50,7 +58,7 @@ class ModelStore(
     private val lock = Any()
 
     /** Dosyayı hazırlar ve doğrulanmış yerel yolunu döner. */
-    fun ensure(model: ModelFile): File = synchronized(lock) {
+    fun ensure(model: ModelFile, checkCancelled: () -> Unit = {}): File = synchronized(lock) {
         if (!dir.isDirectory && !dir.mkdirs() && !dir.isDirectory) {
             throw ModelException.Io(model.fileName, IOException("klasör oluşturulamadı"))
         }
@@ -76,7 +84,7 @@ class ModelStore(
         if (dir.usableSpace < model.sizeBytes + SPACE_MARGIN) {
             throw ModelException.InsufficientStorage(model.fileName, model.sizeBytes + SPACE_MARGIN)
         }
-        copyVerified(model, part)
+        copyVerified(model, part, checkCancelled)
         try {
             Files.move(part.toPath(), target.toPath(), StandardCopyOption.ATOMIC_MOVE)
         } catch (e: IOException) {
@@ -87,7 +95,7 @@ class ModelStore(
         target
     }
 
-    private fun copyVerified(model: ModelFile, part: File) {
+    private fun copyVerified(model: ModelFile, part: File, checkCancelled: () -> Unit) {
         val digest = MessageDigest.getInstance("SHA-256")
         var total = 0L
         try {
@@ -95,6 +103,7 @@ class ModelStore(
                 java.io.FileOutputStream(part).use { out ->
                     val buf = ByteArray(BUFFER_SIZE)
                     while (true) {
+                        checkCancelled()
                         val n = input.read(buf)
                         if (n < 0) break
                         out.write(buf, 0, n)
@@ -110,6 +119,10 @@ class ModelStore(
         } catch (e: IOException) {
             part.delete()
             throw ModelException.Io(model.fileName, e)
+        } catch (e: Throwable) {
+            // İptal (checkCancelled) veya beklenmeyen hata: yarım kopya kalmasın.
+            part.delete()
+            throw e
         }
         if (total != model.sizeBytes) {
             part.delete()

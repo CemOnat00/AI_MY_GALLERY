@@ -10,7 +10,7 @@ tools/fetch_models.sh              # metin + görüntü (yaklaşık 226 MB)
 tools/fetch_models.sh --text-only  # yalnızca metin (T-007 için yeterli)
 ```
 
-`tools/fetch_models.sh` yalnızca geliştirici makinesinde çalışır, uygulamanın parçası değildir. Gereken: bash, curl, python3 (yalnızca standart kütüphane), shasum/sha256sum. Sabitlenmiş Hugging Face revizyonlarından indirir, her dosyanın SHA-256 değerini doğrular (uyuşmazsa siler ve hata verir), zaten doğrulanmış dosyayı yeniden indirmez. Dense ağırlığını `model.safetensors`'tan ham float32 `.bin`'e çevirir.
+`tools/fetch_models.sh` yalnızca geliştirici makinesinde çalışır, uygulamanın parçası değildir. Gereken: bash, curl, python3 (yalnızca standart kütüphane), shasum/sha256sum. Sabitlenmiş Hugging Face revizyonlarından indirir (Ctrl-C veya hatada `*.part` ve geçici safetensors silinir), her dosyanın SHA-256 değerini doğrular (uyuşmazsa siler ve hata verir), zaten doğrulanmış dosyayı yeniden indirmez. Dense ağırlığını `model.safetensors`'tan ham float32 `.bin`'e çevirir.
 
 Dosyalar yoksa modelsiz testler yine çalışır; gerçek dosya gerektiren testler (`assumeTrue`) atlanır. Uygulama dosya eksikse `ModelException.Missing` verir.
 
@@ -34,3 +34,19 @@ istem -> `QueryPreprocessor` (Türkçe küçük harf, kontrol karakteri atma, bo
 - Tokenizer: gerçek `text_vocab.txt` ile 18 metinde Python HF `tokenizers` 0.23.2 token kimlikleriyle birebir (Türkçe harfler, CJK, emoji, 300 karakterlik sözcük, 128 token kesmesi dahil).
 - Dense + L2: gerçek Dense ağırlığı ve Python (onnxruntime 1.30 masaüstü, numpy) referans vektörleriyle 1e-5 içinde.
 - ONNX Runtime Android üzerinde çalıştırma, süre ve bellek: doğrulanamadı (cihaz/emülatör yok). int8 `arm64` dosyasının x86 emülatörde çalışması da doğrulanmadı.
+
+## İlk sorgu gecikmesi ve ısınma (T-008 için)
+
+İlk `encode` çağrısı dosya doğrulaması/kopyası (ilk kurulumda 135 MB akış kopyası + SHA-256), ORT oturumu oluşturma, 119547 satırlık sözlüğün okunması ve Dense yüklemesini içerir; bu iş `Dispatchers.IO`'da yürür, kopya sırasında iptale duyarlıdır (oturum oluşturma bölünemez). Sonraki açılışlarda işaretçi dosyası sayesinde yeniden hash'lenmez. İlk sorgu gecikmesi ÖLÇÜLMEDİ (cihaz yok). T-008, arama ekranı açılmadan önce arka planda bir ısınma (warm-up) `encode` çağrısı yapmalıdır; ilk kurulumdaki kopya süresi kullanıcıya gösterilmelidir (ilerleme/beklet). Tek bir `OnnxTextEncoder` örneği kullanılmalıdır (KDoc: tekil kullanım kuralı).
+
+## Cihaz testi
+
+`OnnxTextEncoderDeviceTest` (androidTest) gerçek modelle ONNX yolunu (encode, oturum, release, slot eviction, Python referans vektörlerine kosinüs >= 0.99) sınar. YAZILDI ve DERLENDİ ama ÇALIŞTIRILMADI (cihaz/emülatör yok). ORT'nin Android'de çalışması, telemetri provider'ı kaldırıldığında yüklemenin bozulmaması, süre ve bellek bu yüzden doğrulanamadı.
+
+## ORT telemetrisi
+
+onnxruntime-android AAR'ı Microsoft telemetri istemcisini içerir (`ai.onnxruntime.TelemetryInitializer` ContentProvider'ı, HttpClient, PowerInfoReceiver, ConnectivityCallback; cihaz kimliği/sistem bilgisi toplar, tmpdir'e önbellek yazar, INTERNET ve ACCESS_NETWORK_STATE izinlerini ekler). Kapatma: (1) manifestte provider ve iki izin `tools:node="remove"`; provider olmayınca yerel katman "Java HttpClient başlatılmadı" diyerek telemetriyi kullanılamaz sayar; (2) oturum açılırken `OrtEnvironment.setTelemetry(false)`. `MergedManifestTest` debug ve release birleşik manifestlerini izin/bileşen beyaz listesiyle denetler (test görevi `processDebugMainManifest`/`processReleaseMainManifest`'e bağlıdır). Sürüm yükseltmelerinde bu testin sonucuna bakılmalıdır.
+
+## APK boyutu ve ABI (ileri aşama kararı)
+
+Debug APK şu an yaklaşık 375 MB: 4 ABI (arm64-v8a, armeabi-v7a, x86, x86_64) ORT yerel kütüphaneleri (~135 MB) + ~226 MB model. `abiFilters += "arm64-v8a"` ile ~100 MB kazanılır ama arm32 cihazlar ve x86 emülatör çalışmaz; bu karar ileri aşamaya bırakıldı ve `build.gradle.kts`'de UYGULANMADI (model-research.md 5.2).
