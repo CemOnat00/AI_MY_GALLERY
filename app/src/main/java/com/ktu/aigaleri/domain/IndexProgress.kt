@@ -11,7 +11,9 @@ enum class IndexMode {
     /**
      * Tüm galeriyi yeniden işler ("yeniden indeksleme"). Önce silmez: kayıtlar fotoğraf bazında
      * yerine yazılır. İptal veya hata halinde henüz yeniden yazılmamış eski kayıtlar korunur ve
-     * aramada kullanılmaya devam eder; iptal edilen FULL'dan sonra [INCREMENTAL] kalanı tamamlar.
+     * aramada kullanılmaya devam eder; iptal edilen FULL'dan sonra [INCREMENTAL] kalanı tamamlar. FULL tamamlanana
+     * dek aynı hedefle devam eder: yarım kalmış bir FULL yeniden istenirse baştan başlamaz, kalanı işler; yalnızca
+     * tamamlanmış (işlenecek kalan olmayan) bir indeksten sonra istenen FULL yeni bir tur başlatır.
      */
     FULL,
 }

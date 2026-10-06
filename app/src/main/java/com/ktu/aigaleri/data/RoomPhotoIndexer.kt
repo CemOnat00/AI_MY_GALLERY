@@ -30,17 +30,20 @@ import kotlinx.coroutines.withContext
  * Tarama (SCANNING): MediaStore kimlikleri ([MediaPhotoSource.loadIds]) ve Room kimlikleri alınır; galeride
  * artık olmayanların kayıtları toplu silinir (<= [DELETE_CHUNK]/sorgu; CASCADE embedding'i siler). Sonra işlenecek
  * kimlik listesi çıkarılır (en yeni kimlik önce):
- * - FULL: galerideki tümü, hedef sürüm = (mevcut en yüksek `Photo.indexVersion`, en az [PIPELINE_VERSION]) + 1.
- *   Kayıtlar fotoğraf bazında YERİNE yazılır (önce silinmez); başarısız veya yarıda kalan fotoğrafın eski kaydı
- *   ve vektörü korunur, aranabilir kalır.
- * - INCREMENTAL: hedef sürüm = mevcut en yüksek `indexVersion` (en az [PIPELINE_VERSION]); işlenenler: Room'da
- *   olmayanlar + `indexVersion < hedef` + güncel `modelVersion` ile vektörü olmayanlar ([PhotoDao.idsNeedingIndex]).
- *   Yarım kalmış FULL'un kalanı böylece (bir kısmı hedef sürüme yükseldiği için) devam eder; başarısız fotoğraflar
- *   kalıcı işaretlenmedikleri için her çalıştırmada yeniden denenir. Aynı model/sürümde yazılmış kayıt yeniden
- *   işlenmez.
+ * - INCREMENTAL: hedef sürüm = `max` = mevcut en yüksek `Photo.indexVersion` (en az [PIPELINE_VERSION]); işlenenler:
+ *   Room'da olmayanlar + `indexVersion < max` + güncel `modelVersion` ile vektörü olmayanlar ([PhotoDao.idsNeedingIndex]).
+ *   Başarısız fotoğraflar kalıcı işaretlenmedikleri için her çalıştırmada yeniden denenir. Aynı model/sürümde yazılmış
+ *   kayıt yeniden işlenmez.
+ * - FULL: FULL tamamlanana dek aynı hedefle devam eder. Room'da işlenecek kalan varsa
+ *   ([PhotoDao.idsNeedingIndex]`(max)` boş değil) hedef `max` kalır ve yalnızca kalan (+ Room'da olmayan yeni fotoğraflar)
+ *   işlenir: yarım FULL baştan başlamaz, böylece iş sistem tarafından yeniden başlatılsa da ilerler. Kalan yoksa (indeks
+ *   güncel veya boş) yeni tur başlar: hedef `max + 1`, galerideki tüm fotoğraflar işlenir. Kayıtlar fotoğraf bazında YERİNE yazılır (önce silinmez); başarısız veya
+ *   yarıda kalan fotoğrafın eski kaydı ve vektörü korunur, aranabilir kalır. FULL hiçbir şey yazmadan kesilirse
+ *   (ör. taramada) `max` değişmemiştir: yeniden istenen FULL gerçekten yeni tur olarak çalışır.
  * Şema değişmez: "FULL hedefi" ayrı bir sütun/tablo değil, `Photo.indexVersion`'ın azami değeridir.
- * Sınır: iptal edilen FULL hiçbir fotoğraf yazmadan kesilirse hedef kaydedilmemiştir (kalan iş yoktur, eski kayıtlar
- * aynen durur); yeniden FULL istenmelidir.
+ * Tarama güvenliği: MediaStore HİÇ kimlik döndürmezse (izin hatası fırlatılmadan; Android 14 kısmi erişim, geçici
+ * sağlayıcı hatası) ve Room doluysa temizleme VE işleme atlanır (hiçbir kayıt silinmez; yanlışlıkla tüm indeksi
+ * silmemek için). Galeri gerçekten boşaldıysa eski kayıtlar bir sonraki dolu taramaya kadar kalır.
  *
  * Bellek: yalnızca kimlikler tutulur. 100 bin fotoğrafta MediaStore kimlikleri ~0.8 MB (LongArray), Room kimlikleri
  * ~3 MB (List<Long>), işlenecek liste ~0.8 MB; tepe ~8-10 MB. URI/tarih dizileri [BATCH_SIZE] fotoğraflık parçalarla
@@ -48,7 +51,11 @@ import kotlinx.coroutines.withContext
  *
  * Hata politikası: tek fotoğraf kodlanamazsa (çözme, ONNX çıkarımı) atlanır, `failed` artar, devam edilir; ham istisna,
  * yol veya içerik log'lanmaz (hiç log yazılmaz). Model düzeyi hatalar ([ModelFailures.isModelLevel]), veritabanı
- * ve tarama hataları akışı [IndexException.Unexpected] ile, izin hatası [IndexException.PermissionMissing] ile sonlandırır.
+ * ve tarama hataları akışı [IndexException.Unexpected] ile sonlandırır. Fotoğraf okurken [SecurityException]
+ * (izin geri alındı) tek fotoğraf hatası sayılmaz, akışı [IndexException.PermissionMissing] ile keser. Bu çalıştırmada
+ * hiç başarı yokken [MAX_FAILURES_WITHOUT_SUCCESS] fotoğraf üst üste başarısız olursa (bozuk/uyumsuz model, tüm
+ * fotoğrafları etkileyen sorun) akış [IndexException.Unexpected] ile kesilir; aksi halde bozuk model tüm galeriyi
+ * sessizce COMPLETED yapardı. İlk başarıdan sonra bu sınır uygulanmaz.
  * Taramadan sonra MediaStore'dan kaybolmuş fotoğraf hata sayılmaz: kaydı silinir ve işlenmiş sayılır.
  *
  * IndexState: tarama sonunda (`processed = 0`), her [STATE_WRITE_EVERY] fotoğrafta, bitişte ve (iptal/hata) çıkışta yazılır;
@@ -74,6 +81,7 @@ class RoomPhotoIndexer(
         val total = plan.ids.size
         var processed = 0
         var failed = 0
+        var successes = 0
         var completed = false
         try {
             guarded { writeState(total, 0, plan.lastRunAt) }
@@ -91,7 +99,15 @@ class RoomPhotoIndexer(
                         guarded { photoDao.deleteById(id) }
                     } else {
                         val vector = encodeOrNull(media)
-                        if (vector == null) failed++ else guarded { write(media, vector, plan.targetVersion) }
+                        if (vector == null) {
+                            failed++
+                            if (successes == 0 && failed >= MAX_FAILURES_WITHOUT_SUCCESS) {
+                                throw IndexException.Unexpected(IllegalStateException("ardışık kodlama hatası sınırı aşıldı"))
+                            }
+                        } else {
+                            guarded { write(media, vector, plan.targetVersion) }
+                            successes++
+                        }
                     }
                     processed++
                     if (processed % STATE_WRITE_EVERY == 0 && processed < total) {
@@ -126,6 +142,11 @@ class RoomPhotoIndexer(
         val dbList = photoDao.allIds()
         val dbIds = LongArray(dbList.size) { dbList[it] }
 
+        // Güvenli taraf: galeri boş görünüp Room doluysa (kısmi erişim/geçici hata) hiçbir şey silme ve işleme.
+        if (mediaIds.isEmpty() && dbIds.isNotEmpty()) {
+            return Plan(LongArray(0), maxOf(photoDao.maxIndexVersion() ?: 0, PIPELINE_VERSION), stateDao.get()?.lastRunAt)
+        }
+
         // Galeride artık olmayanlar: toplu sil (CASCADE embedding'i siler).
         val stale = IdSets.difference(dbIds, mediaIds)
         var i = 0
@@ -136,25 +157,27 @@ class RoomPhotoIndexer(
         }
 
         // Silmeler sonrası: silinen kayıtların sürümü tabanı yükseltmesin.
-        val base = maxOf(photoDao.maxIndexVersion() ?: 0, PIPELINE_VERSION)
-        val target = if (mode == IndexMode.FULL) base + 1 else base
-        val ids = when (mode) {
-            IndexMode.FULL -> IdSets.mergeDescending(mediaIds, LongArray(0))
-            IndexMode.INCREMENTAL -> {
-                val missing = IdSets.difference(mediaIds, dbIds)
-                val needing = photoDao.idsNeedingIndex(target, embeddingSpec.modelVersion).toLongArray().also { it.sort() }
-                IdSets.mergeDescending(missing, needing)
-            }
-        }
+        val max = maxOf(photoDao.maxIndexVersion() ?: 0, PIPELINE_VERSION)
+        val missing = IdSets.difference(mediaIds, dbIds)
+        val needing = photoDao.idsNeedingIndex(max, embeddingSpec.modelVersion).toLongArray().also { it.sort() }
+        val remainder = IdSets.mergeDescending(missing, needing)
+        // INCREMENTAL her zaman kalanı işler. FULL: Room'da kalan varsa (yarım FULL) aynı hedefle kalanı sürdürür, yoksa yeni tur.
+        // "Kalan" ölçütü yalnızca Room'daki kayıtlardır (yarım FULL); yeni eklenen fotoğraflar tek başına yeni tur açmaz
+        // ama kalan işlenirken (ya da INCREMENTAL'da) onlar da işlenir.
+        val startNewRound = mode == IndexMode.FULL && needing.isEmpty()
+        val target = if (startNewRound) max + 1 else max
+        val ids = if (startNewRound) IdSets.mergeDescending(mediaIds, LongArray(0)) else remainder
         return Plan(ids, target, stateDao.get()?.lastRunAt)
     }
 
-    /** Başarılıysa vektör, tek fotoğraf hatasıysa null; model düzeyi hata [IndexException.Unexpected] olur. */
+    /** Başarılıysa vektör, tek fotoğraf hatasıysa null; model düzeyi hata [IndexException.Unexpected], izin hatası [IndexException.PermissionMissing] olur. */
     private suspend fun encodeOrNull(media: MediaPhoto): FloatArray? =
         try {
             encoder.encode(media.uri)
         } catch (e: CancellationException) {
             throw e
+        } catch (e: SecurityException) {
+            throw IndexException.PermissionMissing()
         } catch (e: Exception) {
             if (ModelFailures.isModelLevel(e)) throw IndexException.Unexpected(e)
             null
@@ -197,6 +220,9 @@ class RoomPhotoIndexer(
 
         /** SQLite değişken sınırının altında toplu silme parçası. */
         const val DELETE_CHUNK = 500
+
+        /** Bu çalıştırmada hiç başarı yokken bu kadar fotoğraf başarısız olursa akış kesilir (bkz. sınıf KDoc'u). */
+        const val MAX_FAILURES_WITHOUT_SUCCESS = 20
 
         /** IndexState yazım aralığı (fotoğraf sayısı). */
         const val STATE_WRITE_EVERY = 10

@@ -41,13 +41,6 @@ class IndexWorkTest {
     }
 
     @Test
-    fun effectiveMode_fullResumesAsIncremental_afterRestart() {
-        assertEquals(IndexMode.FULL, IndexWork.effectiveMode(IndexMode.FULL, 0))
-        for (attempt in 1..5) assertEquals(IndexMode.INCREMENTAL, IndexWork.effectiveMode(IndexMode.FULL, attempt))
-        for (attempt in 0..3) assertEquals(IndexMode.INCREMENTAL, IndexWork.effectiveMode(IndexMode.INCREMENTAL, attempt))
-    }
-
-    @Test
     fun parseMode_roundTrips_andDefaultsToIncremental() {
         for (m in IndexMode.entries) assertEquals(m, IndexWork.parseMode(m.name))
         for (bad in listOf(null, "", "full", "X")) assertEquals(IndexMode.INCREMENTAL, IndexWork.parseMode(bad))
@@ -74,10 +67,13 @@ class IndexWorkTest {
     }
 
     @Test
-    fun execute_afterRestart_runsIncrementalInsteadOfFull() = runBlocking {
-        val indexer = FakeIndexer()
-        IndexWork.execute(indexer, IndexMode.FULL, 1)
-        assertEquals(listOf(IndexMode.INCREMENTAL), indexer.modes)
+    fun execute_keepsRequestedMode_evenAfterRestart() = runBlocking {
+        // FULL kendi başına yeniden başlatılabilir (RoomPhotoIndexer): mod yeniden denemede değiştirilmez.
+        for (attempt in 0..2) {
+            val indexer = FakeIndexer()
+            IndexWork.execute(indexer, IndexMode.FULL, attempt)
+            assertEquals(listOf(IndexMode.FULL), indexer.modes)
+        }
     }
 
     @Test

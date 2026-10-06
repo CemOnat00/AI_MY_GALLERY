@@ -77,7 +77,7 @@ class RoomPhotoIndexerDeviceTest {
         assertTrue(encoded.isEmpty())
         assertTrue(db.photoDao().idsNeedingIndex(RoomPhotoIndexer.PIPELINE_VERSION, spec.modelVersion).isEmpty())
 
-        // FULL: hedef sürüm artar, hepsi yerine yazılır, embedding hiç eksilmez.
+        // FULL (indeks güncel -> yeni tur): hedef sürüm artar, hepsi yerine yazılır, embedding hiç eksilmez.
         idx.index(IndexMode.FULL).toList()
         assertEquals(RoomPhotoIndexer.PIPELINE_VERSION + 1, db.photoDao().maxIndexVersion())
         assertEquals(4, db.photoEmbeddingDao().count())
@@ -119,8 +119,9 @@ class RoomPhotoIndexerDeviceTest {
     fun bulkDelete_ofManyIds_works() = runBlocking {
         val ids = (1L..1_200L).toList()
         for (id in ids) db.photoDao().upsert(Photo(id, "content://x/$id", null, 1L, 1))
-        val idx = indexer(Source(emptyList()))
+        // Galeri boş OLMAMALI: boş MediaStore + dolu Room'da temizleme bilinçli olarak atlanır.
+        val idx = indexer(Source(listOf(5_000L)))
         idx.index().toList()
-        assertEquals(0, db.photoDao().count())
+        assertEquals(listOf(5_000L), db.photoDao().allIds())
     }
 }

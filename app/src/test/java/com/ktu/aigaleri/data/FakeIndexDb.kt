@@ -93,6 +93,9 @@ class RecordingSource(photos: List<MediaPhoto> = emptyList()) : MediaPhotoSource
     val loadByIdsSizes = mutableListOf<Int>()
     var idsFailure: Throwable? = null
 
+    /** loadIds döndükten hemen sonra çağrılır (taramada iptal taklidi). */
+    var afterLoadIds: () -> Unit = {}
+
     /** loadByIds sonuçlarından gizlenecek kimlikler (tarama sonrası silinme taklidi). */
     val vanishedAfterScan = mutableSetOf<Long>()
 
@@ -100,7 +103,7 @@ class RecordingSource(photos: List<MediaPhoto> = emptyList()) : MediaPhotoSource
     override suspend fun loadPhotos(): List<MediaPhoto> { loadPhotosCalls++; return gallery }
     override suspend fun loadIds(): LongArray {
         idsFailure?.let { throw it }
-        return LongArray(gallery.size) { gallery[it].id }.also { it.reverse() } // sırasız gelsin
+        return LongArray(gallery.size) { gallery[it].id }.also { it.reverse() }.also { afterLoadIds() } // sırasız gelsin
     }
     override suspend fun loadByIds(ids: List<Long>): List<MediaPhoto> {
         loadByIdsSizes += ids.size

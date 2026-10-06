@@ -287,9 +287,9 @@ class RoomPhotoIndexerTest {
         val db = FakeIndexDb()
         val n = 1_234L
         for (id in 1..n) db.photos[id] = mediaPhoto(id).toPhoto(1, 1)
-        val e = env(emptyList(), db = db)
+        val e = env(listOf(5_000L), db = db) // galeri boş OLMAMALI (boş galeride silme yapılmaz)
         e.indexer.index().run()
-        assertTrue(db.photos.isEmpty())
+        assertEquals(setOf(5_000L), db.photos.keys)
         assertEquals(3, db.deleteByIdsCalls.size)
         assertTrue(db.deleteByIdsCalls.all { it.size <= RoomPhotoIndexer.DELETE_CHUNK })
         assertEquals(n, db.deleteByIdsCalls.sumOf { it.size }.toLong())
@@ -323,7 +323,7 @@ class RoomPhotoIndexerTest {
         val e = env(listOf(1, 2, 3, 4))
         e.encoder.failures[uri(3)] = ImageDecodeException("bozuk")
         e.encoder.failures[uri(1)] = ModelException.Inference("run", RuntimeException("ort"))
-        e.encoder.failures[uri(4)] = SecurityException("dosya")
+        e.encoder.failures[uri(4)] = java.io.FileNotFoundException("dosya")
         val out = e.indexer.index().run()
         assertEquals(IndexProgress(IndexPhase.COMPLETED, 4, 4, failed = 3), out.last())
         // INDEXING sırası 4,3,2,1: hata, hata, başarı, hata -> failed 1,2,2,3
@@ -492,5 +492,142 @@ class RoomPhotoIndexerTest {
         val first = e.indexer.index().first()
         assertEquals(IndexPhase.SCANNING, first.phase)
         assertEquals(0, first.total)
+    }
+
+    // ---- FULL kendi başına yeniden başlatılabilir ----
+
+    @Test
+    fun full_cancelledDuringScanning_writesNothing_andRetryRunsAsRealFull() = runTest {
+        val e = env(listOf(1, 2, 3))
+        e.indexer.index().run() // hepsi indexVersion 1
+        e.encoder.encoded.clear()
+        lateinit var job: kotlinx.coroutines.Job
+        e.source.afterLoadIds = { job.cancel() }
+        job = launch { e.indexer.index(IndexMode.FULL).collect { } }
+        job.join()
+        e.source.afterLoadIds = {}
+        assertTrue(e.encoder.encoded.isEmpty()) // sıfır yazım
+        assertTrue(e.db.photos.values.all { it.indexVersion == 1 })
+
+        val out = e.indexer.index(IndexMode.FULL).run() // gerçekten FULL çalışır
+        assertEquals(3, out.last().total)
+        assertEquals(3, e.encoder.encoded.size)
+        assertTrue(e.db.photos.values.all { it.indexVersion == 2 })
+    }
+
+    @Test
+    fun full_afterPartialFull_resumesWithSameTarget_thenNextFullStartsNewRound() = runTest {
+        val e = env(listOf(1, 2, 3, 4, 5))
+        e.indexer.index().run()
+        collectCancelledAfterEncodes(e, IndexMode.FULL, 2) // 5 ve 4 -> sürüm 2
+        e.encoder.encoded.clear()
+
+        val resumed = e.indexer.index(IndexMode.FULL).run()
+        assertEquals(3, resumed.last().total) // yalnızca kalan: baştan başlamaz
+        assertEquals(listOf(uri(3), uri(2), uri(1)), e.encoder.encoded)
+        assertTrue(e.db.photos.values.all { it.indexVersion == 2 }) // aynı hedef: max+1 değil
+
+        e.encoder.encoded.clear()
+        val next = e.indexer.index(IndexMode.FULL).run() // tamamlanmış: yeni tur
+        assertEquals(5, next.last().total)
+        assertEquals(5, e.encoder.encoded.size)
+        assertTrue(e.db.photos.values.all { it.indexVersion == 3 })
+    }
+
+    @Test
+    fun full_onEmptyIndex_startsNewRound_andNewPhotosAfterCompletedFullGetNewRoundToo() = runTest {
+        val e = env(listOf(1, 2))
+        e.indexer.index(IndexMode.FULL).run()
+        assertTrue(e.db.photos.values.all { it.indexVersion == 2 }) // boş indekste max=1 -> yeni tur 2
+        e.source.gallery = listOf(1L, 2L, 3L).map { mediaPhoto(it) }
+        e.encoder.encoded.clear()
+        // Room'da kalan yok (yeni fotoğraf tek başına kalan sayılmaz): FULL yeni tur, hedef 3, hepsi işlenir.
+        val out = e.indexer.index(IndexMode.FULL).run()
+        assertEquals(3, out.last().total)
+        assertTrue(e.db.photos.values.all { it.indexVersion == 3 })
+    }
+
+    @Test
+    fun full_resumingPartialFull_alsoIndexesNewlyAddedPhotos() = runTest {
+        val e = env(listOf(1, 2, 3))
+        e.indexer.index().run()
+        collectCancelledAfterEncodes(e, IndexMode.FULL, 1) // 3 -> sürüm 2; 2,1 kalan
+        e.source.gallery = (1L..4L).map { mediaPhoto(it) }
+        e.encoder.encoded.clear()
+        val out = e.indexer.index(IndexMode.FULL).run()
+        assertEquals(3, out.last().total) // kalan 2,1 + yeni 4
+        assertEquals(setOf(uri(4), uri(2), uri(1)), e.encoder.encoded.toSet())
+        assertTrue(e.db.photos.values.all { it.indexVersion == 2 })
+    }
+
+    // ---- izin ve ardışık hata ----
+
+    @Test
+    fun securityExceptionWhileReadingPhoto_isPermissionMissing_notPerPhotoFailure() = runTest {
+        val e = env(listOf(1, 2, 3))
+        e.encoder.failures[uri(2)] = SecurityException("izin geri alındı")
+        try {
+            e.indexer.index().run()
+            fail()
+        } catch (_: IndexException.PermissionMissing) {
+        }
+        assertEquals(setOf(3L), e.db.photos.keys) // kesilmeden önceki yazım korunur
+        assertEquals(1, e.encoder.released)
+    }
+
+    @Test
+    fun consecutiveFailuresWithoutAnySuccess_endFlowWithUnexpected() = runTest {
+        val n = RoomPhotoIndexer.MAX_FAILURES_WITHOUT_SUCCESS
+        val e = env((1L..(n + 5L)).toList())
+        for (id in 1L..(n + 5L)) e.encoder.failures[uri(id)] = ImageDecodeException("bozuk")
+        try {
+            e.indexer.index().run()
+            fail("Unexpected beklenir")
+        } catch (ex: IndexException.Unexpected) {
+            assertTrue(causes(ex).any { it is IllegalStateException })
+        }
+        assertEquals(n, e.encoder.encoded.size) // sınırda kesildi, galeri sessizce bitirilmedi
+        assertTrue(e.db.photos.isEmpty())
+        assertEquals(1, e.encoder.released)
+    }
+
+    @Test
+    fun failuresBelowLimit_orAfterFirstSuccess_doNotEndFlow() = runTest {
+        val n = RoomPhotoIndexer.MAX_FAILURES_WITHOUT_SUCCESS
+        // n-1 hata: sınırın altında tamamlanır.
+        val a = env((1L..(n - 1L)).toList())
+        for (id in 1L until n) a.encoder.failures[uri(id)] = ImageDecodeException("bozuk")
+        assertEquals(n - 1, a.indexer.index().run().last().failed)
+        // İlk işlenen (en büyük kimlik) başarılı, sonrasında 2n hata: ilk başarıdan sonra sınır uygulanmaz.
+        val total = 2L * n + 1
+        val b = env((1L..total).toList())
+        for (id in 1L until total) b.encoder.failures[uri(id)] = ImageDecodeException("bozuk")
+        val last = b.indexer.index().run().last()
+        assertEquals(IndexPhase.COMPLETED, last.phase)
+        assertEquals(2 * n, last.failed)
+    }
+
+    // ---- boş MediaStore güvenliği ----
+
+    @Test
+    fun emptyMediaStore_withPopulatedDb_deletesAndProcessesNothing() = runTest {
+        val e = env(listOf(1, 2, 3))
+        e.indexer.index().run()
+        e.source.gallery = emptyList() // SecurityException atılmadan boş döndü (ör. kısmi erişim)
+        e.encoder.encoded.clear()
+        for (mode in IndexMode.entries) {
+            val out = e.indexer.index(mode).run()
+            assertEquals(listOf(IndexPhase.SCANNING, IndexPhase.COMPLETED), out.map { it.phase })
+            assertEquals(setOf(1L, 2L, 3L), e.db.photos.keys)
+            assertEquals(setOf(1L, 2L, 3L), e.db.embeddings.keys)
+        }
+        assertTrue(e.encoder.encoded.isEmpty())
+        assertTrue(e.db.deleteByIdsCalls.isEmpty())
+    }
+
+    @Test
+    fun emptyMediaStore_withEmptyDb_isPlainEmptyRun() = runTest {
+        val e = env(emptyList())
+        assertEquals(IndexProgress(IndexPhase.COMPLETED, 0, 0), e.indexer.index(IndexMode.FULL).run().last())
     }
 }
