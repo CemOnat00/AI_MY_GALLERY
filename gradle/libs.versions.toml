@@ -38,6 +38,16 @@ coil = "3.4.0"
 # bozmadığı cihazda doğrulanamadı (cihaz yok).
 # ABI filtresi/budama bu görevde yapılmaz (model-research.md 5.2, ileri aşama).
 onnxruntime = "1.30.0"
+# WorkManager (T-006): indeksleme işini yeniden başlatılabilir, kısıtlı ve süreç ölümüne dayanıklı çalıştırır
+# (architecture.md Bölüm 3). 2.11.2: AGP 9.1.0 ile uyumlu en yeni sürüm (2.12.0 AGP 9.6 ister). Ağ kullanmaz;
+# AAR'ın ACCESS_NETWORK_STATE izni ve foreground servis/izinleri AndroidManifest.xml'de tools:node="remove" ile çıkarılır
+# (kapsam dışı, MergedManifestTest beyaz listesi). work-runtime-ktx 2.10'dan beri boş sarmalayıcıdır; CoroutineWorker
+# work-runtime içindedir, istenen artefakt adı için ktx bildirildi.
+work = "2.11.2"
+# ExifInterface (T-006): fotoğrafın EXIF yönünü okumak için. Coil üzerinden zaten geçişli olarak 1.4.2 çözülüyordu;
+# lint (ExifInterface) android.media.ExifInterface yerine bunu önerir, bu yüzden açıkça ve aynı sürümle bildirildi
+# (yeni kod/boyut eklemez). Ağ veya analitik bileşeni yoktur.
+exifinterface = "1.4.2"
 # Test bağımlılıkları.
 junit = "4.13.2"
 androidxTestExtJunit = "1.3.0"
@@ -75,6 +85,13 @@ androidx-room-testing = { group = "androidx.room", name = "room-testing", versio
 kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "coroutines" }
 # ONNX Runtime Android (T-007): cihaz üstü ONNX çıkarımı; ml paketi dışında kullanılmaz.
 onnxruntime-android = { group = "com.microsoft.onnxruntime", name = "onnxruntime-android", version.ref = "onnxruntime" }
+# ExifInterface: bkz. exifinterface sürüm yorumu.
+androidx-exifinterface = { group = "androidx.exifinterface", name = "exifinterface", version.ref = "exifinterface" }
+# WorkManager (T-006): CoroutineWorker + benzersiz iş kuyruğu; yalnızca work paketi ve AppDependencies kullanır.
+androidx-work-runtime-ktx = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "work" }
+# WorkManager test başlatıcısı (androidTest, T-006): benzersiz iş politikasını (KEEP/REPLACE) gerçek WorkManager
+# üzerinde, işi çalıştırmadan denemek için; yalnızca androidTest sınıf yoluna girer.
+androidx-work-testing = { group = "androidx.work", name = "work-testing", version.ref = "work" }
 # Birim testi.
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 # Flow/suspend birim testleri (runTest); domain sözleşme testlerinde kullanılıyor.

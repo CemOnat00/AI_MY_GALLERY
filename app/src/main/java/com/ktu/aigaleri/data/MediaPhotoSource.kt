@@ -16,7 +16,23 @@ interface MediaPhotoSource {
      * tarihi bilinmeyenler sonda.
      *
      * Bellek sınırı: liste tamamen belleğe alınır; 50-100 bin fotoğrafta onlarca MB tutabilir.
-     * Sayfalama/parça okuma kararı indeksleme görevine (T-006) aittir.
+     * İndeksleyici (T-006) bunu KULLANMAZ; [loadIds] ve [loadByIds] ile parça parça okur.
      */
     suspend fun loadPhotos(): List<MediaPhoto>
+
+    /**
+     * Galerideki tüm fotoğraf kimlikleri (sıra belirsiz). Yalnızca kimlik sütunu okunur; 100 bin fotoğraf
+     * için ~800 KB (LongArray). Varsayılan gerçekleme [loadPhotos]'a düşer, gerçek kaynak geçersiz kılar.
+     */
+    suspend fun loadIds(): LongArray = loadPhotos().let { list -> LongArray(list.size) { list[it].id } }
+
+    /**
+     * Verilen kimliklerin fotoğrafları (sıra belirsiz). Galeride artık olmayan kimlikler sonuçta bulunmaz
+     * (hata değil). Çağıran parçaları küçük tutmalıdır (indeksleyici <= 50); gerçek kaynak SQLite değişken
+     * sınırı için kendi içinde de parçalar. Varsayılan gerçekleme [loadPhotos]'a düşer.
+     */
+    suspend fun loadByIds(ids: List<Long>): List<MediaPhoto> {
+        val wanted = ids.toHashSet()
+        return loadPhotos().filter { it.id in wanted }
+    }
 }

@@ -28,6 +28,8 @@ private class RecordingLauncher(
     override val isAvailable: Boolean = true,
     var failure: RuntimeException? = null,
 ) : IndexLauncher {
+    val running = MutableStateFlow(false)
+    override val isRunning: kotlinx.coroutines.flow.Flow<Boolean> get() = running
     val modes = mutableListOf<IndexMode>()
     override fun launch(mode: IndexMode) {
         modes += mode
@@ -38,7 +40,7 @@ private class RecordingLauncher(
 @OptIn(ExperimentalCoroutinesApi::class)
 class IndexStatusViewModelEdgeCaseTest {
     private val period = IndexStatusViewModel.SAMPLE_PERIOD_MS
-    private val cooldown = IndexStatusViewModel.REINDEX_COOLDOWN_MS
+    private val grace = IndexStatusViewModel.LAUNCH_GRACE_MS
 
     @Before fun setUp() = Dispatchers.setMain(StandardTestDispatcher())
 
@@ -58,15 +60,16 @@ class IndexStatusViewModelEdgeCaseTest {
         vm.reindex()
         assertEquals(2, launcher.modes.size)
         assertFalse(vm.reindexError.value)
+        runCurrent()
         assertTrue(vm.reindexInProgress.value)
     }
 
     @Test
-    fun reindex_cooldownBoundary_blockedJustBefore_allowedAfter() = runTest {
+    fun reindex_graceBoundary_blockedJustBefore_allowedAfter_whenWorkNeverAppears() = runTest {
         val launcher = RecordingLauncher()
         val vm = IndexStatusViewModel(MutableStateFlow(null), launcher)
         vm.reindex()
-        advanceTimeBy(cooldown - 1)
+        advanceTimeBy(grace - 1)
         runCurrent()
         assertTrue(vm.reindexInProgress.value)
         vm.reindex()
@@ -79,19 +82,36 @@ class IndexStatusViewModelEdgeCaseTest {
     }
 
     @Test
-    fun reindex_tappedManyTimes_launchesOnce_thenAgainAfterEachCooldown() = runTest {
+    fun reindex_tappedManyTimes_launchesOnce_thenAgainAfterEachWorkCycle() = runTest {
         val launcher = RecordingLauncher()
         val vm = IndexStatusViewModel(MutableStateFlow(null), launcher)
         repeat(50) { vm.reindex() }
         assertEquals(1, launcher.modes.size)
         repeat(3) {
-            advanceTimeBy(cooldown + 1)
+            launcher.running.value = true
+            runCurrent()
+            repeat(5) { vm.reindex() }
+            launcher.running.value = false
             runCurrent()
             assertFalse(vm.reindexInProgress.value)
             repeat(5) { vm.reindex() }
         }
         assertEquals(4, launcher.modes.size)
         assertTrue(launcher.modes.all { it == IndexMode.FULL })
+    }
+
+    @Test
+    fun reindex_launcherFlowFails_isTreatedAsNotRunning() = runTest {
+        val launcher = object : IndexLauncher {
+            val modes = mutableListOf<IndexMode>()
+            override val isRunning: kotlinx.coroutines.flow.Flow<Boolean> = flow { throw IllegalStateException("work db") }
+            override fun launch(mode: IndexMode) { modes += mode }
+        }
+        val vm = IndexStatusViewModel(MutableStateFlow(null), launcher)
+        runCurrent()
+        assertFalse(vm.reindexInProgress.value)
+        vm.reindex()
+        assertEquals(1, launcher.modes.size)
     }
 
     @Test

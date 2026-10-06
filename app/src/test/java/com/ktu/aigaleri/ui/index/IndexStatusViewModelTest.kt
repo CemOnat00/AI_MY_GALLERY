@@ -116,17 +116,49 @@ class IndexStatusViewModelTest {
     }
 
     @Test
-    fun reindex_doubleTapIsIgnored_untilCooldownEnds() = runTest {
+    fun reindex_doubleTapIsIgnored_whileWorkIsActive_andInProgressFollowsWorkState() = runTest {
         val launcher = FakeLauncher()
         val vm = IndexStatusViewModel(MutableStateFlow(null), launcher)
         vm.reindex()
         vm.reindex()
         assertEquals(1, launcher.modes.size)
-        assertTrue(vm.reindexInProgress.value)
-        advanceTimeBy(IndexStatusViewModel.REINDEX_COOLDOWN_MS + 1)
+        runCurrent()
+        assertTrue(vm.reindexInProgress.value) // iş henüz gözlenmedi: yerel "başlatılıyor" bayrağı
+        launcher.running.value = true
+        runCurrent()
+        assertTrue(vm.reindexInProgress.value) // artık iş durumundan
+        advanceTimeBy(IndexStatusViewModel.LAUNCH_GRACE_MS * 2)
+        assertTrue(vm.reindexInProgress.value) // sabit bekleme süresi yok: iş sürdükçe kilitli
+        vm.reindex()
+        assertEquals(1, launcher.modes.size)
+        launcher.running.value = false
+        runCurrent()
         assertFalse(vm.reindexInProgress.value)
         vm.reindex()
         assertEquals(2, launcher.modes.size)
+    }
+
+    @Test
+    fun reindex_whenWorkNeverObservedRunning_flagClearsAfterGrace() = runTest {
+        val launcher = FakeLauncher()
+        val vm = IndexStatusViewModel(MutableStateFlow(null), launcher)
+        vm.reindex()
+        runCurrent()
+        assertTrue(vm.reindexInProgress.value)
+        advanceTimeBy(IndexStatusViewModel.LAUNCH_GRACE_MS + 1)
+        runCurrent()
+        assertFalse(vm.reindexInProgress.value)
+    }
+
+    @Test
+    fun reindex_ignoredWhenWorkAlreadyRunning_beforeAnyTap() = runTest {
+        val launcher = FakeLauncher()
+        launcher.running.value = true
+        val vm = IndexStatusViewModel(MutableStateFlow(null), launcher)
+        runCurrent()
+        assertTrue(vm.reindexInProgress.value)
+        vm.reindex()
+        assertTrue(launcher.modes.isEmpty())
     }
 
     @Test
@@ -142,6 +174,8 @@ class IndexStatusViewModelTest {
 
 private class FakeLauncher(available: Boolean = true) : IndexLauncher {
     override val isAvailable = available
+    val running = MutableStateFlow(false)
+    override val isRunning: kotlinx.coroutines.flow.Flow<Boolean> get() = running
     val modes = mutableListOf<IndexMode>()
     override fun launch(mode: IndexMode) { modes += mode }
 }

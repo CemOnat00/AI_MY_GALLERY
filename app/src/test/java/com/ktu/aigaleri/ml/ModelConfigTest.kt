@@ -46,10 +46,12 @@ class ModelConfigTest {
                 .map { it.getAttributeNS(android, "name") }.toSet()
         }
         assertEquals(
-            setOf("android.permission.INTERNET", "android.permission.ACCESS_NETWORK_STATE"),
+            // T-006: WorkManager'ın FOREGROUND_SERVICE izni de çıkarılır (foreground servis kapsam dışı).
+            setOf("android.permission.INTERNET", "android.permission.ACCESS_NETWORK_STATE", "android.permission.FOREGROUND_SERVICE"),
             removed("uses-permission"),
         )
         assertEquals(setOf("ai.onnxruntime.TelemetryInitializer"), removed("provider"))
+        assertEquals(setOf("androidx.work.impl.foreground.SystemForegroundService"), removed("service"))
     }
 
     @Test

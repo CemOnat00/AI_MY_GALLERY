@@ -29,8 +29,37 @@ interface PhotoDao {
     )
     suspend fun idsWithoutEmbedding(modelVersion: String): List<Long>
 
+    /**
+     * Tüm kimlikler, artan sıralı (indeksleyici taramasında MediaStore ile fark almak için).
+     * Bellek: kimlik başına ~32 bayt (boxed Long); 100 bin fotoğrafta ~3 MB.
+     */
+    @Query("SELECT mediaStoreId FROM photo ORDER BY mediaStoreId")
+    suspend fun allIds(): List<Long>
+
+    /** En yüksek `indexVersion` (kayıt yoksa null); indeksleyicinin hedef sürümünün tabanı. */
+    @Query("SELECT MAX(indexVersion) FROM photo")
+    suspend fun maxIndexVersion(): Int?
+
+    /**
+     * Yeniden işlenmesi gereken kayıtlar: `indexVersion` hedefin altında VEYA [modelVersion] ile yazılmış
+     * vektörü yok (eksik ya da eski model). Kimlik azalan sıralı (yeni eklenenler önce).
+     */
+    @Query(
+        "SELECT mediaStoreId FROM photo WHERE indexVersion < :targetVersion OR mediaStoreId NOT IN " +
+            "(SELECT photoId FROM photo_embedding WHERE modelVersion = :modelVersion) " +
+            "ORDER BY mediaStoreId DESC",
+    )
+    suspend fun idsNeedingIndex(targetVersion: Int, modelVersion: String): List<Long>
+
     @Query("DELETE FROM photo WHERE mediaStoreId = :mediaStoreId")
     suspend fun deleteById(mediaStoreId: Long)
+
+    /**
+     * Toplu silme (CASCADE embedding'i de siler). Çağıran SQLite değişken sınırı için parçalar
+     * (<= 500 kimlik/çağrı).
+     */
+    @Query("DELETE FROM photo WHERE mediaStoreId IN (:ids)")
+    suspend fun deleteByIds(ids: List<Long>)
 
     @Query("DELETE FROM photo")
     suspend fun deleteAll()

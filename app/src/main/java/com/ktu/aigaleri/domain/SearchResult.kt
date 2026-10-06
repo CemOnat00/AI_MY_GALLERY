@@ -3,8 +3,8 @@ package com.ktu.aigaleri.domain
 /**
  * Tek bir arama sonucu. Android veya model tipi içermez; [uri] MediaStore URI'sinin metin halidir.
  *
- * @property photoId MediaStore kimliği (Long). T-002'de `Photo.mediaStoreId` birincil ve benzersiz
- *   anahtar olacaktır; bu alan onunla birebir aynı değeri taşır.
+ * @property photoId MediaStore kimliği (Long). `Photo.mediaStoreId` birincil ve benzersiz anahtardır;
+ *   bu alan onunla birebir aynı değeri taşır.
  * @property uri fotoğrafın MediaStore URI'si (string).
  * @property score benzerlik skoru; büyük olan daha benzer. Cosine benzerliği için [-1, 1] aralığı.
  * @property dateTaken çekim zamanı (epoch ms); bilinmiyorsa null.

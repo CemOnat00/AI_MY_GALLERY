@@ -39,6 +39,10 @@ class MergedManifestTest {
     private val allowedPermissions = setOf(
         "android.permission.READ_MEDIA_IMAGES",
         "android.permission.READ_EXTERNAL_STORAGE",
+        // T-006: WorkManager AAR'ı (bilinçli kabul): iş sürekliliği için normal izinler. FOREGROUND_SERVICE ve
+        // ACCESS_NETWORK_STATE manifestte tools:node=remove ile çıkarılır (aşağıda ayrıca doğrulanır).
+        "android.permission.WAKE_LOCK",
+        "android.permission.RECEIVE_BOOT_COMPLETED",
         "$pkg.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION", // AndroidX imza izni
     )
 
@@ -53,6 +57,9 @@ class MergedManifestTest {
         for (net in listOf("android.permission.INTERNET", "android.permission.ACCESS_NETWORK_STATE")) {
             assertFalse("$variant: $net birleşik manifestte", declaredNames.contains(net))
         }
+        // Foreground servis/bildirim kapsam dışı (T-006): izin yok, WorkManager'ın foreground servisi de yok.
+        assertFalse("$variant: FOREGROUND_SERVICE*", declaredNames.any { it.startsWith("android.permission.FOREGROUND_SERVICE") })
+        assertFalse("$variant: POST_NOTIFICATIONS", declaredNames.contains("android.permission.POST_NOTIFICATIONS"))
         assertTrue(declaredNames.contains("android.permission.READ_MEDIA_IMAGES"))
         val readExt = declared.single { it.androidAttr("name") == "android.permission.READ_EXTERNAL_STORAGE" }
         assertEquals("32", readExt.androidAttr("maxSdkVersion"))
@@ -64,8 +71,19 @@ class MergedManifestTest {
             .flatMap { names(doc, it) }
         assertTrue("$variant: ORT bileşeni kaldı", allNames.none { it.startsWith("ai.onnxruntime") })
         assertEquals(setOf("androidx.startup.InitializationProvider"), names(doc, "provider"))
-        assertEquals(setOf("androidx.room.MultiInstanceInvalidationService"), names(doc, "service"))
-        assertEquals(setOf("androidx.profileinstaller.ProfileInstallReceiver"), names(doc, "receiver"))
+        assertEquals(
+            setOf("androidx.room.MultiInstanceInvalidationService", "androidx.work.impl.background.systemjob.SystemJobService"),
+            names(doc, "service"),
+        )
+        assertEquals(
+            setOf(
+                "androidx.profileinstaller.ProfileInstallReceiver",
+                "androidx.work.impl.utils.ForceStopRunnable\$BroadcastReceiver",
+                "androidx.work.impl.background.systemalarm.RescheduleReceiver",
+                "androidx.work.impl.diagnostics.DiagnosticsReceiver",
+            ),
+            names(doc, "receiver"),
+        )
         val debugOnlyActivities = setOf("androidx.compose.ui.tooling.PreviewActivity", "androidx.activity.ComponentActivity")
         val expectedActivities = setOf("$pkg.ui.MainActivity") + if (variant == "debug") debugOnlyActivities else emptySet()
         assertEquals(expectedActivities, names(doc, "activity"))

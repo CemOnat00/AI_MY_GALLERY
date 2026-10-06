@@ -54,7 +54,7 @@ class AppDependenciesStubsTest {
     }
 
     @Test
-    fun stubs_areInstantiatedOnlyInAppDependencies() {
+    fun stubSearchRepository_isInstantiatedOnlyInAppDependencies_andIndexLauncherIsReal() {
         val offenders = mainSrc.walkTopDown()
             .filter { it.isFile && it.extension == "kt" }
             .filter { it.name != "AppDependencies.kt" && !it.path.contains("/ui/stub/") }
@@ -64,7 +64,9 @@ class AppDependenciesStubsTest {
         assertTrue("stub örneği AppDependencies dışında: $offenders", offenders.isEmpty())
         val deps = File(mainSrc, "ui/AppDependencies.kt").readText()
         assertTrue(deps.contains("StubSearchRepository()"))
-        assertTrue(deps.contains("StubIndexLauncher()"))
+        // T-006: indeks başlatıcı gerçek (WorkManager); stub yalnızca UI testlerinde kalır.
+        assertTrue(deps.contains("WorkManagerIndexLauncher("))
+        assertFalse(deps.contains("StubIndexLauncher"))
     }
 
     @Test

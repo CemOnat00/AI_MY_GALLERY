@@ -67,4 +67,19 @@ class MediaStorePhotoSourceTest {
         assertEquals(photos.size, source.count())
         assertTrue(photos.all { it.id > 0 && it.uri.startsWith("content://") })
     }
+
+    @Test
+    fun loadIdsAndLoadByIds_findInsertedRecord_andIgnoreUnknownIds() = runBlocking {
+        val id = ContentUris.parseId(insertedUri!!)
+        val source = MediaStorePhotoSource(context.contentResolver)
+
+        assertTrue(id in source.loadIds().toList())
+        val byIds = source.loadByIds(listOf(id, Long.MAX_VALUE - 1))
+        assertEquals(listOf(id), byIds.map { it.id })
+        assertEquals(insertedUri.toString(), byIds.single().uri)
+        assertEquals(knownTakenMs, byIds.single().dateTaken)
+        assertTrue(source.loadByIds(emptyList()).isEmpty())
+        // SQLite değişken sınırını aşan istek parçalanarak yanıtlanır.
+        assertEquals(1, source.loadByIds((1L..1_200L).toList() + id).count { it.id == id })
+    }
 }
