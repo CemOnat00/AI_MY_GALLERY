@@ -127,8 +127,12 @@ class OnnxImageEncoder(
         private const val INTRA_OP_THREADS = 2
 
         /** Uygulama bağlamından kurar (AppDependencies kendi [ModelStore]'unu verir). */
-        fun create(context: Context, store: ModelStore): OnnxImageEncoder =
-            OnnxImageEncoder(store, ContentResolverImageLoader(context.applicationContext.contentResolver))
+        fun create(
+            context: Context,
+            store: ModelStore,
+            slot: SingleSessionSlot = SingleSessionSlot.shared,
+        ): OnnxImageEncoder =
+            OnnxImageEncoder(store, ContentResolverImageLoader(context.applicationContext.contentResolver), slot)
     }
 }
 

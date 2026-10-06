@@ -29,6 +29,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.ktu.aigaleri.R
+import com.ktu.aigaleri.domain.InvalidQueryException
 import com.ktu.aigaleri.ui.image.PhotoImage
 import com.ktu.aigaleri.ui.index.IndexingBanner
 import com.ktu.aigaleri.ui.index.IndexingBannerContent
@@ -71,6 +72,7 @@ fun SearchContent(
                 SearchStatus.Loading -> CircularProgressIndicator()
                 SearchStatus.Empty -> Message(R.string.search_empty)
                 SearchStatus.Error -> Message(R.string.search_error)
+                is SearchStatus.InvalidQuery -> Message(invalidQueryMessage(status.reason))
                 is SearchStatus.Success -> LazyVerticalGrid(
                     columns = GridCells.Adaptive(minSize = 110.dp),
                     modifier = Modifier.fillMaxSize().testTag(TAG_RESULT_GRID),
@@ -88,6 +90,12 @@ fun SearchContent(
             }
         }
     }
+}
+
+/** Geçersiz istem nedeninin kullanıcı mesajı (istem metni içermez). */
+internal fun invalidQueryMessage(reason: InvalidQueryException.Reason): Int = when (reason) {
+    InvalidQueryException.Reason.EMPTY -> R.string.search_invalid_empty
+    InvalidQueryException.Reason.TOO_LONG -> R.string.search_invalid_too_long
 }
 
 @Composable

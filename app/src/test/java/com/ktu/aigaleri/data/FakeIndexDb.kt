@@ -58,6 +58,12 @@ class FakeIndexDb {
                 val p = photos.getValue(it.photoId)
                 IndexedVector(p.mediaStoreId, p.uri, p.dateTaken, it.vector)
             }
+        override suspend fun getPageForModel(modelVersion: String, afterId: Long, limit: Int): List<IndexedVector> =
+            embeddings.values.filter { it.modelVersion == modelVersion && it.photoId > afterId }
+                .sortedBy { it.photoId }.take(limit).map {
+                    val p = photos.getValue(it.photoId)
+                    IndexedVector(p.mediaStoreId, p.uri, p.dateTaken, it.vector)
+                }
         override suspend fun count() = embeddings.size
         override suspend fun deleteNotMatching(modelVersion: String) {
             embeddings.entries.removeAll { it.value.modelVersion != modelVersion }

@@ -23,7 +23,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private val searchViewModel: SearchViewModel by viewModels {
-        viewModelFactory { initializer { SearchViewModel(deps.searchRepository) } }
+        viewModelFactory { initializer { SearchViewModel(deps.searchRepository, deps::warmUpSearch) } }
     }
 
     private val indexStatusViewModel: IndexStatusViewModel by viewModels {

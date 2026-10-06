@@ -32,8 +32,8 @@ class AssetManagerOpener(private val assets: AssetManager) : AssetOpener {
  *
  * Bellek/süre: ilk [encode] çağrısında model dosyaları doğrulanıp filesDir'e kopyalanır (SHA-256) ve oturum
  * açılır; bu iş [Dispatchers.IO]'da yürür (ana thread'de değil) ve kopya sırasında iptale duyarlıdır
- * (oturum oluşturma [OrtSession] içinde bölünemez). İlk sorgu gecikmesi ölçülmedi; T-008 ısınma (warm-up)
- * için uygulama açılışında arka planda bir [encode] çağırmalıdır. Sonraki çağrılar açık oturumu kullanır.
+ * (oturum oluşturma [OrtSession] içinde bölünemez). İlk sorgu gecikmesi ölçülmedi; arama ekranı açılırken
+ * [warmUp] çağrılır (T-008). Sonraki çağrılar açık oturumu kullanır.
  * Oturum dosya yolundan açılır (135 MB Java yığınına girmez), CPU arena kapalı, 2 iş parçacığı. [release]
  * oturumu ve sözlük/ağırlık belleğini bırakır; oturum başka bir model yüzünden slot'tan çıkarılırsa
  * ([SingleSessionSlot]) bu referanslar geri çağrıyla bırakılır ve sonraki [encode] yeniden açar.
@@ -74,6 +74,17 @@ class OnnxTextEncoder(
                 pipelineFor(session, cancelCheck).embed(normalized)
             }
         }
+    }
+
+    /**
+     * Isınma: model dosyalarını doğrular, oturumu açar ve sabit bir ifadeyle bir çıkarım yapar; böylece ilk gerçek
+     * sorgu bu maliyeti ödemez. Kullanıcı istemi kullanılmaz (sabit [WARM_UP_QUERY]); sonuç atılır. Oturum zaten
+     * açıksa yalnızca tek kısa çıkarımdır. Eşzamanlı gerçek sorgu slot kilidinde bekler ve açık oturumu kullanır
+     * (çift açılış olmaz). İndeksleme sürerken görüntü oturumunu kapatır (bkz. [com.ktu.aigaleri.data.RoomSearchRepository]).
+     * Hata ve iptal [encode] gibi yayılır; çağıran en iyi çabayla yutmalıdır.
+     */
+    suspend fun warmUp() {
+        encode(WARM_UP_QUERY)
     }
 
     /** Oturumu kapatır ve sözlük/Dense belleğini bırakır; sonraki [encode] yeniden açar. */
@@ -135,8 +146,12 @@ class OnnxTextEncoder(
     companion object {
         private const val SESSION_KEY = "text"
         private const val INTRA_OP_THREADS = 2
+        private const val WARM_UP_QUERY = "ısınma"
 
-        /** Uygulama bağlamından kurar; AppDependencies bağlantısı T-008'dedir. */
+        /**
+         * Kendi [ModelStore]'unu kurar; YALNIZCA cihaz testleri için. Uygulamada `AppDependencies` paylaşılan tek
+         * `ModelStore` ve `SingleSessionSlot` ile doğrudan kurucuyu kullanır.
+         */
         fun create(context: Context): OnnxTextEncoder {
             val app = context.applicationContext
             return OnnxTextEncoder(ModelStore(app.filesDir, AssetManagerOpener(app.assets)))

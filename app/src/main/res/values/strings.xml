@@ -16,6 +16,8 @@
     <string name="search_idle">Aramak için bir istem yaz.</string>
     <string name="search_empty">Eşleşen fotoğraf bulunamadı. Farklı bir istem dene veya indeksin hazır olduğunu kontrol et.</string>
     <string name="search_error">Arama sırasında bir hata oluştu. Lütfen tekrar dene.</string>
+    <string name="search_invalid_empty">İstem boş görünüyor. Aramak istediğin şeyi yaz (ör. plajda gülen çocuk).</string>
+    <string name="search_invalid_too_long">İstem çok uzun. Daha kısa bir istem dene.</string>
     <string name="photo_content_description">Fotoğraf</string>
     <string name="image_load_failed">Görsel yüklenemedi</string>
     <string name="viewer_not_found">Fotoğraf bulunamadı. Aramaya dönüp tekrar dene.</string>

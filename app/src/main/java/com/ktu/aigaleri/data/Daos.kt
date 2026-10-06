@@ -77,7 +77,8 @@ interface PhotoEmbeddingDao {
      * Arama için: verilen modelin tüm vektörleri, fotoğraf bilgisiyle birlikte.
      *
      * Bellek sınırı: sonuç tek seferde belleğe yüklenir. 512 boyutta 10 bin fotoğraf ≈ 20 MB,
-     * 50 bin ≈ 100 MB+ (uri her satırda tekrar yüklenir). Sayfalı okuma/önbellek kararı T-008'e aittir.
+     * 50 bin ≈ 100 MB+ (uri her satırda tekrar yüklenir). ARAMA İÇİN KULLANILMAZ (T-008): arama [getPageForModel]
+     * ile sayfalı tarar; bu sorgu yalnızca küçük veri/test içindir.
      */
     @Query(
         "SELECT p.mediaStoreId AS photoId, p.uri AS uri, p.dateTaken AS dateTaken, e.vector AS vector " +
@@ -85,6 +86,21 @@ interface PhotoEmbeddingDao {
             "WHERE e.modelVersion = :modelVersion ORDER BY p.mediaStoreId",
     )
     suspend fun getAllForModel(modelVersion: String): List<IndexedVector>
+
+    /**
+     * Arama için sayfalı (keyset) okuma: verilen modelin vektörleri, `photoId > [afterId]` olan ilk [limit] satır,
+     * `photoId` artan. İlk sayfa için [afterId] = `Long.MIN_VALUE`; sonraki sayfa için önceki sayfanın son `photoId`'si.
+     * OFFSET kullanılmaz (sayfa maliyeti sabit: `photo_embedding` rowid aralık taraması + `photo` PK araması) ve
+     * tarama sürerken yazan indeksleyiciyle tutarlıdır (kimlik tekrarı olmaz; yeni satır görünür ya da görünmez).
+     * Sayfa belleği ~[limit] x (vektör BLOB + uri); SQLite CursorWindow (2 MB) için [limit] <= ~500 tutulmalıdır
+     * (512 boyutta satır ~2,1 KB).
+     */
+    @Query(
+        "SELECT p.mediaStoreId AS photoId, p.uri AS uri, p.dateTaken AS dateTaken, e.vector AS vector " +
+            "FROM photo_embedding e INNER JOIN photo p ON p.mediaStoreId = e.photoId " +
+            "WHERE e.modelVersion = :modelVersion AND e.photoId > :afterId ORDER BY e.photoId LIMIT :limit",
+    )
+    suspend fun getPageForModel(modelVersion: String, afterId: Long, limit: Int): List<IndexedVector>
 
     @Query("SELECT COUNT(*) FROM photo_embedding")
     suspend fun count(): Int

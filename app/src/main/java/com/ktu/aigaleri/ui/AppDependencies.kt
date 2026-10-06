@@ -7,21 +7,25 @@ import com.ktu.aigaleri.data.IndexState
 import com.ktu.aigaleri.data.MediaPhotoSource
 import com.ktu.aigaleri.data.MediaStorePhotoSource
 import com.ktu.aigaleri.data.RoomPhotoIndexer
+import com.ktu.aigaleri.data.RoomSearchRepository
 import com.ktu.aigaleri.data.RoomTransactionRunner
 import com.ktu.aigaleri.domain.PhotoIndexer
 import com.ktu.aigaleri.domain.SearchRepository
 import com.ktu.aigaleri.ml.AssetManagerOpener
 import com.ktu.aigaleri.ml.ModelStore
 import com.ktu.aigaleri.ml.OnnxImageEncoder
-import com.ktu.aigaleri.ui.stub.StubSearchRepository
+import com.ktu.aigaleri.ml.OnnxTextEncoder
+import com.ktu.aigaleri.ml.SingleSessionSlot
 import com.ktu.aigaleri.work.WorkManagerIndexLauncher
 import kotlinx.coroutines.flow.Flow
 
 /**
  * Basit elle bağımlılık sağlama (DI kütüphanesi yok); tüm bağlantılar TEK YERDE burada.
  *
- * GEÇİCİ: [searchRepository] stub'dır; T-008'de gerçek `SearchRepository` ile değiştirilecek, ekran kodu değişmez.
  * T-006: [indexLauncher] gerçek WorkManager tabanlıdır ve [photoIndexer] indeksleme hattını kurar.
+ * T-008: [searchRepository] gerçek (Room + metin kodlayıcı). Görüntü kodlayıcı (indeksleme, WorkManager işi bu
+ * singleton'dan [photoIndexer]'ı alır; iş aynı süreçte çalışır) ve metin kodlayıcı (arama) AYNI [modelStore] ve AYNI
+ * [sessionSlot] örneğini paylaşır; bu, tek ONNX oturum kuralının ön koşuludur.
  */
 class AppDependencies private constructor(context: Context) {
     private val appContext = context.applicationContext
@@ -34,10 +38,16 @@ class AppDependencies private constructor(context: Context) {
     val indexState: Flow<IndexState?> get() = database.indexStateDao().observe()
 
     /**
-     * Model dosyası yöneticisi; uygulamada TEK örnek olmalıdır (`ModelStore` kilidi örnek başınadır). T-008 metin
-     * kodlayıcısı da bunu kullanmalıdır.
+     * Model dosyası yöneticisi; uygulamada TEK örnek olmalıdır (`ModelStore` kilidi örnek başınadır). Görüntü
+     * ([photoIndexer]) ve metin ([textEncoder]) kodlayıcıları bunu paylaşır.
      */
     val modelStore: ModelStore by lazy { ModelStore(appContext.filesDir, AssetManagerOpener(appContext.assets)) }
+
+    /** Tek ONNX oturum kuralı yuvası; görüntü ve metin kodlayıcı aynı örneği kullanır. */
+    val sessionSlot: SingleSessionSlot get() = SingleSessionSlot.shared
+
+    /** Arama metin kodlayıcısı (tek örnek; [modelStore] ve [sessionSlot] paylaşılır). */
+    val textEncoder: OnnxTextEncoder by lazy { OnnxTextEncoder(modelStore, sessionSlot) }
 
     /** İndeksleme hattı (görüntü kodlayıcı + MediaStore + Room); yalnızca WorkManager işinde toplanır. */
     val photoIndexer: PhotoIndexer by lazy {
@@ -47,11 +57,17 @@ class AppDependencies private constructor(context: Context) {
             embeddingDao = database.photoEmbeddingDao(),
             stateDao = database.indexStateDao(),
             transactions = RoomTransactionRunner(database),
-            encoder = OnnxImageEncoder.create(appContext, modelStore),
+            encoder = OnnxImageEncoder.create(appContext, modelStore, sessionSlot),
         )
     }
 
-    val searchRepository: SearchRepository = StubSearchRepository()
+    val searchRepository: SearchRepository by lazy {
+        RoomSearchRepository(encoder = textEncoder, dao = database.photoEmbeddingDao())
+    }
+
+    /** Arama ekranı açılırken çağrılır: metin oturumunu önceden açar (ilk sorgu gecikmesi). En iyi çabadır. */
+    suspend fun warmUpSearch() = textEncoder.warmUp()
+
     val indexLauncher: IndexLauncher by lazy { WorkManagerIndexLauncher(WorkManager.getInstance(appContext)) }
 
     companion object {
