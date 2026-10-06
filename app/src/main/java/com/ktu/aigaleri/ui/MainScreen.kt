@@ -31,6 +31,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.ktu.aigaleri.R
 import com.ktu.aigaleri.ui.index.IndexStatusContent
+import com.ktu.aigaleri.ui.index.indexingBanner
 import com.ktu.aigaleri.ui.index.IndexStatusViewModel
 import com.ktu.aigaleri.ui.search.SearchContent
 import com.ktu.aigaleri.ui.search.SearchViewModel
@@ -105,8 +106,11 @@ fun AppNavHost(
         composable(Routes.SEARCH) {
             if (granted) {
                 val searchState by searchViewModel.state.collectAsStateWithLifecycle()
+                val indexUiState by indexStatusViewModel.state.collectAsStateWithLifecycle()
+                val indexRunning by indexStatusViewModel.reindexInProgress.collectAsStateWithLifecycle()
                 SearchContent(
                     state = searchState,
+                    indexing = indexingBanner(indexUiState, indexRunning),
                     onQueryChange = searchViewModel::onQueryChange,
                     onSearch = searchViewModel::search,
                     onOpenPhoto = { navController.open(Routes.viewer(it)) },

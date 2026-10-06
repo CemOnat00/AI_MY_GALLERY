@@ -3,6 +3,7 @@ package com.ktu.aigaleri.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ktu.aigaleri.data.MediaPhotoSource
+import com.ktu.aigaleri.domain.IndexMode
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,11 +24,26 @@ data class MainUiState(
     val loadError: Boolean = false,
 )
 
-/** İzin durumunu tutar; izin verilince fotoğraf sayısını [source] üzerinden (ana thread dışında) okur. */
-class MainViewModel(private val source: MediaPhotoSource) : ViewModel() {
+/** Başlatıcı verilmediğinde (yalnızca testler) kullanılan, hiçbir şey yapmayan başlatıcı. */
+private object UnavailableIndexLauncher : IndexLauncher {
+    override val isAvailable: Boolean = false
+
+    override fun launch(mode: IndexMode) = Unit
+}
+
+/**
+ * İzin durumunu tutar; izin verilince fotoğraf sayısını [source] üzerinden (ana thread dışında) okur ve
+ * artımlı indekslemeyi [launcher] ile başlatır (izin Granted'a geçince bir kez; izin kaybolup geri gelmedikçe
+ * tekrarlanmaz. Çift iş zaten WorkManager unique work KEEP ile de engellenir).
+ */
+class MainViewModel(
+    private val source: MediaPhotoSource,
+    private val launcher: IndexLauncher = UnavailableIndexLauncher,
+) : ViewModel() {
     private val _state = MutableStateFlow(MainUiState())
     val state: StateFlow<MainUiState> = _state.asStateFlow()
     private var loadJob: Job? = null
+    private var incrementalRequested = false
 
     /**
      * Ekran ön plana geldiğinde sistemdeki gerçek izin durumuyla çağrılır. İzin verilmişse sayı
@@ -46,7 +62,27 @@ class MainViewModel(private val source: MediaPhotoSource) : ViewModel() {
                 photoCount = if (permission == PermissionState.Granted) it.photoCount else null,
                 loadError = if (permission == PermissionState.Granted) it.loadError else false,
             ) }
-        if (permission == PermissionState.Granted) loadCount() else loadJob?.cancel()
+        if (permission == PermissionState.Granted) {
+            loadCount()
+            startIncrementalIndexing()
+        } else {
+            loadJob?.cancel()
+            incrementalRequested = false
+        }
+    }
+
+    private fun startIncrementalIndexing() {
+        if (incrementalRequested || !launcher.isAvailable) return
+        incrementalRequested = true
+        try {
+            launcher.launch(IndexMode.INCREMENTAL)
+        } catch (e: CancellationException) {
+            incrementalRequested = false
+            throw e
+        } catch (e: Exception) {
+            // Başlatılamadı: çökme yok, ayrıntı loglanmaz; sonraki onResume'da yeniden denenir.
+            incrementalRequested = false
+        }
     }
 
     private fun loadCount() {
@@ -60,6 +96,7 @@ class MainViewModel(private val source: MediaPhotoSource) : ViewModel() {
             } catch (e: SecurityException) {
                 // İzin okuma sırasında geri alınmış; ayrıntı (yol/içerik) loglanmaz.
                 _state.value = MainUiState(PermissionState.NotRequested, null)
+                incrementalRequested = false
             } catch (e: Exception) {
                 // Genel hata: ayrıntı loglanmaz, ekran "okunamadı" gösterir.
                 _state.update { it.copy(photoCount = null, loadError = true) }

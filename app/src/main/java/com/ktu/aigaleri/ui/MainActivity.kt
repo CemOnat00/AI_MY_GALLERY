@@ -19,7 +19,7 @@ class MainActivity : ComponentActivity() {
     private val deps by lazy { AppDependencies.get(applicationContext) }
 
     private val viewModel: MainViewModel by viewModels {
-        viewModelFactory { initializer { MainViewModel(deps.photoSource) } }
+        viewModelFactory { initializer { MainViewModel(deps.photoSource, deps.indexLauncher) } }
     }
 
     private val searchViewModel: SearchViewModel by viewModels {

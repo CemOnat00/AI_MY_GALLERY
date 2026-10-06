@@ -30,6 +30,8 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.ktu.aigaleri.R
 import com.ktu.aigaleri.ui.image.PhotoImage
+import com.ktu.aigaleri.ui.index.IndexingBanner
+import com.ktu.aigaleri.ui.index.IndexingBannerContent
 
 const val TAG_QUERY_FIELD = "query_field"
 const val TAG_SEARCH_BUTTON = "search_button"
@@ -43,6 +45,7 @@ fun SearchContent(
     onSearch: () -> Unit,
     onOpenPhoto: (Long) -> Unit,
     onOpenIndexStatus: () -> Unit,
+    indexing: IndexingBanner? = null,
 ) {
     Column(modifier = Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         OutlinedTextField(
@@ -61,6 +64,7 @@ fun SearchContent(
             }
             OutlinedButton(onClick = onOpenIndexStatus) { Text(stringResource(R.string.index_status_open)) }
         }
+        if (indexing != null) IndexingBannerContent(indexing, onOpenIndexStatus)
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             when (val status = state.status) {
                 SearchStatus.Idle -> Message(R.string.search_idle)
