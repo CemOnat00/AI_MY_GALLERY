@@ -63,6 +63,10 @@ data class PhotoEmbedding(
  * @property total son çalıştırmada işlenecek toplam fotoğraf.
  * @property processed işlenen fotoğraf sayısı.
  * @property lastRunAt son çalışma zamanı (epoch ms); hiç çalışmadıysa null.
+ * @property fullTargetVersion (şema v2) devam eden (yarım) FULL turunun hedef `Photo.indexVersion`'ı; FULL turu yoksa
+ *   null. FULL başlarken ayarlanır, FULL çalıştırması (başarısız fotoğraflarla bile) bitince null'a çekilir; böylece
+ *   yarım kalan FULL (sıfır yazımla kesilse de) aynı hedefle devam eder ve tamamlanmış her FULL'dan sonra istenen
+ *   FULL yeni bir tur açar. INCREMENTAL bu alana dokunmaz.
  */
 @Entity(tableName = "index_state")
 data class IndexState(
@@ -70,6 +74,7 @@ data class IndexState(
     val total: Int,
     val processed: Int,
     val lastRunAt: Long?,
+    val fullTargetVersion: Int? = null,
 ) {
     companion object {
         const val SINGLETON_ID = 1

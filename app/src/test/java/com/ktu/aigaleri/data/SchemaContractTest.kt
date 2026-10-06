@@ -11,7 +11,9 @@ import org.junit.Test
  */
 class SchemaContractTest {
     private val appDir = File(System.getProperty("user.dir")!!)
-    private val schema = File(appDir, "schemas/com.ktu.aigaleri.data.AiGaleriDatabase/1.json").readText()
+    private val schemaDir = File(appDir, "schemas/com.ktu.aigaleri.data.AiGaleriDatabase")
+    private val schema1 = File(schemaDir, "1.json").readText()
+    private val schema = File(schemaDir, "2.json").readText()
     private fun src(name: String) = File(appDir, "src/main/java/com/ktu/aigaleri/data/$name").readText()
 
     @Test
@@ -27,13 +29,15 @@ class SchemaContractTest {
 
     @Test
     fun schema_indexState_columns() {
-        assertTrue(schema.contains("`id` INTEGER NOT NULL, `total` INTEGER NOT NULL, `processed` INTEGER NOT NULL, `lastRunAt` INTEGER, PRIMARY KEY(`id`)"))
+        assertTrue(schema1.contains("`id` INTEGER NOT NULL, `total` INTEGER NOT NULL, `processed` INTEGER NOT NULL, `lastRunAt` INTEGER, PRIMARY KEY(`id`)"))
+        // v2: yalnızca nullable fullTargetVersion eklendi.
+        assertTrue(schema.contains("`id` INTEGER NOT NULL, `total` INTEGER NOT NULL, `processed` INTEGER NOT NULL, `lastRunAt` INTEGER, `fullTargetVersion` INTEGER, PRIMARY KEY(`id`)"))
     }
 
     @Test
-    fun database_versionIsOne_andExportsSchema() {
+    fun database_versionIsTwo_andExportsSchema() {
         val db = src("AiGaleriDatabase.kt")
-        assertTrue(db.contains("version = 1"))
+        assertTrue(db.contains("version = 2"))
         assertTrue(db.contains("exportSchema = true"))
     }
 

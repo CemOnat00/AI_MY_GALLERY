@@ -9,6 +9,7 @@ import com.ktu.aigaleri.domain.IndexProgress
 import com.ktu.aigaleri.ml.ImageDecodeException
 import com.ktu.aigaleri.ml.ModelException
 import kotlin.time.Duration.Companion.minutes
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
@@ -27,8 +28,8 @@ import org.junit.Test
 
 /**
  * T-006 (QA): RoomPhotoIndexer sınır durumları; sahte kaynak/kodlayıcı/bellek içi DAO ile (model ve cihaz yok).
- * KNOWN_ISSUE testleri, reviewer'ın sorunlu bulduğu MEVCUT davranışı belgeler; davranış düzeltilince bu testler
- * (assert'leri) güncellenmelidir. @Ignore kullanılmaz.
+ * (Eski KNOWN_ISSUE testleri T-006 ek turunda düzeltilen davranışa göre güncellendi: FULL kalıcı tur durumu ve
+ * yalnızca model hatalarını sayan eşik.)
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class RoomPhotoIndexerEdgeCaseTest {
@@ -274,7 +275,7 @@ class RoomPhotoIndexerEdgeCaseTest {
 
     @Test
     fun allPhotosFail_belowLimit_completesWithFailedCount_noRecords_stateComplete() = runTest {
-        val n = RoomPhotoIndexer.MAX_FAILURES_WITHOUT_SUCCESS - 1
+        val n = RoomPhotoIndexer.MAX_MODEL_FAILURES_WITHOUT_SUCCESS - 1
         val e = env((1L..n.toLong()).toList())
         for (id in 1L..n) e.encoder.failures[uri(id)] = ImageDecodeException("bozuk")
         val last = e.indexer.index().run().last()
@@ -286,30 +287,32 @@ class RoomPhotoIndexerEdgeCaseTest {
 
     @Test
     fun allPhotosFail_inFull_atLimit_keepsOldRecordsAndOldVectors_andDoesNotAdvanceLastRunAt() = runTest {
-        val n = RoomPhotoIndexer.MAX_FAILURES_WITHOUT_SUCCESS + 3
+        val n = RoomPhotoIndexer.MAX_MODEL_FAILURES_WITHOUT_SUCCESS + 3
         val e = env((1L..n.toLong()).toList())
         e.indexer.index().run()
         val firstRun = e.db.state!!.lastRunAt
         val blobs = e.db.embeddings.mapValues { it.value.vector.copyOf() }
-        for (id in 1L..n) e.encoder.failures[uri(id)] = ImageDecodeException("bozuk")
+        for (id in 1L..n) e.encoder.failures[uri(id)] = ModelException.Inference("run", RuntimeException("ort"))
         try {
             e.indexer.index(IndexMode.FULL).run()
             fail("Unexpected beklenir")
         } catch (_: IndexException.Unexpected) {
         }
+        // Kesilen FULL turu kalıcıdır: yeniden istenince aynı hedefle (2) devam eder.
+        assertEquals(2, e.db.state!!.fullTargetVersion)
         assertEquals(n, e.db.photos.size)
         for ((id, b) in blobs) assertArrayEquals(b, e.db.embeddings.getValue(id).vector)
         assertTrue(e.db.photos.values.all { it.indexVersion == 1 })
         assertEquals(firstRun, e.db.state!!.lastRunAt)
         // Sınırı aşan 20. başarısız fotoğraf processed'e sayılmadan akış kesilir.
-        assertEquals(RoomPhotoIndexer.MAX_FAILURES_WITHOUT_SUCCESS - 1, e.db.state!!.processed)
+        assertEquals(RoomPhotoIndexer.MAX_MODEL_FAILURES_WITHOUT_SUCCESS - 1, e.db.state!!.processed)
     }
 
     // ================= gerçek hayat: ilk 20 çözme hatası =================
 
     @Test
     fun first19DecodeFailures_thenSuccess_completes_andLaterFailuresAreNotLimited() = runTest {
-        val limit = RoomPhotoIndexer.MAX_FAILURES_WITHOUT_SUCCESS
+        val limit = RoomPhotoIndexer.MAX_MODEL_FAILURES_WITHOUT_SUCCESS
         // En yeni (büyük kimlik) 19 bozuk, sonra sağlam, sonra yine 30 bozuk.
         val total = 19 + 1 + 30
         val e = env((1L..total.toLong()).toList())
@@ -323,70 +326,125 @@ class RoomPhotoIndexerEdgeCaseTest {
     }
 
     /**
-     * KNOWN_ISSUE (b): en yeni 20 fotoğraf ImageDecodeException verirse (ör. galeri başında 20 bozuk/indirme yarım
-     * dosyası) hiç başarı olmadığı için akış `Unexpected` ile kesilir; ESKİ sağlam fotoğraflar hiç indekslenmez ve
-     * aynı sıra yüzünden her çalıştırmada (WorkManager 3 deneme, sonra FAILURE) aynı yerde tekrar takılır.
-     * Düzeltilince (yalnızca model düzeyi/belirsiz hatalar sayılır) bu test güncellenmelidir: beklenen COMPLETED,
-     * failed=20, 5 sağlam fotoğraf indekslenmiş.
+     * En yeni 20 fotoğraf ImageDecodeException verse bile (fotoğrafa özgü hata) eşik tetiklenmez: akış COMPLETED olur,
+     * eski sağlam fotoğraflar indekslenir. Eşik yalnızca model kaynaklı hataları sayar.
      */
     @Test
-    fun KNOWN_ISSUE_newest20DecodeFailures_stopFlow_olderHealthyPhotosNeverIndexed() = runTest {
-        val limit = RoomPhotoIndexer.MAX_FAILURES_WITHOUT_SUCCESS
+    fun newest20DecodeFailures_doNotStopFlow_olderHealthyPhotosAreIndexed() = runTest {
+        val limit = RoomPhotoIndexer.MAX_MODEL_FAILURES_WITHOUT_SUCCESS
         val total = limit + 5
         val e = env((1L..total.toLong()).toList())
         for (id in (total - limit + 1)..total) e.encoder.failures[uri(id.toLong())] = ImageDecodeException("bozuk")
-        repeat(2) { // tekrar denemek de aynı sonucu verir: ilerleme yok
-            try {
-                e.indexer.index().run()
-                fail("MEVCUT davranış: Unexpected")
-            } catch (ex: IndexException.Unexpected) {
-                assertTrue(causes(ex).any { it is IllegalStateException })
-            }
-            assertTrue("sağlam eski fotoğraflar indekslenmedi", e.db.photos.isEmpty())
-        }
-        assertEquals(2 * limit, e.encoder.encoded.size) // eski 5 fotoğrafa hiç gelinmedi
-        assertFalse(e.encoder.encoded.contains(uri(1)))
-        // Kontrol: aynı bozuk fotoğraflar sırada SONDA olsaydı (en eski 20) sağlamlar indekslenirdi.
-        val e2 = env((1L..total.toLong()).toList())
-        for (id in 1L..limit.toLong()) e2.encoder.failures[uri(id)] = ImageDecodeException("bozuk")
-        val last = e2.indexer.index().run().last()
-        assertEquals(limit, last.failed)
-        assertEquals(5, e2.db.photos.size)
+        val last = e.indexer.index().run().last()
+        assertEquals(IndexProgress(IndexPhase.COMPLETED, total, total, failed = limit), last)
+        assertEquals((1L..5L).toSet(), e.db.photos.keys)
     }
 
-    // ================= KNOWN_ISSUE (a): kalıcı başarısız fotoğraf + FULL =================
+    @Test
+    fun decodeFailuresDoNotCount_evenMixedWithFewerModelFailures() = runTest {
+        val limit = RoomPhotoIndexer.MAX_MODEL_FAILURES_WITHOUT_SUCCESS
+        // 100 çözme hatası + (limit-1) model hatası: hiçbiri tek başına/toplam eşiği aşmaz, sağlamlar indekslenir.
+        val total = 100 + (limit - 1) + 3
+        val e = env((1L..total.toLong()).toList())
+        for (id in 1L..(100L + limit - 1)) {
+            e.encoder.failures[uri(total - id + 1)] =
+                if (id % 2 == 0L && id <= 2L * (limit - 1)) ModelException.Inference("run", RuntimeException()) else ImageDecodeException("b")
+        }
+        val last = e.indexer.index().run().last()
+        assertEquals(IndexPhase.COMPLETED, last.phase)
+        assertEquals(3, e.db.photos.size)
+    }
+
+    @Test
+    fun modelFailuresAtLimit_withoutSuccess_stillEndFlowWithUnexpected_evenWithDecodeFailuresInterleaved() = runTest {
+        val limit = RoomPhotoIndexer.MAX_MODEL_FAILURES_WITHOUT_SUCCESS
+        val total = 3 * limit
+        val e = env((1L..total.toLong()).toList())
+        for (id in 1L..total) {
+            e.encoder.failures[uri(id)] =
+                if (id % 2 == 0L) ModelException.Inference("run", RuntimeException()) else ImageDecodeException("b")
+        }
+        try {
+            e.indexer.index().run()
+            fail("Unexpected beklenir")
+        } catch (_: IndexException.Unexpected) {
+        }
+        assertEquals(2 * limit - 1, e.encoder.encoded.size) // kimlik azalan: çift=model; 20. model hatasında (39. fotoğraf) kesilir
+        assertTrue(e.db.photos.isEmpty())
+    }
+
+    // ================= kalıcı başarısız fotoğraf + FULL: her tamamlanmış FULL yeni tur açar =================
 
     /**
-     * KNOWN_ISSUE (a): FULL tamamlandıktan sonra tek bir fotoğraf başarısız kalırsa (eski kayıt indexVersion < hedef)
-     * `idsNeedingIndex(max)` boş değildir; sonraki FULL yeni tur AÇMAZ, hedef aynı kalır ve yalnızca o bozuk
-     * fotoğrafı yeniden dener (yani FULL fiilen INCREMENTAL gibi davranır). Fotoğraf düzelene/silinene dek tam yeniden
-     * indeksleme (örn. yeni model/hat sürümü sonrası kullanıcı isteği) hiç çalışmaz.
-     * Düzeltilince beklenen: ikinci FULL tüm galeriyi (total=5) işler ve sürüm 3 olur; bu test güncellenmelidir.
+     * FULL, başarısız fotoğraflarla bitse de tur kapanır (IndexState.fullTargetVersion = null); kalıcı bozuk tek fotoğraf
+     * sonraki FULL'u kilitlemez: her istenen FULL tüm galeriyi yeni hedefle işler.
      */
     @Test
-    fun KNOWN_ISSUE_full_withPersistentFailedPhoto_doesNotStartNewRound_actsLikeIncremental() = runTest {
+    fun full_withPersistentFailedPhoto_eachCompletedFullOpensNewRound() = runTest {
         val e = env((1L..5L).toList())
         e.indexer.index().run() // hepsi sürüm 1
         e.encoder.failures[uri(3)] = ImageDecodeException("kalıcı bozuk")
         val first = e.indexer.index(IndexMode.FULL).run().last() // yeni tur: hedef 2, #3 başarısız
         assertEquals(IndexProgress(IndexPhase.COMPLETED, 5, 5, failed = 1), first)
         assertEquals(mapOf(2 to listOf(1L, 2L, 4L, 5L), 1 to listOf(3L)), versions(e.db).mapValues { it.value.sorted() })
+        assertNull(e.db.state!!.fullTargetVersion) // tur kapandı
 
         e.encoder.encoded.clear()
         val second = e.indexer.index(IndexMode.FULL).run().last() // kullanıcı tekrar "yeniden indeksle" der
-        // MEVCUT davranış: yalnızca bozuk fotoğraf yeniden denendi, diğer 4'ü yeniden işlenmedi.
-        assertEquals(IndexProgress(IndexPhase.COMPLETED, 1, 1, failed = 1), second)
-        assertEquals(listOf(uri(3)), e.encoder.encoded)
-        assertTrue(e.db.photos.filterKeys { it != 3L }.values.all { it.indexVersion == 2 }) // 3 değil
+        assertEquals(IndexProgress(IndexPhase.COMPLETED, 5, 5, failed = 1), second) // tüm galeri, yeni tur
+        assertEquals(5, e.encoder.encoded.size)
+        assertEquals(mapOf(3 to listOf(1L, 2L, 4L, 5L), 1 to listOf(3L)), versions(e.db).mapValues { it.value.sorted() })
+        assertNull(e.db.state!!.fullTargetVersion)
 
-        // Fotoğraf düzelince INCREMENTAL onu 2'ye yükseltir; ANCAK ŞİMDİ FULL gerçekten yeni tur olur (3).
+        // Fotoğraf düzelince INCREMENTAL onu 3'e yükseltir; sonraki FULL yine yeni tur (4).
         e.encoder.failures.clear()
         e.indexer.index().run()
-        assertEquals(setOf(2), e.db.photos.values.map { it.indexVersion }.toSet())
-        e.encoder.encoded.clear()
+        assertEquals(setOf(3), e.db.photos.values.map { it.indexVersion }.toSet())
         val third = e.indexer.index(IndexMode.FULL).run().last()
         assertEquals(5, third.total)
+        assertEquals(setOf(4), e.db.photos.values.map { it.indexVersion }.toSet())
+    }
+
+    // ================= FULL kalıcı tur durumu (IndexState.fullTargetVersion) =================
+
+    @Test
+    fun fullTargetVersion_setWhenFullStarts_clearedOnlyWhenFullCompletes_incrementalLeavesItAlone() = runTest {
+        val e = env((1L..4L).toList())
+        e.indexer.index().run()
+        assertNull(e.db.state!!.fullTargetVersion)
+        cancelAfterEncodes(e, IndexMode.FULL, 1)
+        assertEquals(2, e.db.state!!.fullTargetVersion) // yarım FULL
+        // INCREMENTAL kalanı tamamlar ama işareti silmez.
+        e.indexer.index().run()
+        assertEquals(setOf(2), e.db.photos.values.map { it.indexVersion }.toSet())
+        assertEquals(2, e.db.state!!.fullTargetVersion)
+        assertTrue(e.db.stateWrites.drop(e.db.stateWrites.size - 3).all { it.fullTargetVersion == 2 })
+        // Tur INCREMENTAL ile tamamlanmıştı: sonraki FULL kalan görmez ve yeni tur (3) açar, bitince işaret kalkar.
+        e.encoder.encoded.clear()
+        assertEquals(4, e.indexer.index(IndexMode.FULL).run().last().total)
         assertEquals(setOf(3), e.db.photos.values.map { it.indexVersion }.toSet())
+        assertNull(e.db.state!!.fullTargetVersion)
+    }
+
+    @Test
+    fun fullCancelledWithZeroPhotoWrites_afterPlanPersisted_resumesSameTarget_andIncrementalAlsoCompletesIt() = runTest {
+        for (resumeWith in listOf(IndexMode.FULL, IndexMode.INCREMENTAL)) {
+            val e = env((1L..3L).toList())
+            e.indexer.index().run()
+            e.encoder.failures[uri(3)] = CancellationException("iptal") // ilk kodlamada iptal: hiç fotoğraf yazılmaz
+            try {
+                e.indexer.index(IndexMode.FULL).run()
+            } catch (_: CancellationException) {
+            }
+            assertTrue(e.db.photos.values.all { it.indexVersion == 1 })
+            assertEquals(2, e.db.state!!.fullTargetVersion) // tur kalıcı (sıfır yazımla bile)
+            e.encoder.failures.clear()
+            e.encoder.encoded.clear()
+            val out = e.indexer.index(resumeWith).run().last()
+            assertEquals("$resumeWith", 3, out.total) // hedefin altındaki tüm kayıtlar
+            assertTrue(e.db.photos.values.all { it.indexVersion == 2 }) // max+1 değil: aynı hedef
+            assertEquals(if (resumeWith == IndexMode.FULL) null else 2, e.db.state!!.fullTargetVersion)
+        }
     }
 
     @Test

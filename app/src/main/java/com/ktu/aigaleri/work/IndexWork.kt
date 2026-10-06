@@ -29,14 +29,15 @@ enum class IndexOutcome { SUCCESS, RETRY, FAILURE }
  *   yani çalışan bir INCREMENTAL, FULL'u arayüzden engeller ve REPLACE yalnızca arayüz dışı çağrılarda (ör. ileride
  *   başka bir tetikleyici) ulaşılabilir. Bu bilinçli bırakıldı (kod davranışı değiştirilmedi).
  *
- * Yeniden başlatma/devamlılık: sistem işi durdurursa (kısıt bozuldu, süre sınırı, süreç öldü, yeniden başlatma) WorkManager
- * işi aynı moddaki girdiyle yeniden çalıştırır. Mod değişmez: FULL kendi başına yeniden başlatılabilirdir, tamamlanana
- * dek aynı hedefle kalanı işler ([com.ktu.aigaleri.data.RoomPhotoIndexer]); INCREMENTAL zaten kalanı işler.
+ * Yeniden başlatma/devamlılık: sistem işi durdurursa (kısıt bozuldu, süre sınırı, süreç öldü, yeniden başlatma)
+ * WorkManager işi aynı moddaki girdiyle yeniden çalıştırır. Mod değişmez: FULL kendi başına yeniden başlatılabilirdir
+ * (kalıcı tur durumu `IndexState.fullTargetVersion`, bkz. [com.ktu.aigaleri.data.RoomPhotoIndexer]); tamamlanana dek
+ * aynı hedefle kalanı işler. INCREMENTAL zaten kalanı işler.
  *
- * WorkManager sınırı: foreground servis/bildirim yoktur (kapsam dışı; izin ve servis manifestten çıkarıldı). İş sıradan
- * bir arka plan işidir; sistem (Doze, uygulama bekleme kovası, pil kısıtı, JobScheduler süre sınırı) işi her an
- * durdurabilir ve çalışma sıklığını/süresini garanti etmez. Bu yüzden iş kesintiye dayanıklı (resumable) yazılmıştır;
- * büyük galeri bir çalıştırmada bitmeyebilir. Kısıtlar: pil düşük değil; ağ kısıtı YOK (ağ kullanılmaz).
+ * WorkManager sınırı: foreground servis/bildirim yoktur (kapsam dışı; izin ve servis manifestten çıkarıldı). İş
+ * sıradan bir arka plan işidir; sistem (Doze, uygulama bekleme kovası, pil kısıtı, JobScheduler süre sınırı) işi her
+ * an durdurabilir ve çalışma sıklığını/süresini garanti etmez. Bu yüzden iş kesintiye dayanıklı (resumable)
+ * yazılmıştır; büyük galeri bir çalıştırmada bitmeyebilir. Kısıtlar: pil düşük değil; ağ kısıtı YOK (ağ kullanılmaz).
  */
 object IndexWork {
     const val UNIQUE_NAME = "ai-galeri-index"
@@ -71,7 +72,8 @@ object IndexWork {
     /**
      * [indexer] akışını sonuna kadar toplar (ilerleme arayüze Room `IndexState` ile gider; burada tüketilmez).
      * İptal ([CancellationException]) aynen yayılır: yazılan kayıtlar korunur, iş yeniden başlayınca kalan devam eder.
-     * [runAttemptCount] yalnızca yeniden deneme sayısını sınırlar; mod değişmez. Sonuç: izin yok -> FAILURE (kullanıcı eylemi gerekir); model dosyası yok/bozuk -> FAILURE (yeniden denemek
+     * [runAttemptCount] yalnızca yeniden deneme sayısını sınırlar; mod değişmez.
+     * Sonuç: izin yok -> FAILURE (kullanıcı eylemi gerekir); model dosyası yok/bozuk -> FAILURE (yeniden denemek
      * düzeltmez); diğer beklenmeyen hata -> [MAX_ATTEMPTS]'a kadar RETRY. Tek fotoğraf hataları başarıyı bozmaz.
      */
     suspend fun execute(indexer: PhotoIndexer, requested: IndexMode, runAttemptCount: Int): IndexOutcome =
@@ -83,7 +85,8 @@ object IndexWork {
         } catch (e: IndexException.PermissionMissing) {
             IndexOutcome.FAILURE
         } catch (e: IndexException.Unexpected) {
-            if (isPermanent(e.cause) || runAttemptCount + 1 >= MAX_ATTEMPTS) IndexOutcome.FAILURE else IndexOutcome.RETRY
+            val giveUp = isPermanent(e.cause) || runAttemptCount + 1 >= MAX_ATTEMPTS
+            if (giveUp) IndexOutcome.FAILURE else IndexOutcome.RETRY
         }
 
     /**

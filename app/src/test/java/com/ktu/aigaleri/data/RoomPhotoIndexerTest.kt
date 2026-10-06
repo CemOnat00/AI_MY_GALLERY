@@ -231,7 +231,10 @@ class RoomPhotoIndexerTest {
         assertTrue(e.db.embeddings.values.all { it.modelVersion == spec.modelVersion }) // aranabilir kalır
         assertEquals(2, e.encoder.released) // ilk tam çalıştırma + iptal edilen FULL: iptalde de oturum bırakıldı
         // İlerleme: iptalde de yazıldı.
-        assertEquals(IndexState(total = 5, processed = 2, lastRunAt = e.db.state!!.lastRunAt), e.db.state)
+        assertEquals(
+            IndexState(total = 5, processed = 2, lastRunAt = e.db.state!!.lastRunAt, fullTargetVersion = 2),
+            e.db.state,
+        )
 
         // INCREMENTAL yalnızca kalan 3'ü işler ve hedefe (2) yükseltir.
         e.encoder.encoded.clear()
@@ -577,9 +580,9 @@ class RoomPhotoIndexerTest {
 
     @Test
     fun consecutiveFailuresWithoutAnySuccess_endFlowWithUnexpected() = runTest {
-        val n = RoomPhotoIndexer.MAX_FAILURES_WITHOUT_SUCCESS
+        val n = RoomPhotoIndexer.MAX_MODEL_FAILURES_WITHOUT_SUCCESS
         val e = env((1L..(n + 5L)).toList())
-        for (id in 1L..(n + 5L)) e.encoder.failures[uri(id)] = ImageDecodeException("bozuk")
+        for (id in 1L..(n + 5L)) e.encoder.failures[uri(id)] = ModelException.Inference("run", RuntimeException("ort"))
         try {
             e.indexer.index().run()
             fail("Unexpected beklenir")
@@ -593,15 +596,15 @@ class RoomPhotoIndexerTest {
 
     @Test
     fun failuresBelowLimit_orAfterFirstSuccess_doNotEndFlow() = runTest {
-        val n = RoomPhotoIndexer.MAX_FAILURES_WITHOUT_SUCCESS
+        val n = RoomPhotoIndexer.MAX_MODEL_FAILURES_WITHOUT_SUCCESS
         // n-1 hata: sınırın altında tamamlanır.
         val a = env((1L..(n - 1L)).toList())
-        for (id in 1L until n) a.encoder.failures[uri(id)] = ImageDecodeException("bozuk")
+        for (id in 1L until n) a.encoder.failures[uri(id)] = ModelException.Inference("run", RuntimeException())
         assertEquals(n - 1, a.indexer.index().run().last().failed)
         // İlk işlenen (en büyük kimlik) başarılı, sonrasında 2n hata: ilk başarıdan sonra sınır uygulanmaz.
         val total = 2L * n + 1
         val b = env((1L..total).toList())
-        for (id in 1L until total) b.encoder.failures[uri(id)] = ImageDecodeException("bozuk")
+        for (id in 1L until total) b.encoder.failures[uri(id)] = ModelException.Inference("run", RuntimeException())
         val last = b.indexer.index().run().last()
         assertEquals(IndexPhase.COMPLETED, last.phase)
         assertEquals(2 * n, last.failed)

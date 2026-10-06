@@ -137,4 +137,15 @@ class AiGaleriDatabaseTest {
             channel.cancel()
         }
     }
+
+    @Test
+    fun indexState_fullTargetVersion_roundTrips_andDefaultsToNull() = runBlocking {
+        val states = db.indexStateDao()
+        states.upsert(IndexState(total = 3, processed = 1, lastRunAt = null))
+        assertNull(states.get()!!.fullTargetVersion)
+        states.upsert(IndexState(total = 3, processed = 2, lastRunAt = 5L, fullTargetVersion = 4))
+        assertEquals(IndexState(total = 3, processed = 2, lastRunAt = 5L, fullTargetVersion = 4), states.get())
+        states.upsert(states.get()!!.copy(fullTargetVersion = null))
+        assertNull(states.get()!!.fullTargetVersion)
+    }
 }
