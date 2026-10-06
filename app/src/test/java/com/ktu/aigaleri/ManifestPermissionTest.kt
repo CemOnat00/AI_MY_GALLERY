@@ -34,6 +34,9 @@ class ManifestPermissionTest {
 
     @Test
     fun noInternetPermission() {
-        assertFalse(Regex("<uses-permission[^>]*INTERNET").containsMatchIn(xml))
+        // tools:node="remove" girdileri (ORT AAR'ının eklediği izni kaldırır, T-007) izin DEĞİL, kaldırmadır.
+        val declared = Regex("<uses-permission[^>]*INTERNET[^>]*>").findAll(xml).map { it.value }
+            .filterNot { it.contains("tools:node=\"remove\"") }.toList()
+        assertTrue(declared.toString(), declared.isEmpty())
     }
 }

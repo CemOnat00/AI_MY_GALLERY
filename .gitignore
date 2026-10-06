@@ -1,1 +1,4 @@
 .kotlin/
+
+# Model dosyaları repoya eklenmez (tools/fetch_models.sh ile indirilir, docs/model-setup.md).
+app/src/main/assets/models/

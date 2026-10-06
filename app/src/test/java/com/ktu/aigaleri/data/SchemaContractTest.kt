@@ -52,7 +52,10 @@ class SchemaContractTest {
     @Test
     fun manifest_hasNoInternetPermission_andBackupDisabled() {
         val m = File(appDir, "src/main/AndroidManifest.xml").readText()
-        assertFalse(m.contains("android.permission.INTERNET"))
+        // tools:node="remove" girdisi (ORT AAR izni kaldırma, T-007) izin değildir.
+        val internet = Regex("<uses-permission[^>]*android.permission.INTERNET[^>]*>").findAll(m).map { it.value }
+            .filterNot { it.contains("tools:node=\"remove\"") }.toList()
+        assertTrue(internet.toString(), internet.isEmpty())
         assertTrue(m.contains("android:allowBackup=\"false\""))
     }
 }

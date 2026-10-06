@@ -17,7 +17,10 @@ class ProjectConfigTest {
     private fun sourceManifest() = manifest(File(appDir, "src/main/AndroidManifest.xml"))
 
     private fun usesPermissions(xml: String) =
-        Regex("<uses-permission[^>]*android:name=\"([^\"]+)\"").findAll(xml).map { it.groupValues[1] }.toList()
+        // tools:node="remove" girdileri (ORT AAR'ının eklediği izinleri kaldırır, T-007) izin sayılmaz.
+        Regex("<uses-permission[^>]*android:name=\"([^\"]+)\"[^>]*>").findAll(xml)
+            .filterNot { it.value.contains("tools:node=\"remove\"") }
+            .map { it.groupValues[1] }.toList()
 
     @Test
     fun sourceManifest_hasNoInternetPermission() {

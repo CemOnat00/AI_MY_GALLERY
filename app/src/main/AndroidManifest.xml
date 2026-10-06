@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <!-- Bilerek INTERNET izni yok: uygulama tamamen cihaz üstüdür.
          Tek izin galeri okuma: Android 13+ READ_MEDIA_IMAGES, eski sürümlerde READ_EXTERNAL_STORAGE. -->
@@ -7,6 +8,11 @@
     <uses-permission
         android:name="android.permission.READ_EXTERNAL_STORAGE"
         android:maxSdkVersion="32" />
+
+    <!-- onnxruntime-android AAR manifesti INTERNET ve ACCESS_NETWORK_STATE ekler (T-007'de görüldü);
+         uygulama ağ kullanmaz, birleşik manifestten kaldırılır. -->
+    <uses-permission android:name="android.permission.INTERNET" tools:node="remove" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" tools:node="remove" />
 
     <application
         android:allowBackup="false"

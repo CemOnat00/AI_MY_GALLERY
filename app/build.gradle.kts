@@ -35,6 +35,11 @@ android {
         compose = true
         buildConfig = true
     }
+    androidResources {
+        // ONNX modelleri zaten az sıkışır; açılışta gereksiz açma süresi olmasın, assets'ten akış kopyası hızlansın
+        // (model-research.md 5.1). Model dosyaları repoda yoktur: docs/model-setup.md.
+        noCompress += "onnx"
+    }
     sourceSets {
         // Room şema dosyaları androidTest'te migration testi için kullanılır.
         getByName("androidTest").assets.directories.add("$projectDir/schemas")
@@ -60,6 +65,8 @@ dependencies {
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
+
+    implementation(libs.onnxruntime.android)
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
