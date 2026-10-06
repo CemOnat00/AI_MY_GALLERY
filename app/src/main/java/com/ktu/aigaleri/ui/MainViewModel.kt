@@ -33,8 +33,10 @@ private object UnavailableIndexLauncher : IndexLauncher {
 
 /**
  * İzin durumunu tutar; izin verilince fotoğraf sayısını [source] üzerinden (ana thread dışında) okur ve
- * artımlı indekslemeyi [launcher] ile başlatır (izin Granted'a geçince bir kez; izin kaybolup geri gelmedikçe
- * tekrarlanmaz. Çift iş zaten WorkManager unique work KEEP ile de engellenir).
+ * artımlı indekslemeyi [launcher] ile başlatır: izin Granted iken HER [onResume]/izin sonucunda INCREMENTAL istenir
+ * (kameradan dönünce yeni fotoğraflar indekslensin). Tekrarlı istek zararsızdır; bu, launcher'ın INCREMENTAL için
+ * unique work KEEP politikasına dayanır (çalışan/kuyruktaki iş varken yeni iş eklenmez). Bu sözleşme değişirse
+ * (ör. REPLACE) burada durum tabanlı tekrar önleme gerekir.
  */
 class MainViewModel(
     private val source: MediaPhotoSource,
@@ -43,7 +45,6 @@ class MainViewModel(
     private val _state = MutableStateFlow(MainUiState())
     val state: StateFlow<MainUiState> = _state.asStateFlow()
     private var loadJob: Job? = null
-    private var incrementalRequested = false
 
     /**
      * Ekran ön plana geldiğinde sistemdeki gerçek izin durumuyla çağrılır. İzin verilmişse sayı
@@ -67,21 +68,18 @@ class MainViewModel(
             startIncrementalIndexing()
         } else {
             loadJob?.cancel()
-            incrementalRequested = false
         }
     }
 
     private fun startIncrementalIndexing() {
-        if (incrementalRequested || !launcher.isAvailable) return
-        incrementalRequested = true
+        if (!launcher.isAvailable) return
         try {
             launcher.launch(IndexMode.INCREMENTAL)
         } catch (e: CancellationException) {
-            incrementalRequested = false
             throw e
         } catch (e: Exception) {
-            // Başlatılamadı: çökme yok, ayrıntı loglanmaz; sonraki onResume'da yeniden denenir.
-            incrementalRequested = false
+            // Başlatılamadı: çökme yok, ayrıntı loglanmaz (gizlilik). Yeniden deneme YALNIZCA bir sonraki
+            // onResume/izin sonucunda olur; arka planda otomatik tekrar yoktur.
         }
     }
 
@@ -96,7 +94,6 @@ class MainViewModel(
             } catch (e: SecurityException) {
                 // İzin okuma sırasında geri alınmış; ayrıntı (yol/içerik) loglanmaz.
                 _state.value = MainUiState(PermissionState.NotRequested, null)
-                incrementalRequested = false
             } catch (e: Exception) {
                 // Genel hata: ayrıntı loglanmaz, ekran "okunamadı" gösterir.
                 _state.update { it.copy(photoCount = null, loadError = true) }

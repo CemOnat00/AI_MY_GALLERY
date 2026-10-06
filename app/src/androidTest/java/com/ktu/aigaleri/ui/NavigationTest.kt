@@ -4,6 +4,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -12,6 +13,7 @@ import androidx.navigation.compose.rememberNavController
 import com.ktu.aigaleri.domain.SearchRepository
 import com.ktu.aigaleri.domain.SearchResult
 import com.ktu.aigaleri.ui.index.IndexStatusViewModel
+import com.ktu.aigaleri.ui.index.TAG_INDEXING_BANNER
 import com.ktu.aigaleri.ui.search.SearchViewModel
 import com.ktu.aigaleri.ui.search.TAG_QUERY_FIELD
 import com.ktu.aigaleri.ui.stub.StubIndexLauncher
@@ -35,14 +37,19 @@ class NavigationTest {
         override suspend fun search(query: String, limit: Int) = emptyList<SearchResult>()
     }
 
-    private fun show(permission: PermissionState) {
+    private val runningLauncher = object : IndexLauncher {
+        override val isRunning = flowOf(true)
+        override fun launch(mode: com.ktu.aigaleri.domain.IndexMode) = Unit
+    }
+
+    private fun show(permission: PermissionState, launcher: IndexLauncher = StubIndexLauncher()) {
         rule.setContent {
             navController = rememberNavController()
             AppNavHost(
                 navController = navController,
                 state = MainUiState(permission = permission),
                 searchViewModel = SearchViewModel(repository),
-                indexStatusViewModel = IndexStatusViewModel(flowOf(null), StubIndexLauncher()),
+                indexStatusViewModel = IndexStatusViewModel(flowOf(null), launcher),
                 onRequestPermission = {},
                 onOpenSettings = {},
             )
@@ -98,6 +105,23 @@ class NavigationTest {
         rule.waitForIdle()
         assertNotNull(navController.currentBackStackEntry)
         assertEquals(Routes.SEARCH, route())
+    }
+
+    @Test
+    fun indexingBanner_shownWhileRunning_andClickOpensIndexStatus() {
+        show(PermissionState.Granted, runningLauncher)
+        rule.waitUntil(timeoutMillis = 5_000) {
+            rule.onAllNodesWithTag(TAG_INDEXING_BANNER).fetchSemanticsNodes().isNotEmpty()
+        }
+        rule.onNodeWithTag(TAG_INDEXING_BANNER).performClick()
+        rule.waitForIdle()
+        assertEquals(Routes.INDEX_STATUS, route())
+    }
+
+    @Test
+    fun indexingBanner_hiddenWhenNotRunning() {
+        show(PermissionState.Granted)
+        rule.onNodeWithTag(TAG_INDEXING_BANNER).assertDoesNotExist()
     }
 
     @Test

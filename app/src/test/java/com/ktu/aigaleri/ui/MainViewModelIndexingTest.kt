@@ -55,13 +55,24 @@ class MainViewModelIndexingTest {
     }
 
     @Test
-    fun repeatedCallsWhileGranted_enqueueOnlyOnce() {
+    fun everyResumeWhileGranted_enqueuesIncremental_relyingOnLauncherKeepPolicy() {
         val launcher = RecordingLauncher()
         val vm = vm(launcher)
         vm.onResume(granted = true)
         vm.onResume(granted = true)
         vm.onPermissionResult(granted = true, shouldShowRationale = false)
+        assertEquals(List(3) { IndexMode.INCREMENTAL }, launcher.modes)
+    }
+
+    @Test
+    fun securityExceptionWhileCounting_resetsPermission_andNextGrantedResumeEnqueuesAgain() {
+        val launcher = RecordingLauncher()
+        val vm = MainViewModel(FakeMediaPhotoSource(photos, failWith = SecurityException()), launcher)
+        vm.onResume(granted = true)
+        assertEquals(PermissionState.NotRequested, vm.state.value.permission)
         assertEquals(1, launcher.modes.size)
+        vm.onResume(granted = true)
+        assertEquals(2, launcher.modes.size)
     }
 
     @Test
@@ -85,17 +96,18 @@ class MainViewModelIndexingTest {
     }
 
     @Test
-    fun permissionRevokedThenRegranted_enqueuesAgain() {
+    fun permissionRevokedThenRegranted_enqueuesAgain_andNotWhileRevoked() {
         val launcher = RecordingLauncher()
         val vm = vm(launcher)
         vm.onResume(granted = true)
         vm.onResume(granted = false)
+        assertEquals(1, launcher.modes.size)
         vm.onResume(granted = true)
         assertEquals(2, launcher.modes.size)
     }
 
     @Test
-    fun launchException_doesNotCrash_andRetriesOnNextResume() {
+    fun launchException_doesNotCrash_andOnlyNextResumeRetries() {
         val launcher = RecordingLauncher(failWith = IllegalStateException())
         val vm = vm(launcher)
         vm.onResume(granted = true)
@@ -103,8 +115,7 @@ class MainViewModelIndexingTest {
         launcher.failWith = null
         vm.onResume(granted = true)
         assertEquals(2, launcher.modes.size)
-        vm.onResume(granted = true)
-        assertEquals(2, launcher.modes.size)
+        assertEquals(PermissionState.Granted, vm.state.value.permission)
     }
 
     @Test
@@ -127,6 +138,13 @@ class MainViewModelIndexingTest {
     @Test
     fun banner_showsProgressWhenRunning() {
         assertEquals(IndexingBanner(3, 10), indexingBanner(IndexStatusUiState.Data(10, 3, null), running = true))
+    }
+
+    @Test
+    fun banner_staleCompletedCounts_showNeutralText() {
+        val none = IndexingBanner(null, null)
+        assertEquals(none, indexingBanner(IndexStatusUiState.Data(10, 10, 5L), running = true))
+        assertEquals(none, indexingBanner(IndexStatusUiState.Data(10, 12, 5L), running = true))
     }
 
     @Test

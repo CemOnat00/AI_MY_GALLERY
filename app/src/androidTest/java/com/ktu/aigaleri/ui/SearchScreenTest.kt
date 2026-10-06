@@ -10,6 +10,8 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import com.ktu.aigaleri.domain.SearchResult
+import com.ktu.aigaleri.ui.index.IndexingBanner
+import com.ktu.aigaleri.ui.index.TAG_INDEXING_BANNER
 import com.ktu.aigaleri.ui.search.SearchContent
 import com.ktu.aigaleri.ui.search.SearchStatus
 import com.ktu.aigaleri.ui.search.SearchUiState
@@ -25,8 +27,42 @@ import org.junit.Test
 class SearchScreenTest {
     @get:Rule val rule = createComposeRule()
 
-    private fun show(state: SearchUiState, onSearch: () -> Unit = {}) = rule.setContent {
-        SearchContent(state, onQueryChange = {}, onSearch = onSearch, onOpenPhoto = {}, onOpenIndexStatus = {})
+    private fun show(
+        state: SearchUiState,
+        onSearch: () -> Unit = {},
+        indexing: IndexingBanner? = null,
+        onOpenIndexStatus: () -> Unit = {},
+    ) = rule.setContent {
+        SearchContent(
+            state,
+            onQueryChange = {},
+            onSearch = onSearch,
+            onOpenPhoto = {},
+            onOpenIndexStatus = onOpenIndexStatus,
+            indexing = indexing,
+        )
+    }
+
+    @Test
+    fun indexingBanner_hiddenWhenNull() {
+        show(SearchUiState())
+        rule.onNodeWithTag(TAG_INDEXING_BANNER).assertDoesNotExist()
+    }
+
+    @Test
+    fun indexingBanner_showsProgress_andClickOpensIndexStatus() {
+        var opened = false
+        show(SearchUiState(), indexing = IndexingBanner(3, 10), onOpenIndexStatus = { opened = true })
+        rule.onNodeWithTag(TAG_INDEXING_BANNER).assertExists()
+        rule.onNodeWithText("3 / 10", substring = true).assertExists()
+        rule.onNodeWithTag(TAG_INDEXING_BANNER).performClick()
+        assertTrue(opened)
+    }
+
+    @Test
+    fun indexingBanner_withoutCounts_showsNeutralText() {
+        show(SearchUiState(), indexing = IndexingBanner(null, null))
+        rule.onNodeWithText("sonuçlar eksik olabilir", substring = true).assertExists()
     }
 
     @Test

@@ -30,6 +30,6 @@
     <string name="reindex_unavailable">İndeksleme henüz bağlı değil; yeniden indeksleme şimdilik kullanılamıyor.</string>
     <string name="retry_button">Yeniden dene</string>
     <string name="reindex_failed">Yeniden indeksleme başlatılamadı. Lütfen tekrar dene.</string>
-    <string name="indexing_progress">İndeksleniyor %1$d / %2$d. İndeks tamamlanana kadar sonuçlar eksik olabilir. Ayrıntı için dokun.</string>
-    <string name="indexing_started">İndeksleniyor… İndeks tamamlanana kadar sonuçlar eksik olabilir. Ayrıntı için dokun.</string>
+    <string name="indexing_progress">İndeksleme sürüyor veya sırada (%1$d / %2$d); sonuçlar eksik olabilir. Ayrıntı için dokun.</string>
+    <string name="indexing_started">İndeksleme sürüyor veya sırada; sonuçlar eksik olabilir. Ayrıntı için dokun.</string>
 </resources>
