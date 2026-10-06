@@ -13,7 +13,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -106,8 +105,6 @@ fun AppNavHost(
     NavHost(navController = navController, startDestination = Routes.SEARCH, modifier = modifier) {
         composable(Routes.SEARCH) {
             if (granted) {
-                // Arama ekranı açılırken metin oturumunu önceden aç (ilk sorgu gecikmesi); ViewModel başına bir kez.
-                LaunchedEffect(Unit) { searchViewModel.warmUp() }
                 val searchState by searchViewModel.state.collectAsStateWithLifecycle()
                 val indexUiState by indexStatusViewModel.state.collectAsStateWithLifecycle()
                 val indexRunning by indexStatusViewModel.reindexInProgress.collectAsStateWithLifecycle()
@@ -116,6 +113,7 @@ fun AppNavHost(
                     indexing = indexingBanner(indexUiState, indexRunning),
                     onQueryChange = searchViewModel::onQueryChange,
                     onSearch = searchViewModel::search,
+                    onQueryFocused = searchViewModel::warmUp,
                     onOpenPhoto = { navController.open(Routes.viewer(it)) },
                     onOpenIndexStatus = { navController.open(Routes.INDEX_STATUS) },
                 )

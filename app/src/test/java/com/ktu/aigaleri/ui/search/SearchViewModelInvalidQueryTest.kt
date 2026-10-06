@@ -70,20 +70,41 @@ class SearchViewModelInvalidQueryTest {
     }
 
     @Test
-    fun warmUp_runsOnlyOnce_perViewModel() {
+    fun warmUp_whileInFlight_isDeduplicated_thenCanRunAgain() {
         var calls = 0
-        val vm = SearchViewModel(ThrowingRepo()) { calls++ }
+        val gate = CompletableDeferred<Unit>()
+        val vm = SearchViewModel(ThrowingRepo()) { calls++; gate.await(); true }
         vm.warmUp()
         vm.warmUp()
         vm.warmUp()
+        assertEquals(1, calls) // sürerken tekrar çağrı etkisiz
+        gate.complete(Unit)
+        vm.warmUp() // bitti: yeniden çağrı action'a gider (ısınmışsa action ucuz döner)
+        assertEquals(2, calls)
+    }
+
+    @Test
+    fun warmUp_deferredResult_isRetriedOnNextFocus() {
+        val answers = ArrayDeque(listOf(false, false, true))
+        var calls = 0
+        val vm = SearchViewModel(ThrowingRepo()) { calls++; answers.removeFirst() }
+        vm.warmUp(); vm.warmUp(); vm.warmUp()
+        assertEquals(3, calls)
+    }
+
+    @Test
+    fun warmUp_afterFailure_isNotRetried() {
+        var calls = 0
+        val vm = SearchViewModel(ThrowingRepo()) { calls++; throw IllegalStateException("model yok") }
+        vm.warmUp(); vm.warmUp()
         assertEquals(1, calls)
-        assertEquals(1, calls.also { SearchViewModel(ThrowingRepo()) { }.warmUp() }) // başka örnek bunu etkilemez
     }
 
     @Test
     fun warmUp_failureIsSwallowed_andSearchStillWorks() {
         val vm = SearchViewModel(ThrowingRepo(results = listOf(SearchResult(1, "content://media/1", 0.5f)))) {
             throw IllegalStateException("model yok")
+            @Suppress("UNREACHABLE_CODE") true
         }
         vm.warmUp() // fırlatmaz
         assertEquals(SearchStatus.Idle, vm.state.value.status)
@@ -95,7 +116,7 @@ class SearchViewModelInvalidQueryTest {
     @Test
     fun warmUp_doesNotBlockSearch_whileWarmUpIsInFlight() {
         val gate = CompletableDeferred<Unit>()
-        val vm = SearchViewModel(ThrowingRepo(results = listOf(SearchResult(1, "content://media/1", 0.5f)))) { gate.await() }
+        val vm = SearchViewModel(ThrowingRepo(results = listOf(SearchResult(1, "content://media/1", 0.5f)))) { gate.await(); true }
         vm.warmUp()
         vm.onQueryChange("kedi")
         vm.search()

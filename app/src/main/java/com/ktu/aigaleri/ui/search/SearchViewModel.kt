@@ -56,32 +56,34 @@ data class SearchUiState(
 /**
  * Arama ekranı mantığı; arama [repository] üzerinden (indeks okuma) yapılır, ana thread'de bloklamaz.
  *
- * @param warmUpAction metin modeli oturumunu önceden açan en iyi çaba işlemi ([warmUp]); varsayılan işlem yok.
+ * @param warmUpAction metin modeli oturumunu önceden açan en iyi çaba işlemi ([warmUp]); `true`: ısınmış,
+ *   `false`: koşullar uygun değil (ör. indeks boş/indeksleme sürüyor), sonra yeniden denenir. Politika [SearchWarmUp]'tadır.
  */
 class SearchViewModel(
     private val repository: SearchRepository,
-    private val warmUpAction: suspend () -> Unit = {},
+    private val warmUpAction: suspend () -> Boolean = { true },
 ) : ViewModel() {
     private val _state = MutableStateFlow(SearchUiState())
     val state: StateFlow<SearchUiState> = _state.asStateFlow()
     private var searchJob: Job? = null
-    private var warmedUp = false
+    private var warmUpJob: Job? = null
+    private var warmUpFailed = false
 
     /**
-     * Arama ekranı açılırken çağrılır; ViewModel başına en fazla BİR kez çalışır (tekrar çağrı etkisizdir).
-     * Arka planda ısınma işlemini yürütür; hata ve ayrıntı yutulur (ısınma başarısızsa ilk sorgu normal yoldan
-     * modeli açar ve hatayı kendisi bildirir). İptal (ViewModel temizlenmesi) yayılır. Log yazılmaz.
+     * İlk metin alanı odağında çağrılır. Bir ısınma sürerken tekrar çağrı etkisizdir; bittikten sonra yeniden çağrı
+     * [warmUpAction]'a gider (ısınmışsa o ucuz döner). Hata ve ayrıntı yutulur ve bu ViewModel'de ısınma bir daha denenmez
+     * (ilk sorgu normal yoldan modeli açar ve hatayı kendisi bildirir). İptal (ViewModel temizlenmesi) yayılır. Log yazılmaz.
      */
     fun warmUp() {
-        if (warmedUp) return
-        warmedUp = true
-        viewModelScope.launch {
+        if (warmUpFailed || warmUpJob?.isActive == true) return
+        warmUpJob = viewModelScope.launch {
             try {
                 warmUpAction()
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                // En iyi çaba: ayrıntı loglanmaz.
+                // En iyi çaba: ayrıntı loglanmaz; hata tekrarlanmasın (ör. model kopyası) diye bu ViewModel'de bırakılır.
+                warmUpFailed = true
             }
         }
     }

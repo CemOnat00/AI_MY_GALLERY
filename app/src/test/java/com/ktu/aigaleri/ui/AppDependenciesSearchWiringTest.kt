@@ -45,14 +45,26 @@ class AppDependenciesSearchWiringTest {
     @Test
     fun searchRepositoryIsRealAndUsesSharedTextEncoder() {
         assertTrue(Regex("""RoomSearchRepository\(\s*encoder = textEncoder""").containsMatchIn(deps))
-        assertTrue(deps.contains("suspend fun warmUpSearch() = textEncoder.warmUp()"))
+        assertTrue(deps.contains("suspend fun warmUpSearch(): Boolean = searchWarmUp.run()"))
+        assertTrue(deps.contains("warm = { textEncoder.warmUp() }"))
+        assertTrue(deps.contains("isIndexing = { indexLauncher.isRunning.first() }"))
+        assertTrue(deps.contains("registerComponentCallbacks("))
+        assertTrue(deps.contains("TextSessionTrimHandler("))
         val activity = File(mainSrc, "ui/MainActivity.kt").readText()
         assertTrue(activity.contains("SearchViewModel(deps.searchRepository, deps::warmUpSearch)"))
     }
 
     @Test
+    fun warmUpIsTriggeredByQueryFieldFocus_notByScreenOpen() {
+        val screen = File(mainSrc, "ui/MainScreen.kt").readText()
+        assertTrue(screen.contains("onQueryFocused = searchViewModel::warmUp"))
+        assertTrue(!screen.contains("LaunchedEffect"))
+        assertTrue(File(mainSrc, "ui/search/SearchScreen.kt").readText().contains("onFocusChanged"))
+    }
+
+    @Test
     fun noLoggingOfQueryOrVectorsInSearchCode() {
-        val files = listOf("data/RoomSearchRepository.kt", "data/TopKCollector.kt", "ui/search/SearchViewModel.kt")
+        val files = listOf("data/RoomSearchRepository.kt", "data/TopKCollector.kt", "ui/search/SearchViewModel.kt", "ui/search/SearchWarmUp.kt", "ui/TextSessionTrimHandler.kt")
         for (f in files) {
             val t = File(mainSrc, f).readText()
             assertTrue("$f log çağrısı içeriyor", !Regex("""\bLog\.|println\(|Timber|Logger""").containsMatchIn(t))

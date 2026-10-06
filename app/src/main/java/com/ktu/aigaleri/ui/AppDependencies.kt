@@ -1,6 +1,7 @@
 package com.ktu.aigaleri.ui
 
 import android.content.Context
+import com.ktu.aigaleri.ui.search.SearchWarmUp
 import androidx.work.WorkManager
 import com.ktu.aigaleri.data.AiGaleriDatabase
 import com.ktu.aigaleri.data.IndexState
@@ -12,12 +13,17 @@ import com.ktu.aigaleri.data.RoomTransactionRunner
 import com.ktu.aigaleri.domain.PhotoIndexer
 import com.ktu.aigaleri.domain.SearchRepository
 import com.ktu.aigaleri.ml.AssetManagerOpener
+import com.ktu.aigaleri.ml.ModelManifest
 import com.ktu.aigaleri.ml.ModelStore
 import com.ktu.aigaleri.ml.OnnxImageEncoder
 import com.ktu.aigaleri.ml.OnnxTextEncoder
 import com.ktu.aigaleri.ml.SingleSessionSlot
 import com.ktu.aigaleri.work.WorkManagerIndexLauncher
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 
 /**
  * Basit elle bağımlılık sağlama (DI kütüphanesi yok); tüm bağlantılar TEK YERDE burada.
@@ -46,8 +52,10 @@ class AppDependencies private constructor(context: Context) {
     /** Tek ONNX oturum kuralı yuvası; görüntü ve metin kodlayıcı aynı örneği kullanır. */
     val sessionSlot: SingleSessionSlot get() = SingleSessionSlot.shared
 
+    private val textEncoderDelegate = lazy { OnnxTextEncoder(modelStore, sessionSlot) }
+
     /** Arama metin kodlayıcısı (tek örnek; [modelStore] ve [sessionSlot] paylaşılır). */
-    val textEncoder: OnnxTextEncoder by lazy { OnnxTextEncoder(modelStore, sessionSlot) }
+    val textEncoder: OnnxTextEncoder by textEncoderDelegate
 
     /** İndeksleme hattı (görüntü kodlayıcı + MediaStore + Room); yalnızca WorkManager işinde toplanır. */
     val photoIndexer: PhotoIndexer by lazy {
@@ -65,10 +73,36 @@ class AppDependencies private constructor(context: Context) {
         RoomSearchRepository(encoder = textEncoder, dao = database.photoEmbeddingDao())
     }
 
-    /** Arama ekranı açılırken çağrılır: metin oturumunu önceden açar (ilk sorgu gecikmesi). En iyi çabadır. */
-    suspend fun warmUpSearch() = textEncoder.warmUp()
+    /**
+     * Isınma politikası: yalnızca aranabilir indeks varsa ve indeksleme çalışmıyorsa metin oturumunu önceden açar
+     * (bkz. [SearchWarmUp]).
+     */
+    private val searchWarmUpDelegate = lazy {
+        SearchWarmUp(
+            hasSearchableIndex = {
+                database.photoEmbeddingDao().getPageForModel(ModelManifest.MODEL_VERSION, Long.MIN_VALUE, 1).isNotEmpty()
+            },
+            isIndexing = { indexLauncher.isRunning.first() },
+            warm = { textEncoder.warmUp() },
+        )
+    }
+    private val searchWarmUp: SearchWarmUp by searchWarmUpDelegate
+
+    /** İlk metin alanı odağında çağrılır. @return ısınmış mı (false: koşullar uygun değil, sonra yeniden denenir). En iyi çaba. */
+    suspend fun warmUpSearch(): Boolean = searchWarmUp.run()
 
     val indexLauncher: IndexLauncher by lazy { WorkManagerIndexLauncher(WorkManager.getInstance(appContext)) }
+
+    init {
+        // Arka plana alınınca/bellek baskısında metin oturumunu bırak (süreç boyunca ~135 MB tutma).
+        appContext.registerComponentCallbacks(
+            TextSessionTrimHandler(
+                scope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
+                release = { if (textEncoderDelegate.isInitialized()) textEncoder.release() },
+                afterRelease = { if (searchWarmUpDelegate.isInitialized()) searchWarmUp.onSessionReleased() },
+            ),
+        )
+    }
 
     companion object {
         @Volatile private var instance: AppDependencies? = null

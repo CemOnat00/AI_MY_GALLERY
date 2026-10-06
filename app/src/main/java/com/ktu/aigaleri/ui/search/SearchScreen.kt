@@ -24,6 +24,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
@@ -47,12 +48,14 @@ fun SearchContent(
     onOpenPhoto: (Long) -> Unit,
     onOpenIndexStatus: () -> Unit,
     indexing: IndexingBanner? = null,
+    onQueryFocused: () -> Unit = {},
 ) {
     Column(modifier = Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         OutlinedTextField(
             value = state.query,
             onValueChange = onQueryChange,
-            modifier = Modifier.fillMaxWidth().testTag(TAG_QUERY_FIELD),
+            modifier = Modifier.fillMaxWidth().testTag(TAG_QUERY_FIELD)
+                .onFocusChanged { if (it.isFocused) onQueryFocused() },
             label = { Text(stringResource(R.string.search_hint)) },
             supportingText = { Text("${state.query.length}/$MAX_QUERY_LENGTH") },
             singleLine = true,

@@ -243,6 +243,59 @@ class RoomSearchRepositoryTest {
     }
 
     @Test
+    fun allScannedRecordsCorrupt_isIllegalState_notSilentEmpty() = runBlocking {
+        // spec boyutu değişti ama modelVersion aynı kaldı: tüm kayıtlar yanlış boyutlu
+        val oldDim = (1L..300L).map { row(it, FloatArray(TEST_DIM - 2) { 0.5f }) }
+        for (pageSize in listOf(7, 256)) {
+            try {
+                repo(FakeEmbeddingDao(oldDim), pageSize = pageSize).search("x")
+                fail("pageSize=$pageSize")
+            } catch (e: IllegalStateException) {
+                assertTrue(!e.message!!.contains("300")) // sayı/ayrıntı sızmaz
+            }
+        }
+        // yalnızca bozuk kayıtlar (boş uri, NaN) da hepsi atlanırsa hata
+        val onlyBad = listOf(row(1, e0(), uri = " "), row(2, FloatArray(TEST_DIM) { Float.NaN }))
+        try {
+            repo(FakeEmbeddingDao(onlyBad)).search("x")
+            fail()
+        } catch (_: IllegalStateException) {
+        }
+    }
+
+    @Test
+    fun someCorruptRecords_stillReturnsHealthyOnes_andEmptyIndexIsNotAnError() = runBlocking {
+        val rows = listOf(row(1, FloatArray(3)), row(2, unitWithFirst(0.4f)))
+        assertEquals(listOf(2L), ids(repo(FakeEmbeddingDao(rows), pageSize = 1).search("x")))
+        assertEquals(emptyList<SearchResult>(), repo(FakeEmbeddingDao()).search("x")) // taranan 0: hata değil
+    }
+
+    @Test
+    fun corruptRecordsOfOtherModelVersion_doNotTriggerError() = runBlocking {
+        val rows = listOf(row(1, FloatArray(3), model = "old-model"), row(2, e0()))
+        assertEquals(listOf(2L), ids(repo(FakeEmbeddingDao(rows)).search("x")))
+    }
+
+    @Test
+    fun queryVectorNorm_isChecked_withTolerance() = runBlocking {
+        val dao = FakeEmbeddingDao(listOf(row(1, e0())))
+        fun v(norm: Float) = e0().also { it[0] = norm }
+        // sapma toleransın içinde: kabul
+        for (ok in listOf(1f, 1.0005f, 0.9995f)) assertEquals(1, repo(dao, FixedTextEncoder(v(ok))).search("x").size)
+        // dışında: ISE (sıfır, küçük, büyük norm); indeks okunmaz
+        val untouched = FakeEmbeddingDao(listOf(row(1, e0())))
+        for (bad in listOf(0f, 0.99f, 1.01f, 2f, 0.5f)) {
+            try {
+                repo(untouched, FixedTextEncoder(v(bad))).search("gizli")
+                fail("norm=$bad")
+            } catch (e: IllegalStateException) {
+                assertTrue(!e.message!!.contains("gizli"))
+            }
+        }
+        assertTrue(untouched.pageCalls.isEmpty())
+    }
+
+    @Test
     fun minScore_whenSet_filtersBelowThreshold_defaultKeepsAll() = runBlocking {
         val rows = listOf(row(1, unitWithFirst(0.9f)), row(2, unitWithFirst(0.2f)), row(3, unitWithFirst(0.5f)))
         assertEquals(listOf(1L, 3L, 2L), ids(repo(FakeEmbeddingDao(rows)).search("x")))

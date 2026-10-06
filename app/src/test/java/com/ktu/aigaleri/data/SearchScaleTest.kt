@@ -10,6 +10,11 @@ import org.junit.Test
 /**
  * 50-100 bin sentetik kayıtla bellek/süre makullüğü (JVM, sahte DAO; telefon ölçümü DEĞİLDİR). Kayıtlar sayfa istendikçe
  * üretilir, bütün indeks hiç bellekte tutulmaz; böylece "tarama indeksten bağımsız bellek kullanır" iddiası sınanır.
+ *
+ * Dürüstlük notları: (1) ölçülen süre, sahte DAO'nun kayıt ÜRETİM süresini (rastgele vektör + kodlama) de içerir; gerçek
+ * SQLite/Room/CursorWindow maliyetini içermez, yani ne iyimser ne kesin bir telefon tahminidir. (2) Süre üst sınırı
+ * (60 sn) bilinçli olarak çok gevşektir: yalnızca sonsuz/kuadratik bir regresyonu yakalar, performansı doğrulamaz.
+ * (3) Bellek denetimi yalnızca arama SONRASI tutulan belleği sınar (GC sonrası), tepe belleği değil.
  */
 class SearchScaleTest {
     private class GeneratingDao(private val total: Int, private val dim: Int) : PhotoEmbeddingDao {
