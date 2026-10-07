@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+
+<html lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/><meta content="mobile_tab" name="shell-type"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{width:100%;margin:0;padding:0;background-color:#f9faf5;color:#1a1c19;overscroll-behavior-y:none;}.pb-safe{padding-bottom:env(safe-area-inset-bottom,0px);}.pt-safe{padding-top:env(safe-area-inset-top,0px);}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { colors: { "on-secondary": "#ffffff", "error": "#ba1a1a", "on-error-container": "#93000a", "on-secondary-fixed-variant": "#334b4f", "on-error": "#ffffff", "secondary": "#4a6267", "surface-container-low": "#f3f4ef", "background": "#f9faf5", "surface-variant": "#e2e3de", "tertiary": "#3a4664", "secondary-fixed": "#cde7ed", "tertiary-container": "#525e7d", "on-primary-container": "#97e4f2", "inverse-on-surface": "#f0f1ec", "on-primary-fixed-variant": "#004f58", "surface-dim": "#d9dad6", "tertiary-fixed": "#d9e2ff", "on-background": "#1a1c19", "surface-container-highest": "#e2e3de", "primary": "#004e58", "surface-tint": "#016874", "on-tertiary-fixed": "#0e1b36", "primary-fixed": "#a2effd", "on-tertiary-container": "#ccd8fd", "outline-variant": "#bec8ca", "tertiary-fixed-dim": "#bac6ea", "error-container": "#ffdad6", "on-surface-variant": "#3f484a", "secondary-fixed-dim": "#b1cbd1", "inverse-surface": "#2f312e", "on-secondary-fixed": "#051f23", "secondary-container": "#cde7ed", "surface-container-high": "#e8e9e4", "surface-bright": "#f9faf5", "primary-fixed-dim": "#85d2e0", "surface-container-lowest": "#ffffff", "surface": "#f9faf5", "on-secondary-container": "#50686d", "on-primary-fixed": "#001f24", "on-surface": "#1a1c19", "surface-container": "#edeee9", "primary-container": "#006874", "outline": "#6f797b", "on-tertiary-fixed-variant": "#3a4664", "on-tertiary": "#ffffff", "on-primary": "#ffffff", "inverse-primary": "#85d2e0" }, borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" }, spacing: { "gutter": "0.125rem", "space-xs": "0.25rem", "margin": "1rem", "space-sm": "0.5rem", "space-lg": "1.5rem", "space-xl": "2rem", "space-md": "1rem" }, fontFamily: { "body-md": ["Roboto Flex"], "label-lg": ["Roboto Flex"], "label-md": ["Roboto Flex"], "body-sm": ["Roboto Flex"], "title-lg": ["Roboto Flex"], "title-sm": ["Roboto Flex"], "headline-lg": ["Roboto Flex"], "body-lg": ["Roboto Flex"], "headline-md": ["Roboto Flex"], "title-md": ["Roboto Flex"], "headline-sm": ["Roboto Flex"], "label-sm": ["Roboto Flex"] }, fontSize: { "body-md": ["14px", { lineHeight: "20px", letterSpacing: "0.25px", fontWeight: "400" }], "label-lg": ["14px", { lineHeight: "20px", letterSpacing: "0.1px", fontWeight: "500" }], "label-md": ["12px", { lineHeight: "16px", letterSpacing: "0.5px", fontWeight: "500" }], "body-sm": ["12px", { lineHeight: "16px", letterSpacing: "0.4px", fontWeight: "400" }], "title-lg": ["22px", { lineHeight: "28px", fontWeight: "500" }], "title-sm": ["14px", { lineHeight: "20px", letterSpacing: "0.1px", fontWeight: "500" }], "headline-lg": ["32px", { lineHeight: "40px", fontWeight: "400" }], "body-lg": ["16px", { lineHeight: "24px", letterSpacing: "0.5px", fontWeight: "400" }], "headline-md": ["28px", { lineHeight: "36px", fontWeight: "400" }], "title-md": ["16px", { lineHeight: "24px", letterSpacing: "0.15px", fontWeight: "500" }], "headline-sm": ["24px", { lineHeight: "32px", fontWeight: "400" }], "label-sm": ["11px", { lineHeight: "16px", letterSpacing: "0.5px", fontWeight: "500" }] } } } };</script><style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head><body class="bg-surface font-body-md text-on-surface antialiased flex flex-col min-h-screen"><header class="fixed top-0 w-full z-50 bg-surface/80 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)] pt-safe"><div class="flex justify-between items-center px-margin h-6 text-on-surface-variant font-label-sm text-label-sm select-none"><span class="font-label-md text-label-md font-medium text-on-surface">14:32</span><div class="flex items-center gap-space-xs"><span class="material-symbols-outlined text-[16px]">signal_cellular_4_bar</span><span class="material-symbols-outlined text-[16px]">wifi</span><span class="material-symbols-outlined text-[18px]">battery_full</span></div></div><div class="h-20 px-margin flex items-center justify-between gap-space-sm"><div class="flex-1 flex items-center h-14 bg-surface-container rounded-full px-space-md gap-space-sm shadow-[0_1px_4px_rgba(0,0,0,0.04)]"><span class="material-symbols-outlined text-on-surface-variant">search</span><span class="flex-1 font-body-lg text-body-lg text-on-surface-variant truncate">Search</span></div><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center shrink-0"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></header><main class="flex flex-col relative w-full pt-20 pb-24 bg-surface min-h-screen"><div class="flex flex-col w-full">
+<!-- Interactive State Control Bar & Theme Switcher -->
+<div class="px-margin pt-space-xs pb-space-sm bg-surface">
+<div class="flex items-center justify-between gap-space-xs mb-space-xs">
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Görünüm Durumu</span>
+<button class="flex items-center gap-1 px-space-sm py-1 rounded-full bg-surface-container text-on-surface font-label-sm text-label-sm transition-colors" id="themeToggleBtn" type="button">
+<span class="material-symbols-outlined text-[16px]" id="themeIcon">dark_mode</span>
+<span id="themeLabel">Koyu Mod</span>
+</button>
+</div>
+<!-- State Switcher Pills -->
+<div class="flex items-center gap-space-xs overflow-x-auto no-scrollbar py-1">
+<button class="state-tab-btn active px-space-sm py-1.5 rounded-lg bg-primary text-on-primary font-label-md text-label-md whitespace-nowrap shadow-sm transition-all" data-state-trigger="results" type="button">
+        Sonuçlar
+      </button>
+<button class="state-tab-btn px-space-sm py-1.5 rounded-lg bg-surface-container-high text-on-surface-variant font-label-md text-label-md whitespace-nowrap transition-all" data-state-trigger="idle" type="button">
+        Boşta (Idle)
+      </button>
+<button class="state-tab-btn px-space-sm py-1.5 rounded-lg bg-surface-container-high text-on-surface-variant font-label-md text-label-md whitespace-nowrap transition-all" data-state-trigger="loading" type="button">
+        Yükleniyor
+      </button>
+<button class="state-tab-btn px-space-sm py-1.5 rounded-lg bg-surface-container-high text-on-surface-variant font-label-md text-label-md whitespace-nowrap transition-all" data-state-trigger="empty" type="button">
+        Sonuç Yok
+      </button>
+<button class="state-tab-btn px-space-sm py-1.5 rounded-lg bg-surface-container-high text-on-surface-variant font-label-md text-label-md whitespace-nowrap transition-all" data-state-trigger="error" type="button">
+        Hata / Uyarı
+      </button>
+</div>
+</div>
+<!-- Search Bar Container (Material 3 Field) -->
+<div class="px-margin pt-space-xs pb-space-xs bg-surface">
+<div class="relative flex items-center h-14 bg-surface-container-low rounded-xl px-space-md shadow-sm transition-colors focus-within:bg-surface-container">
+<span class="material-symbols-outlined text-[20px] text-on-surface-variant mr-space-sm select-none">search</span>
+<input class="w-full bg-transparent font-body-lg text-body-lg text-on-surface placeholder:text-on-surface-variant/70 focus:outline-none" id="gallerySearchInput" placeholder="Ne arıyorsun? Örn. plajda gülen çocuk" type="text" value="plajda gülen çocuk"/>
+<button aria-label="Aramayı temizle" class="p-1 rounded-full text-on-surface-variant hover:text-on-surface transition-colors" id="clearInputBtn" type="button">
+<span class="material-symbols-outlined text-[20px]">close</span>
+</button>
+</div>
+<!-- Inline validation message container -->
+<div class="hidden px-space-sm pt-1" id="validationNote">
+<span class="font-body-sm text-body-sm text-error flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">info</span>
+<span id="validationText">Lütfen bir şey yaz.</span>
+</span>
+</div>
+</div>
+<!-- Indexing Banner (Screen 3 Status Strip) -->
+<div class="px-margin mb-space-sm">
+<div class="w-full bg-surface-container-low rounded-lg px-3 py-2 cursor-pointer transition-all hover:bg-surface-container select-none">
+<div class="flex items-center justify-between mb-1">
+<div class="flex items-center gap-2">
+<span class="relative flex h-2 w-2">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+</span>
+<span class="font-label-md text-label-md font-medium text-on-surface">İndeksleniyor 340 / 1.200</span>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant flex items-center">
+          Detay
+          <span class="material-symbols-outlined text-[14px] ml-0.5">chevron_right</span>
+</span>
+</div>
+<!-- Linear Progress Line -->
+<div class="w-full h-0.5 bg-surface-container-highest rounded-full overflow-hidden mb-1">
+<div class="bg-primary h-full rounded-full transition-all duration-500" style="width: 28.3%;"></div>
+</div>
+<p class="font-label-sm text-label-sm text-on-surface-variant leading-none">
+        İndeksleme sürüyor; arama sonuçları eksik olabilir.
+      </p>
+</div>
+</div>
+<!-- STATE C: Linear Progress Bar (Visible only in Loading State) -->
+<div class="hidden w-full h-0.5 bg-surface-container-high overflow-hidden mb-space-sm" id="loadingIndicatorBar">
+<div class="bg-primary h-full w-1/3 animate-pulse"></div>
+</div>
+<!-- ==================== CONTENT PANELS ==================== -->
+<!-- STATE A: Results State -->
+<div class="state-container flex flex-col w-full" id="stateResults">
+<div class="px-margin mb-space-xs flex items-center justify-between">
+<span class="font-label-md text-label-md font-medium text-on-surface-variant uppercase tracking-wider">En yakın eşleşmeler</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">14 fotoğraf</span>
+</div>
+<!-- 3-Column Edge-to-Edge Grid with 2dp gaps -->
+<div class="grid grid-cols-3 gap-gutter w-full">
+<div class="aspect-square relative overflow-hidden bg-surface-container-high">
+<img class="w-full h-full object-cover rounded-DEFAULT" data-alt="Candid authentic phone photograph of an energetic 5-year-old Turkish boy with ruffled hair laughing joyfully on sandy Patara beach. Sunlight gleaming on Aegean sea in the background with casual warm tones, natural framing, completely authentic unposed family snapshot." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBprDv-SGcPVWt8Ateosx1rgElKmn6LW7ZrgAPjq8sl05_agcaj5M2nSO0ElyGFKpcQC3wLxi-jq11Q-ltB8YcLZEP-bPDpBqGsNE_6kwLXiUbjyyThSePzOGVtp4n9RjV1UGXyiU6cEC4Eq_qrOBXXydLtZ-kuhdpKApLX7kGtsIHpY4moGRaq5j1hrVmO114vUpuJfPvQ2Fls86bnLxkp2CpTHwNAw_4F9zXX8OaTvanUGGHywzwT"/>
+</div>
+<div class="aspect-square relative overflow-hidden bg-surface-container-high">
+<img class="w-full h-full object-cover rounded-DEFAULT" data-alt="Everyday smartphone photo of a little girl sitting on an outdoor beach towel eating melting vanilla ice cream, cheeks covered in sweet cream, squinting playfully at the camera under hot Mediterranean sunlight, natural warm sand background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAg_0sj0_dV2-TrK20sCrWEYfm1Wl43Zafg_WdFemirYJC4Dhpdby-xVNFhpMadPlmhQk0PpwemradGcbRn4bVna0zBLcORbCQiMXJLavJx_xKxOfwsDpzAZz_8F7ns1pzrNfBCWVWGxlSf0VP_lXsga69GoJD4Dv4T0pEXu0-VjQ9UQMvU_obleTssIUq-N84qeiHirSIEMgjZrN35oREQQpSOgoRy6kxYeZ2IFTpMv0OWSx9YW4AN"/>
+</div>
+<div class="aspect-square relative overflow-hidden bg-surface-container-high">
+<img class="w-full h-full object-cover rounded-DEFAULT" data-alt="Candid shot of two siblings splashing along shallow turquoise sea water on Cesme shore, sunlight reflecting sparkles on gentle water ripples, unposed candid family travel moment shot on mobile phone." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBR2tokD7QEWm3VYH9BsLIrK-2aybChUvT7U5bh3BPF0KXODJe9_WOR0ZQK-QvCI0kenkg0fC-Qo6tecIzuJh30AVmd7k7Iv26lfe_S88tA0_Y3KdVPROzbLoI2JIdB-8Lqho-19dpCp80P0lb_K2b5WMFIst4A3p9waEmaCNLQBo4ar42ZZGnkOuSI6PGPr6ISIZFQg0EXuOUZbKP_9LMLvgUeo3M9zQaEs04XIC42-iyA6dfVsrTd"/>
+</div>
+<div class="aspect-square relative overflow-hidden bg-surface-container-high">
+<img class="w-full h-full object-cover rounded-DEFAULT" data-alt="Real life smartphone snapshot of a smiling toddler building a crooked sandcastle with a yellow plastic bucket on a lively Antalya public beach, vibrant towels and sun umbrellas in soft background blur." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAZzOWni2coFN8ohrzg9dVWGQSGmYaVN2IRxBIJsZrljtU0k7R0b0HPpthnz38ZFVk0ze5EeqF_W_d2C0B3UzKDG7mkWao3qFOFf0aurZKvv1lRZuwMADCqClRWoNtIjsnCe5IX6p2pSFve6bYIOMNd2ZYHKvC12A5rWST6i_OiXiNqtOQEElZ8rWUji9nOzLwwc7gJtKtTTulu3SmbSqVckQVaawt2Ae1lp6vk6Eck6eKDZnqfuqMP"/>
+</div>
+<div class="aspect-square relative overflow-hidden bg-surface-container-high">
+<img class="w-full h-full object-cover rounded-DEFAULT" data-alt="Authentic family memory shot from eye level: sunburnt happy dad carrying giggling little girl on his shoulders along the foamy shoreline during golden hour on Turkish coastline." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDZ1cBwJrWcIdjn_oH8YTPavEtsd5oUsGJbtg9qWBXLCBasLjGcYS-n1IGleXAsgz9SvicOLZ4FrCe5tRmetB-Ur3C4Mg6Te6YRpQIPPpKDraIvvFLZE4aMWcyxmg5-Om2kjSPN3caG08M5PqzB4SV-V_2FMQbIYD4MWRLVRqi-tS6UnuEgVhrzftPssCHAz04GyZYLCuLGx9SkgRUTBd5Z48uw4yREjqeSywi_ouUW-l-abuiYlKSC"/>
+</div>
+<div class="aspect-square relative overflow-hidden bg-surface-container-high">
+<img class="w-full h-full object-cover rounded-DEFAULT" data-alt="Sun-soaked candid portrait of a curly-haired child running playfully across warm sand, throwing colorful beach ball towards the camera, natural dynamic movement, realistic phone camera texture." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDMifDsOjM1rcy3Ssw7tG2p8FNTH0ozk165wGr4Rx1bDK97bvdXdJCwmYjSmXqmdwUSX-uJqWJT2tXMn8hrfimEhD0MWUnskMv1e3wrDlawHk2gBRCG_Nx61t5WWBwU_9_PO2BXL9s9OEZkbCmQrEA6sMr17DJUcEQXR78CBC3pRiO0GmjCHS5hFRFNoTvCV0AeNndL0WxcDpqLKYiM_VnsvnIBhXpSEXnN75IPaR5q5Ewa6VCCseUD"/>
+</div>
+<div class="aspect-square relative overflow-hidden bg-surface-container-high">
+<img class="w-full h-full object-cover rounded-DEFAULT" data-alt="Close up smartphone capture of sandy children feet and colorful seashells collected on a wet sea shore towel, gentle late afternoon breeze, realistic phone photography." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAmagQOyu7rqq6i5ulCB7Cj--T68AfL3pMwXJpFEUmv_UKRkwlIq8gZ3Hr3rBuZscczzfF6ynOTbhszrP8qVCPB2fo7SEfQ_4uvxcNb8_JIBI-nkjm_K-qIn0cDTz-tjkFvD_cTS73na09plxLcpowfKnMfrnAo7ERgFoSuiKkAQ5nwXmW_xlB84Bi1TdITRnG01_pBFXbQJem8edkM_kz4ZCalsBg_8ur4ks5GiCNm40a88i6zIrcN"/>
+</div>
+<div class="aspect-square relative overflow-hidden bg-surface-container-high">
+<img class="w-full h-full object-cover rounded-DEFAULT" data-alt="Spontaneous photograph of a mother and child sharing laughs while resting under an umbrella canopy on Bodrum beach, casual sunglasses and beach bags around them." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAVL3te3Uo5EorSP6kUQ32Bk1Y5dBhkfS8F5ahRH0qFbGV-G9NBJnBvwA1fNh3bpf7dOysMpFENxmRsQsL3J49gL4_mBlHAogrvVWd1_A5wH9pGAZ6akeHi1_8bjWLESFY7v3H5E7bDi2oPbtV_bgBVONyp-3dIRjFndMHuVa90seB_Kh5OJrm3KPT-sN1dc6PggWhTKj91AFTDYcFgs9C1smG87-04m20haqcUTMFXJaH-nB6Eanca"/>
+</div>
+<div class="aspect-square relative overflow-hidden bg-surface-container-high">
+<img class="w-full h-full object-cover rounded-DEFAULT" data-alt="Playful summer moment of kids joyously jumping into the shallow turquoise sea waves together, water drops caught mid-air in bright afternoon light, candid mobile snapshot." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDXr3gjpSPr1qztGD0ib3OuvdmZFN0AKTZkx84wrA0OB6I88nHV3CHXMAu458LGbG-w0wgAXZNafKiRlbQQo7buj_6eEyowu4HqlU7-3gPzdGg1YhNcYXtBJAFA_T_SFIuND9BWIccQ2Ug1yzAUX1nL8vluqerQFkf6OgNtGqBrwhqJcsrtlwSUj135qc8ikLpPEmL0_2QFi9zVGmbFaEH6cyTvsYaO3CRIic41WpaBFxwxh95762w2"/>
+</div>
+</div>
+</div>
+<!-- STATE B: Idle State (Boşta) -->
+<div class="state-container hidden flex-col w-full px-margin" id="stateIdle">
+<div class="mb-space-md">
+<span class="font-label-md text-label-md font-medium text-on-surface-variant uppercase tracking-wider">Arama Önerileri</span>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">Cihazınızdaki fotoğrafları doğal cümlelerle arayın.</p>
+</div>
+<!-- Plain Text Suggestions Rows (Strictly clean, no decorative chips) -->
+<div class="flex flex-col bg-surface-container-low rounded-xl overflow-hidden shadow-sm">
+<button class="suggestion-row flex items-center justify-between px-space-md py-3.5 hover:bg-surface-container transition-colors text-left group" type="button">
+<div class="flex items-center gap-space-sm min-w-0">
+<span class="material-symbols-outlined text-[18px] text-on-surface-variant group-hover:text-primary transition-colors">history</span>
+<span class="font-body-md text-body-md text-on-surface truncate">gün batımında deniz</span>
+</div>
+<span class="material-symbols-outlined text-[18px] text-on-surface-variant group-hover:text-on-surface">north_west</span>
+</button>
+<div class="h-[1px] bg-surface-variant mx-space-md"></div>
+<button class="suggestion-row flex items-center justify-between px-space-md py-3.5 hover:bg-surface-container transition-colors text-left group" type="button">
+<div class="flex items-center gap-space-sm min-w-0">
+<span class="material-symbols-outlined text-[18px] text-on-surface-variant group-hover:text-primary transition-colors">search</span>
+<span class="font-body-md text-body-md text-on-surface truncate">kırmızı araba</span>
+</div>
+<span class="material-symbols-outlined text-[18px] text-on-surface-variant group-hover:text-on-surface">north_west</span>
+</button>
+<div class="h-[1px] bg-surface-variant mx-space-md"></div>
+<button class="suggestion-row flex items-center justify-between px-space-md py-3.5 hover:bg-surface-container transition-colors text-left group" type="button">
+<div class="flex items-center gap-space-sm min-w-0">
+<span class="material-symbols-outlined text-[18px] text-on-surface-variant group-hover:text-primary transition-colors">search</span>
+<span class="font-body-md text-body-md text-on-surface truncate">doğum günü pastası</span>
+</div>
+<span class="material-symbols-outlined text-[18px] text-on-surface-variant group-hover:text-on-surface">north_west</span>
+</button>
+<div class="h-[1px] bg-surface-variant mx-space-md"></div>
+<button class="suggestion-row flex items-center justify-between px-space-md py-3.5 hover:bg-surface-container transition-colors text-left group" type="button">
+<div class="flex items-center gap-space-sm min-w-0">
+<span class="material-symbols-outlined text-[18px] text-on-surface-variant group-hover:text-primary transition-colors">history</span>
+<span class="font-body-md text-body-md text-on-surface truncate">parkta koşan köpek</span>
+</div>
+<span class="material-symbols-outlined text-[18px] text-on-surface-variant group-hover:text-on-surface">north_west</span>
+</button>
+<div class="h-[1px] bg-surface-variant mx-space-md"></div>
+<button class="suggestion-row flex items-center justify-between px-space-md py-3.5 hover:bg-surface-container transition-colors text-left group" type="button">
+<div class="flex items-center gap-space-sm min-w-0">
+<span class="material-symbols-outlined text-[18px] text-on-surface-variant group-hover:text-primary transition-colors">search</span>
+<span class="font-body-md text-body-md text-on-surface truncate">kahve ve kitap</span>
+</div>
+<span class="material-symbols-outlined text-[18px] text-on-surface-variant group-hover:text-on-surface">north_west</span>
+</button>
+</div>
+</div>
+<!-- STATE C: Loading State Wrapper -->
+<div class="state-container hidden flex-col w-full" id="stateLoading">
+<div class="px-margin mb-space-xs flex items-center justify-between">
+<span class="font-label-md text-label-md font-medium text-on-surface-variant uppercase tracking-wider">Aranıyor...</span>
+<span class="font-label-sm text-label-sm text-primary flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px] animate-spin">progress_activity</span>
+        Taranıyor
+      </span>
+</div>
+<!-- Dimmed Grid to express background processing -->
+<div class="grid grid-cols-3 gap-gutter w-full opacity-35 select-none pointer-events-none">
+<div class="aspect-square bg-surface-container-high rounded-DEFAULT overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Everyday candid phone shot of a child laughing on Patara sand beach, Aegean shore." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCI9Df_OLDn9fLnawQWMz8Af3gzkGzqiz5wYnGoc4vAt1M1apK0TnoRQeXoGGkYQlG1U_NADbvsFHRXYR_60m2HAPcMiCGD9UySD_vV7m5et2C5F9m_tKxms-AML2d_2gJw6RatWivDTsgBt_4OJ5eoZ0-MGBg_Pa5MfSRiYCIlm5sQzcLEslTgBNF_h4nT0UTBz26nH-d4jLL4EVzUBOZh21RlrQ7CarFwdGjQnEIWvwSdqDg6j5u7"/>
+</div>
+<div class="aspect-square bg-surface-container-high rounded-DEFAULT overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Everyday smartphone photo of a girl eating melting ice cream in Cesme." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCVtnyAhXyaop0VyHoeUM4qwTch2NI_bZKIDhticI59G8sUzUXFd8ndbLxmVYdvySVK3poT7AmNJhN9A5wSSwHRUb5JKP37jbx999j_837wmUjxijO2PCk9x8ImcATBgyx0Xfpv_XOHe9nl6f7D3VXXG-ywoX1WFMqjkN900vMA822SlqeRCLHNT8fQVqN2p6rYOMjhCqCj1B5CIIuSdenBQrMV8dnopD89aX-1bu6i3AUdylJuZ59M"/>
+</div>
+<div class="aspect-square bg-surface-container-high rounded-DEFAULT overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Candid shot of two siblings splashing along shallow sea water on shore." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDymR2Y_WKbfvoq3AxXOXNFspP0uV2de7SJS2tUyg5xiw_C3Mx6SjRryy6KTvJEhbWl346ivOKCF_cLSZC2NCKwmUL_HzLRqR6J7Pk-KgHyP1JfrK9Fw9qzh2bipLoXHZE7hXRVX4gxZcVTK_OSCj2c3XqJLHMQBRnp1wfGjRhvGDWc-UyhhJxc_BMqjqLxDssygExmA8j6vJx4-8JlqmR9aN8trmsdT-aN5uMj3d1GEBcVDBjZKx38"/>
+</div>
+<div class="aspect-square bg-surface-container-high rounded-DEFAULT overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Real life smartphone snapshot of a smiling toddler building a sandcastle." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDV5pXa2CxSoA5uRNDMCFvBWjcHNwWi0ZeuZ0tEfd8O5gDtx-ZuqE_HmS1dCd2f0wIRKB0NliH6QkJXELf135GScTlwsn1M3xo6bt7v3SmLP2l_0P6Z74ZLFMH_zZNkCwJv3PyoZ3JjJmXthu1hnMmZ_Sao19adaG_wr7AaOP__nD1G-9wHnc_eRqyBDjpGn7aPQLguRB9MeEhhWOKw2-3dolpyPJEilQli3iyTNnNAhg4XyR6HeAvw"/>
+</div>
+<div class="aspect-square bg-surface-container-high rounded-DEFAULT overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Authentic family memory shot of happy dad carrying daughter on shoulders." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDhpC3VQZujvDl1j2ltQ-F_Ln_MZFSRXlpHC9dy8aDJLZY-sWsdObuivAuiQ49fkXuHZI3mj5Bpwzweitl5E_vNVcrzHF4JNLAkU7rdejFM_1EfSZf6UT27EiJFCGQyDACtXxUqCfOyp3zxxug647ivUV_wW-un1IWIFLCKWLp8OyurR_NPQTygp6o3iBfYO_5nnoIivC-AV5L7CA3AvVvQgZCIsBxzyTMrAs_vn1jUZ90Qjby4okWc"/>
+</div>
+<div class="aspect-square bg-surface-container-high rounded-DEFAULT overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Sun soaked candid portrait of a child running playfully across warm sand." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAcs6Y9F-PXqeUMWpHPOIhniwc0ZE_iadEF1zIRcJPL67kqTsSf8VeZp0lmTEkDL1gYCH0pVYgSI6Fq_FkG_VJVYZPcjm_yUtQufgGva7DUZGvz82gqUGnOH-TpRID-SPSndWob-lj-iQrTlqyxSf5bDlMXefeYFZEKdAaeBtxh3JHkkh5_ZuBQI9RA1vjyng-_EAUDvK85YStPOz2YKBIU0_ib7BWdKY5bIoer_yrjBLpbkdas39l4"/>
+</div>
+</div>
+</div>
+<!-- STATE D: Empty State (Sonuç Yok) -->
+<div class="state-container hidden flex-col items-center justify-center w-full px-margin py-space-xl text-center" id="stateEmpty">
+<div class="w-16 h-16 rounded-full bg-surface-container-high flex items-center justify-center text-on-surface-variant mb-space-md">
+<span class="material-symbols-outlined text-[32px]">image_not_supported</span>
+</div>
+<h3 class="font-title-md text-title-md font-medium text-on-surface mb-1">Eşleşen fotoğraf bulunamadı.</h3>
+<p class="font-body-md text-body-md text-on-surface-variant max-w-xs mb-space-lg">
+      Farklı veya daha sade kelimeler deneyin. Örneğin renk, nesne veya ortam adı belirtebilirsiniz.
+    </p>
+<button class="inline-flex items-center gap-1 font-label-lg text-label-lg text-primary hover:underline focus:outline-none" type="button">
+<span>İndeksleme durumunu gör</span>
+<span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+</button>
+</div>
+<!-- STATE E: Generic Error State (Genel Hata / Uyarı) -->
+<div class="state-container hidden flex-col w-full px-margin py-space-md" id="stateError">
+<div class="bg-error-container rounded-xl p-space-md flex flex-col gap-space-sm shadow-sm">
+<div class="flex items-start gap-space-sm">
+<span class="material-symbols-outlined text-error text-[24px] shrink-0 mt-0.5">error_outline</span>
+<div class="flex flex-col min-w-0">
+<span class="font-title-sm text-title-sm font-semibold text-on-error-container">Arama şu an yapılamadı.</span>
+<span class="font-body-sm text-body-sm text-on-error-container opacity-90 mt-0.5">
+            Cihaz içi yapay zeka indeksi anlık olarak meşgul veya geçici bir okuma hatası oluştu.
+          </span>
+</div>
+</div>
+<div class="flex items-center justify-end pt-1">
+<button class="px-space-md py-2 rounded-full bg-primary text-on-primary font-label-md text-label-md transition-colors hover:opacity-90" type="button">
+          Tekrar dene
+        </button>
+</div>
+</div>
+</div>
+</div>
+<script>
+  (function () {
+    const searchInput = document.getElementById('gallerySearchInput');
+    const clearBtn = document.getElementById('clearInputBtn');
+    const validationBox = document.getElementById('validationNote');
+    const validationText = document.getElementById('validationText');
+    const themeBtn = document.getElementById('themeToggleBtn');
+    const themeIcon = document.getElementById('themeIcon');
+    const themeLabel = document.getElementById('themeLabel');
+    const loadingBar = document.getElementById('loadingIndicatorBar');
+
+    const stateButtons = document.querySelectorAll('[data-state-trigger]');
+    const containers = {
+      results: document.getElementById('stateResults'),
+      idle: document.getElementById('stateIdle'),
+      loading: document.getElementById('stateLoading'),
+      empty: document.getElementById('stateEmpty'),
+      error: document.getElementById('stateError')
+    };
+
+    function setActiveState(stateKey) {
+      // Toggle views
+      Object.keys(containers).forEach((key) => {
+        if (containers[key]) {
+          if (key === stateKey) {
+            containers[key].classList.remove('hidden');
+            containers[key].classList.add('flex');
+          } else {
+            containers[key].classList.add('hidden');
+            containers[key].classList.remove('flex');
+          }
+        }
+      });
+
+      // Toggle top loading progress bar
+      if (stateKey === 'loading') {
+        loadingBar.classList.remove('hidden');
+      } else {
+        loadingBar.classList.add('hidden');
+      }
+
+      // Update switcher buttons UI
+      stateButtons.forEach((btn) => {
+        const isCurrent = btn.dataset.stateTrigger === stateKey;
+        if (isCurrent) {
+          btn.classList.remove('bg-surface-container-high', 'text-on-surface-variant');
+          btn.classList.add('bg-primary', 'text-on-primary');
+        } else {
+          btn.classList.remove('bg-primary', 'text-on-primary');
+          btn.classList.add('bg-surface-container-high', 'text-on-surface-variant');
+        }
+      });
+
+      // Synchronize input text with preview scenario
+      if (stateKey === 'idle') {
+        searchInput.value = '';
+        checkValidation('');
+      } else if (stateKey === 'empty') {
+        searchInput.value = 'karda yüzen flamingo';
+        checkValidation(searchInput.value);
+      } else if (stateKey === 'error') {
+        searchInput.value = 'plajda gülen çocuk';
+        checkValidation(searchInput.value);
+      } else {
+        if (!searchInput.value.trim()) {
+          searchInput.value = 'plajda gülen çocuk';
+        }
+        checkValidation(searchInput.value);
+      }
+    }
+
+    function checkValidation(value) {
+      if (value.length > 200) {
+        validationBox.classList.remove('hidden');
+        validationText.textContent = 'En fazla 200 karakter girebilirsiniz.';
+      } else if (value.trim().length === 0 && searchInput === document.activeElement) {
+        validationBox.classList.remove('hidden');
+        validationText.textContent = 'Lütfen bir şey yaz.';
+      } else {
+        validationBox.classList.add('hidden');
+      }
+    }
+
+    // Bind state trigger buttons
+    stateButtons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        setActiveState(btn.dataset.stateTrigger);
+      });
+    });
+
+    // Clear input handling
+    clearBtn.addEventListener('click', () => {
+      searchInput.value = '';
+      searchInput.focus();
+      setActiveState('idle');
+    });
+
+    // Real-time input listener
+    searchInput.addEventListener('input', (e) => {
+      const val = e.target.value;
+      checkValidation(val);
+      if (val.trim().length === 0) {
+        setActiveState('idle');
+      }
+    });
+
+    // Suggestion click handling
+    document.querySelectorAll('.suggestion-row').forEach((row) => {
+      row.addEventListener('click', () => {
+        const text = row.querySelector('.font-body-md').textContent.trim();
+        searchInput.value = text;
+        setActiveState('results');
+      });
+    });
+
+    // Theme Toggle Handler (Light / Dark)
+    let isDark = false;
+    themeBtn.addEventListener('click', () => {
+      isDark = !isDark;
+      if (isDark) {
+        document.documentElement.classList.add('dark');
+        themeIcon.textContent = 'light_mode';
+        themeLabel.textContent = 'Açık Mod';
+      } else {
+        document.documentElement.classList.remove('dark');
+        themeIcon.textContent = 'dark_mode';
+        themeLabel.textContent = 'Koyu Mod';
+      }
+    });
+  })();
+</script></main><nav class="fixed bottom-0 w-full z-50 pb-safe bg-surface/80 backdrop-blur-xl shadow-[0_-1px_8px_rgba(0,0,0,0.04)]" data-active-classes="[&amp;&gt;div]:bg-primary-container [&amp;&gt;div&gt;span]:text-on-primary-container text-on-surface font-medium"><div class="h-20 flex items-center justify-around px-margin"><a aria-current="page" class="flex flex-col items-center justify-center min-w-[64px] min-h-[48px] transition-colors group [&amp;&gt;div]:bg-primary-container [&amp;&gt;div&gt;span]:text-on-primary-container text-on-surface font-medium" data-path="search" href="#"><div class="w-16 h-8 rounded-full flex items-center justify-center transition-colors"><span class="material-symbols-outlined text-[24px] text-on-surface-variant group-hover:text-on-surface">photo_library</span></div><span class="font-label-md text-label-md mt-1">Photos</span></a><a class="flex flex-col items-center justify-center min-w-[64px] min-h-[48px] text-on-surface-variant transition-colors group" data-path="albums" href="#"><div class="w-16 h-8 rounded-full flex items-center justify-center transition-colors"><span class="material-symbols-outlined text-[24px] text-on-surface-variant group-hover:text-on-surface">collections_bookmark</span></div><span class="font-label-md text-label-md mt-1">Albums</span></a><a class="flex flex-col items-center justify-center min-w-[64px] min-h-[48px] text-on-surface-variant transition-colors group" data-path="device-folders" href="#"><div class="w-16 h-8 rounded-full flex items-center justify-center transition-colors"><span class="material-symbols-outlined text-[24px] text-on-surface-variant group-hover:text-on-surface">folder</span></div><span class="font-label-md text-label-md mt-1">On device</span></a></div><div class="flex justify-center pb-2 pt-1"><div class="w-28 h-1 bg-on-surface/20 rounded-full"></div></div></nav></body></html>

@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+
+<html lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/><meta content="mobile_blank" name="shell-type"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{width:100%;margin:0;padding:0;background-color:#1a1c19;color:#f0f1ec;overscroll-behavior-y:none;}.pb-safe{padding-bottom:env(safe-area-inset-bottom,0px);}.pt-safe{padding-top:env(safe-area-inset-top,0px);}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { colors: { "on-secondary": "#ffffff", "error": "#ba1a1a", "on-error-container": "#93000a", "on-secondary-fixed-variant": "#334b4f", "on-error": "#ffffff", "secondary": "#4a6267", "surface-container-low": "#f3f4ef", "background": "#f9faf5", "surface-variant": "#e2e3de", "tertiary": "#3a4664", "secondary-fixed": "#cde7ed", "tertiary-container": "#525e7d", "on-primary-container": "#97e4f2", "inverse-on-surface": "#f0f1ec", "on-primary-fixed-variant": "#004f58", "surface-dim": "#d9dad6", "tertiary-fixed": "#d9e2ff", "on-background": "#1a1c19", "surface-container-highest": "#e2e3de", "primary": "#004e58", "surface-tint": "#016874", "on-tertiary-fixed": "#0e1b36", "primary-fixed": "#a2effd", "on-tertiary-container": "#ccd8fd", "outline-variant": "#bec8ca", "tertiary-fixed-dim": "#bac6ea", "error-container": "#ffdad6", "on-surface-variant": "#3f484a", "secondary-fixed-dim": "#b1cbd1", "inverse-surface": "#2f312e", "on-secondary-fixed": "#051f23", "secondary-container": "#cde7ed", "surface-container-high": "#e8e9e4", "surface-bright": "#f9faf5", "primary-fixed-dim": "#85d2e0", "surface-container-lowest": "#ffffff", "surface": "#f9faf5", "on-secondary-container": "#50686d", "on-primary-fixed": "#001f24", "on-surface": "#1a1c19", "surface-container": "#edeee9", "primary-container": "#006874", "outline": "#6f797b", "on-tertiary-fixed-variant": "#3a4664", "on-tertiary": "#ffffff", "on-primary": "#ffffff", "inverse-primary": "#85d2e0" }, borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" }, spacing: { "gutter": "0.125rem", "space-xs": "0.25rem", "margin": "1rem", "space-sm": "0.5rem", "space-lg": "1.5rem", "space-xl": "2rem", "space-md": "1rem" }, fontFamily: { "body-md": ["Roboto Flex"], "label-lg": ["Roboto Flex"], "label-md": ["Roboto Flex"], "body-sm": ["Roboto Flex"], "title-lg": ["Roboto Flex"], "title-sm": ["Roboto Flex"], "headline-lg": ["Roboto Flex"], "body-lg": ["Roboto Flex"], "headline-md": ["Roboto Flex"], "title-md": ["Roboto Flex"], "headline-sm": ["Roboto Flex"], "label-sm": ["Roboto Flex"] }, fontSize: { "body-md": ["14px", { lineHeight: "20px", letterSpacing: "0.25px", fontWeight: "400" }], "label-lg": ["14px", { lineHeight: "20px", letterSpacing: "0.1px", fontWeight: "500" }], "label-md": ["12px", { lineHeight: "16px", letterSpacing: "0.5px", fontWeight: "500" }], "body-sm": ["12px", { lineHeight: "16px", letterSpacing: "0.4px", fontWeight: "400" }], "title-lg": ["22px", { lineHeight: "28px", fontWeight: "500" }], "title-sm": ["14px", { lineHeight: "20px", letterSpacing: "0.1px", fontWeight: "500" }], "headline-lg": ["32px", { lineHeight: "40px", fontWeight: "400" }], "body-lg": ["16px", { lineHeight: "24px", letterSpacing: "0.5px", fontWeight: "400" }], "headline-md": ["28px", { lineHeight: "36px", fontWeight: "400" }], "title-md": ["16px", { lineHeight: "24px", letterSpacing: "0.15px", fontWeight: "500" }], "headline-sm": ["24px", { lineHeight: "32px", fontWeight: "400" }], "label-sm": ["11px", { lineHeight: "16px", letterSpacing: "0.5px", fontWeight: "500" }] } } } };</script><style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head><body class="bg-surface font-body-md text-on-surface antialiased flex flex-col min-h-screen"><main class="flex flex-col relative w-full bg-surface min-h-screen"><div class="flex flex-col w-full">
+<!-- Interactive State & Theme Controller (Utilitarian Testing Pill Bar) -->
+<div class="flex flex-col gap-space-sm px-margin pt-space-sm pb-space-md bg-surface-container-low">
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-label-sm text-on-surface-variant flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-[16px] text-secondary">tune</span>
+        SİSTEM TEST GÖRÜNÜMÜ
+      </span>
+<!-- Dark/Light Mode Visual Switcher -->
+<button class="flex items-center gap-1.5 px-3 py-1 rounded-full bg-surface-container-highest text-on-surface-variant font-label-sm text-label-sm transition-colors active:opacity-80" id="themeToggleBtn" type="button">
+<span class="material-symbols-outlined text-[16px]" id="themeIcon">dark_mode</span>
+<span id="themeLabel">Koyu Tema</span>
+</button>
+</div>
+<!-- State Switcher Pills -->
+<div class="grid grid-cols-2 p-1 rounded-xl bg-surface-container-highest">
+<button class="py-2 px-3 rounded-lg font-label-md text-label-md font-medium text-center transition-all bg-primary-container text-on-primary-container shadow-sm flex items-center justify-center gap-1.5" id="btnStateA" type="button">
+<span class="material-symbols-outlined text-[16px]">touch_app</span>
+<span>İlk Açılış (İzin İste)</span>
+</button>
+<button class="py-2 px-3 rounded-lg font-label-md text-label-md font-medium text-center transition-all text-on-surface-variant hover:text-on-surface flex items-center justify-center gap-1.5" id="btnStateB" type="button">
+<span class="material-symbols-outlined text-[16px]">settings_alert</span>
+<span>Kalıcı Reddedildi</span>
+</button>
+</div>
+</div>
+<!-- Android System Status Bar Simulation (Utilitarian) -->
+<div class="flex items-center justify-between px-margin py-2 text-on-surface-variant">
+<span class="font-label-sm text-label-sm tracking-tight font-medium">09:41</span>
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px]">network_wifi</span>
+<span class="material-symbols-outlined text-[16px]">signal_cellular_4_bar</span>
+<span class="material-symbols-outlined text-[16px]">battery_full</span>
+</div>
+</div>
+<!-- Content Canvas Container -->
+<div class="relative px-margin pb-space-xl flex flex-col justify-between" style="min-height: 520px;">
+<!-- STATE A: İlk Açılış - İzin İsteme -->
+<div class="flex flex-col items-center text-center pt-space-lg transition-opacity duration-200" id="viewStateA">
+<!-- Primary Feature Icon in soft tonal container -->
+<div class="w-24 h-24 rounded-full bg-secondary-container flex items-center justify-center mb-space-lg shadow-sm">
+<span class="material-symbols-outlined text-primary text-[48px]">photo_library</span>
+</div>
+<!-- Headline -->
+<h1 class="font-title-lg text-title-lg text-on-surface mb-space-sm font-medium">
+        Fotoğraflarınıza erişim izni
+      </h1>
+<!-- Body Copy -->
+<p class="font-body-md text-body-md text-on-surface-variant max-w-sm mb-space-lg text-center leading-relaxed">
+        Ai-galeri, fotoğraflarınızı yalnızca bu cihaz üzerinde arayabilmek için galeri erişimine ihtiyaç duyar. Fotoğraflarınız, yüzler veya arama verileriniz asla cihazınızdan dışarı çıkmaz; sunucu, bulut veya hesap bağlantısı yoktur.
+      </p>
+<!-- Technical / Privacy Badge -->
+<div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-surface-container-high text-on-surface-variant mb-space-xl">
+<span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+<span class="font-label-sm text-label-sm tracking-wide">Tamamen çevrimdışı ve yerel model</span>
+</div>
+<!-- Compact Illustrated Preview Cards demonstrating on-device scan -->
+<div class="w-full max-w-xs grid grid-cols-3 gap-space-xs p-2 rounded-xl bg-surface-container-low mb-space-xl">
+<div class="relative aspect-square rounded-lg overflow-hidden bg-surface-container-high">
+<img class="w-full h-full object-cover" data-alt="A sunlit mountain landscape framed in clean architectural light, natural earthy tones and soft morning shadows." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDH4e5ft7VgPhZ8MEonhxT9vWllXSS9msemGsQPjc94ULMqNt9jf2wslFJrSSyb5WNIvCf5Uch27FeeYIRU6QlurrZPVYrYQvR4XfD5BuHXN2ecTlLPP5WAQDjJ1ifmAovILNOQud1xJ2Rd4uVNDsdWFK95Orfl6-G-9oa2l060YKSg04xxedU_1Ya9y-rIxc5_Z1gK12gSGAN2sFMfH3ndnHhRDtNXAO7y9QKx5FVYWf2PSgAKnxLC"/>
+<div class="absolute bottom-1 right-1 px-1 rounded bg-black/60 text-white font-label-sm text-[9px] flex items-center gap-0.5">
+<span class="material-symbols-outlined text-[10px]">auto_awesome</span>
+<span>Doğa</span>
+</div>
+</div>
+<div class="relative aspect-square rounded-lg overflow-hidden bg-surface-container-high">
+<img class="w-full h-full object-cover" data-alt="Warm indoor portrait of an smiling individual near window daylight, muted teal and warm paper tones." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDqmdGI9kbmhOS-L22LeVtq7QdcBwCVbrwa1ryEbH5FniIE_kIKoZ2DC8p1VSRAevL5a8eGPXxgMcX4ra24dR3D4pngX87e6meoNpgIqCo1sgHZ8ut4z2scucedgMpuTTHIRApyxqtfJiyYhHwuDLxn_MoIKpWuGGhA5dqD1n3pA8XbVwJ9pAOHuY07xzRvTEiQOQkgkgZPWL6FNHWIcuCtz4KLW-qfr_pVLfyWgikESJZcDvCnpK1I"/>
+<div class="absolute bottom-1 right-1 px-1 rounded bg-black/60 text-white font-label-sm text-[9px] flex items-center gap-0.5">
+<span class="material-symbols-outlined text-[10px]">person</span>
+<span>Portre</span>
+</div>
+</div>
+<div class="relative aspect-square rounded-lg overflow-hidden bg-surface-container-high">
+<img class="w-full h-full object-cover" data-alt="A vintage architectural doorway and stone steps under soft diffuse sunlight, neutral and organic museum aesthetics." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCY4CmOYxPxdTmm7so5oDD4wL9mXPeyTlkZm_K0ZzPvNA6gtZy7K-3buD01kPvD6oLqS6b-_kcvJCgT_sBUx-dYdZNZIwADeLy-CGqTnRMxXiVN47GvLxGLIgakNxbD-XPnNeAmPiu0JcS4X3k8vjasszOiUrsdJXiT_0-SfeAB5F0bzeA5IINai8jND6w3G2qMX0KFwfWbG_47ILmQ7oe6acqP5yJ_Bxt7ckxGinD200MRlPzWlRYr"/>
+<div class="absolute bottom-1 right-1 px-1 rounded bg-black/60 text-white font-label-sm text-[9px] flex items-center gap-0.5">
+<span class="material-symbols-outlined text-[10px]">location_on</span>
+<span>Mimari</span>
+</div>
+</div>
+</div>
+<!-- Action Buttons -->
+<div class="w-full max-w-sm flex flex-col gap-space-xs mt-auto">
+<button class="w-full h-12 rounded-[20px] bg-primary text-on-primary font-label-lg text-label-lg flex items-center justify-center gap-2 shadow-sm transition-transform active:scale-[0.98]" id="btnGrantPermission" type="button">
+<span class="material-symbols-outlined text-[20px]">check</span>
+<span>İzin ver</span>
+</button>
+<button class="w-full h-10 rounded-[20px] bg-transparent text-primary font-label-lg text-label-lg flex items-center justify-center transition-colors hover:bg-surface-container-low active:bg-surface-container" id="btnNotNow" type="button">
+<span>Şimdi değil</span>
+</button>
+</div>
+</div>
+<!-- STATE B: Kalıcı Reddedildi Durumu (Initially hidden, revealed via switcher) -->
+<div class="hidden flex flex-col items-center text-center pt-space-lg transition-opacity duration-200" id="viewStateB">
+<!-- Warning / Info Icon in calm, non-panicky warm neutral/container -->
+<div class="w-24 h-24 rounded-full bg-surface-container-highest flex items-center justify-center mb-space-lg shadow-sm">
+<span class="material-symbols-outlined text-secondary text-[48px]">no_photography</span>
+</div>
+<!-- Headline -->
+<h1 class="font-title-lg text-title-lg text-on-surface mb-space-sm font-medium">
+        Galeri izni kapatıldı
+      </h1>
+<!-- Body text -->
+<p class="font-body-md text-body-md text-on-surface-variant max-w-sm mb-space-lg text-center leading-relaxed">
+        Cihazınızdaki fotoğrafları arayabilmek için fotoğraf erişim izni gerekiyor. Uygulama ayarlarından izinleri etkinleştirebilirsiniz.
+      </p>
+<!-- Informative System Status Panel -->
+<div class="w-full max-w-sm p-4 rounded-xl bg-surface-container mb-space-xl text-left flex items-start gap-3">
+<span class="material-symbols-outlined text-secondary text-[22px] mt-0.5">info</span>
+<div class="flex flex-col">
+<span class="font-title-sm text-title-sm text-on-surface font-medium">Nasıl etkinleştirilir?</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant mt-1">
+            Ayarlar &gt; Uygulama İzinleri &gt; Fotoğraflar ve Videolar yolunu izleyip "Tümüne izin ver" seçeneğini belirleyin.
+          </span>
+</div>
+</div>
+<!-- Action Buttons -->
+<div class="w-full max-w-sm flex flex-col gap-space-xs mt-auto">
+<button class="w-full h-12 rounded-[20px] bg-secondary-container text-on-secondary-container font-label-lg text-label-lg flex items-center justify-center gap-2 shadow-sm transition-transform active:scale-[0.98]" id="btnOpenSettings" type="button">
+<span class="material-symbols-outlined text-[20px]">settings</span>
+<span>Ayarları aç</span>
+</button>
+<button class="w-full h-10 rounded-[20px] bg-transparent text-secondary font-label-lg text-label-lg flex items-center justify-center transition-colors hover:bg-surface-container-low active:bg-surface-container" id="btnDismissStateB" type="button">
+<span>Daha sonra</span>
+</button>
+</div>
+</div>
+<!-- Material Toast / Feedback Confirmation (Hidden by default) -->
+<div class="fixed bottom-12 left-1/2 -translate-x-1/2 max-w-[360px] w-[90%] px-4 py-3 rounded-lg bg-inverse-surface text-inverse-on-surface font-body-sm text-body-sm shadow-md flex items-center justify-between opacity-0 pointer-events-none transition-opacity duration-200 z-50" id="statusToast">
+<span id="toastMessage">Sistem izni istendi...</span>
+<span class="material-symbols-outlined text-[18px]">verified</span>
+</div>
+</div>
+</div>
+<script>
+  (function () {
+    const btnA = document.getElementById('btnStateA');
+    const btnB = document.getElementById('btnStateB');
+    const viewA = document.getElementById('viewStateA');
+    const viewB = document.getElementById('viewStateB');
+    const themeBtn = document.getElementById('themeToggleBtn');
+    const themeIcon = document.getElementById('themeIcon');
+    const themeLabel = document.getElementById('themeLabel');
+    const toast = document.getElementById('statusToast');
+    const toastMsg = document.getElementById('toastMessage');
+
+    function showToast(text) {
+      if (!toast) return;
+      toastMsg.textContent = text;
+      toast.classList.remove('opacity-0', 'pointer-events-none');
+      toast.classList.add('opacity-100');
+      setTimeout(() => {
+        toast.classList.remove('opacity-100');
+        toast.classList.add('opacity-0', 'pointer-events-none');
+      }, 2500);
+    }
+
+    function setState(state) {
+      if (state === 'A') {
+        viewA.classList.remove('hidden');
+        viewB.classList.add('hidden');
+        btnA.classList.add('bg-primary-container', 'text-on-primary-container', 'shadow-sm');
+        btnA.classList.remove('text-on-surface-variant');
+        btnB.classList.remove('bg-primary-container', 'text-on-primary-container', 'shadow-sm');
+        btnB.classList.add('text-on-surface-variant');
+      } else {
+        viewB.classList.remove('hidden');
+        viewA.classList.add('hidden');
+        btnB.classList.add('bg-primary-container', 'text-on-primary-container', 'shadow-sm');
+        btnB.classList.remove('text-on-surface-variant');
+        btnA.classList.remove('bg-primary-container', 'text-on-primary-container', 'shadow-sm');
+        btnA.classList.add('text-on-surface-variant');
+      }
+    }
+
+    btnA.addEventListener('click', () => setState('A'));
+    btnB.addEventListener('click', () => setState('B'));
+
+    // Simulated button actions
+    const btnGrant = document.getElementById('btnGrantPermission');
+    const btnSettings = document.getElementById('btnOpenSettings');
+    const btnNotNow = document.getElementById('btnNotNow');
+    const btnDismiss = document.getElementById('btnDismissStateB');
+
+    if (btnGrant) {
+      btnGrant.addEventListener('click', () => {
+        showToast('Android İzin Dialogu Açılıyor (READ_MEDIA_IMAGES)');
+      });
+    }
+
+    if (btnSettings) {
+      btnSettings.addEventListener('click', () => {
+        showToast('Uygulama Bilgisi / Ayarlar sayfasına yönlendiriliyor');
+      });
+    }
+
+    if (btnNotNow) {
+      btnNotNow.addEventListener('click', () => {
+        showToast('İzin isteği ertelendi');
+      });
+    }
+
+    if (btnDismiss) {
+      btnDismiss.addEventListener('click', () => {
+        setState('A');
+      });
+    }
+
+    // Toggle simulated theme on root document
+    let isDark = false;
+    themeBtn.addEventListener('click', () => {
+      isDark = !isDark;
+      if (isDark) {
+        document.documentElement.classList.add('dark');
+        themeIcon.textContent = 'light_mode';
+        themeLabel.textContent = 'Açık Tema';
+      } else {
+        document.documentElement.classList.remove('dark');
+        themeIcon.textContent = 'dark_mode';
+        themeLabel.textContent = 'Koyu Tema';
+      }
+    });
+  })();
+</script></main><div class="fixed bottom-0 w-full z-50 pb-safe pointer-events-none"><div class="flex justify-center pb-2 pt-1"><div class="w-28 h-1 bg-on-surface/20 rounded-full"></div></div></div></body></html>
