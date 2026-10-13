@@ -92,6 +92,13 @@ class IndexWorkTest {
     }
 
     @Test
+    fun execute_outOfMemoryWrappedAsUnexpected_isRetriedNotPermanent() = runBlocking {
+        val indexer = FakeIndexer { throw IndexException.Unexpected(OutOfMemoryError("bellek")) }
+        assertEquals(IndexOutcome.RETRY, IndexWork.execute(indexer, IndexMode.INCREMENTAL, 0))
+        assertEquals(IndexOutcome.FAILURE, IndexWork.execute(indexer, IndexMode.INCREMENTAL, IndexWork.MAX_ATTEMPTS - 1))
+    }
+
+    @Test
     fun execute_missingOrCorruptModel_failsImmediately_sinceRetryCannotFixIt() = runBlocking {
         for (cause in listOf(ModelException.Missing("models/x"), ModelException.IntegrityFailure("x", "sha"))) {
             val indexer = FakeIndexer { throw IndexException.Unexpected(cause) }

@@ -408,18 +408,18 @@ class RoomPhotoIndexerEdgeCaseTest {
     // ================= FULL kalıcı tur durumu (IndexState.fullTargetVersion) =================
 
     @Test
-    fun fullTargetVersion_setWhenFullStarts_clearedOnlyWhenFullCompletes_incrementalLeavesItAlone() = runTest {
+    fun fullTargetVersion_setWhenFullStarts_clearedWhenFullCompletes_orWhenIncrementalFinishesItCleanly() = runTest {
         val e = env((1L..4L).toList())
         e.indexer.index().run()
         assertNull(e.db.state!!.fullTargetVersion)
         cancelAfterEncodes(e, IndexMode.FULL, 1)
         assertEquals(2, e.db.state!!.fullTargetVersion) // yarım FULL
-        // INCREMENTAL kalanı tamamlar ama işareti silmez.
+        // INCREMENTAL kalanı kesintisiz tamamlar: tur kapanır, işaret kalkar (T-015); ara yazımlarda hâlâ 2'dir.
         e.indexer.index().run()
         assertEquals(setOf(2), e.db.photos.values.map { it.indexVersion }.toSet())
-        assertEquals(2, e.db.state!!.fullTargetVersion)
-        assertTrue(e.db.stateWrites.drop(e.db.stateWrites.size - 3).all { it.fullTargetVersion == 2 })
-        // Tur INCREMENTAL ile tamamlanmıştı: sonraki FULL kalan görmez ve yeni tur (3) açar, bitince işaret kalkar.
+        assertNull(e.db.state!!.fullTargetVersion)
+        assertTrue(e.db.stateWrites.dropLast(1).takeLast(2).all { it.fullTargetVersion == 2 })
+        // Sonraki FULL boşa gitmez: yeni tur (3) açar, tüm galeriyi işler, bitince işaret kalkar.
         e.encoder.encoded.clear()
         assertEquals(4, e.indexer.index(IndexMode.FULL).run().last().total)
         assertEquals(setOf(3), e.db.photos.values.map { it.indexVersion }.toSet())
@@ -443,8 +443,66 @@ class RoomPhotoIndexerEdgeCaseTest {
             val out = e.indexer.index(resumeWith).run().last()
             assertEquals("$resumeWith", 3, out.total) // hedefin altındaki tüm kayıtlar
             assertTrue(e.db.photos.values.all { it.indexVersion == 2 }) // max+1 değil: aynı hedef
-            assertEquals(if (resumeWith == IndexMode.FULL) null else 2, e.db.state!!.fullTargetVersion)
+            assertNull("$resumeWith", e.db.state!!.fullTargetVersion) // kesintisiz tamamlanınca tur kapanır
         }
+    }
+
+    // ================= T-015: işaret koruması ve INCREMENTAL ile kapanış =================
+
+    @Test
+    fun midFull_mediaStoreTransientlyEmpty_keepsMarker_forEveryMode_andNextFullResumesSameTarget() = runTest {
+        for (skipWith in IndexMode.entries) {
+            val e = env((1L..4L).toList())
+            e.indexer.index().run()
+            cancelAfterEncodes(e, IndexMode.FULL, 1) // yarım FULL, hedef 2
+            assertEquals(2, e.db.state!!.fullTargetVersion)
+            val before = e.db.photos.toMap()
+
+            val gallery = e.source.gallery
+            e.source.gallery = emptyList() // SecurityException atılmadan boş döndü (kısmi erişim/geçici hata)
+            val out = e.indexer.index(skipWith).run().last()
+            assertEquals("$skipWith", IndexProgress(IndexPhase.COMPLETED, 0, 0), out)
+            assertEquals("$skipWith", 2, e.db.state!!.fullTargetVersion) // işaret silinmedi
+            assertEquals(before, e.db.photos) // hiçbir kayıt silinmedi/değişmedi
+
+            // Galeri geri geldi: FULL yeni tur (3) açmaz, aynı hedefle (2) yalnızca kalanı (3 fotoğraf) tamamlar.
+            e.source.gallery = gallery
+            e.encoder.encoded.clear()
+            assertEquals("$skipWith", 3, e.indexer.index(IndexMode.FULL).run().last().total)
+            assertEquals("$skipWith", setOf(2), e.db.photos.values.map { it.indexVersion }.toSet())
+            assertNull("$skipWith", e.db.state!!.fullTargetVersion)
+        }
+    }
+
+    @Test
+    fun incrementalCompletingWithFailedPhoto_orCancelled_keepsMarker_nextFullResumesRemainder() = runTest {
+        val e = env((1L..4L).toList())
+        e.indexer.index().run()
+        cancelAfterEncodes(e, IndexMode.FULL, 1) // hedef 2; #4 yazıldı, 3 kaldı
+        // Kesilen INCREMENTAL işareti bozmaz.
+        cancelAfterEncodes(e, IndexMode.INCREMENTAL, 1)
+        assertEquals(2, e.db.state!!.fullTargetVersion)
+        // Tamamlanan ama başarısız fotoğraflı INCREMENTAL turu kapatmaz: kalan hâlâ var.
+        e.encoder.failures[uri(1)] = ImageDecodeException("bozuk")
+        val inc = e.indexer.index().run().last()
+        assertEquals(1, inc.failed)
+        assertEquals(2, e.db.state!!.fullTargetVersion)
+        assertEquals(mapOf(2 to listOf(2L, 3L, 4L), 1 to listOf(1L)), versions(e.db).mapValues { it.value.sorted() })
+        // Sonraki FULL aynı hedefle yalnızca kalanı (#1) işler ve turu kapatır.
+        e.encoder.failures.clear()
+        e.encoder.encoded.clear()
+        assertEquals(1, e.indexer.index(IndexMode.FULL).run().last().total)
+        assertEquals(setOf(2), e.db.photos.values.map { it.indexVersion }.toSet())
+        assertNull(e.db.state!!.fullTargetVersion)
+    }
+
+    @Test
+    fun incrementalWithoutPendingFull_keepsMarkerNull() = runTest {
+        val e = env((1L..3L).toList())
+        e.indexer.index().run()
+        e.indexer.index().run()
+        assertNull(e.db.state!!.fullTargetVersion)
+        assertTrue(e.db.stateWrites.all { it.fullTargetVersion == null })
     }
 
     @Test
@@ -619,13 +677,15 @@ class RoomPhotoIndexerEdgeCaseTest {
     }
 
     @Test
-    fun outOfMemoryInEncoder_isNotSwallowed_butSessionIsReleasedAndProgressSaved() = runTest {
-        // Davranış belgeleme: OOM (Error) tek fotoğraf hatası sayılmaz, olduğu gibi yayılır; temizlik yine çalışır.
+    fun outOfMemoryInEncoder_isUnexpectedNotPerPhotoFailure_andSessionIsReleasedAndProgressSaved() = runTest {
+        // T-015: OOM tek fotoğraf hatası sayılmaz (atlayıp sürdürmek aynı hatayı tekrarlar); kontrollü Unexpected
+        // (worker RETRY) olur, neden zincirinde OOM kalır; temizlik yine çalışır.
         val e = env((1L..3L).toList())
         e.encoder.failures[uri(2)] = OutOfMemoryError("test")
         try {
             e.indexer.index().run(); fail()
-        } catch (_: OutOfMemoryError) {
+        } catch (ex: IndexException.Unexpected) {
+            assertTrue(causes(ex).any { it is OutOfMemoryError })
         }
         assertEquals(setOf(3L), e.db.photos.keys)
         assertEquals(1, e.encoder.released)

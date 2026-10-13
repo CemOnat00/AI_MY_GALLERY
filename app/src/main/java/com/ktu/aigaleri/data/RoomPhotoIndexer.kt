@@ -42,11 +42,14 @@ import kotlinx.coroutines.withContext
  *   [PIPELINE_VERSION]), alan hedefe ayarlanır, galerideki tüm fotoğraflar işlenir. FULL çalıştırması bitince (başarısız
  *   fotoğraflarla bile) alan null'a çekilir: kalıcı bozuk bir fotoğraf yeni FULL'u kilitlemez, tamamlanmış her FULL'dan
  *   sonra istenen FULL gerçekten yeni tur açar. Kayıtlar fotoğraf bazında YERİNE yazılır (önce silinmez); başarısız veya
- *   yarıda kalan fotoğrafın eski kaydı ve vektörü korunur, aranabilir kalır. INCREMENTAL alana dokunmaz; hedefi
- *   `max(max, fullTargetVersion)` olduğundan yarım FULL'un kalanını tamamlar.
+ *   yarıda kalan fotoğrafın eski kaydı ve vektörü korunur, aranabilir kalır. INCREMENTAL hedefi
+ *   `max(max, fullTargetVersion)` olduğundan yarım FULL'un kalanını tamamlar; kesintisiz ve başarısız fotoğrafsız
+ *   (`failed == 0`) bitince alanı null'a çeker (sonraki FULL boşa gitmez, yeni tur açar); iptal/hata/başarısız
+ *   fotoğraf varsa alan kalır.
  * Tarama güvenliği: MediaStore HİÇ kimlik döndürmezse (izin hatası fırlatılmadan; Android 14 kısmi erişim, geçici
  * sağlayıcı hatası) ve Room doluysa temizleme VE işleme atlanır (hiçbir kayıt silinmez; yanlışlıkla tüm indeksi
- * silmemek için). Galeri gerçekten boşaldıysa eski kayıtlar bir sonraki dolu taramaya kadar kalır.
+ * silmemek için). Galeri gerçekten boşaldıysa eski kayıtlar bir sonraki dolu taramaya kadar kalır. Bu atlamada tur işareti
+ * (yarım FULL) hiçbir modda silinmez/değişmez: geçici boşluk devam eden turu kaybettirmez.
  *
  * Bellek: yalnızca kimlikler tutulur. 100 bin fotoğrafta MediaStore kimlikleri ~0.8 MB (LongArray), Room kimlikleri
  * ~3 MB (List<Long>), işlenecek liste ~0.8 MB; tepe ~8-10 MB. URI/tarih dizileri [BATCH_SIZE] fotoğraflık parçalarla
@@ -63,8 +66,9 @@ import kotlinx.coroutines.withContext
  * indekslenmeye devam eder. SINIR: ilk başarıdan sonra bozulan model bu eşikle yakalanmaz (kalan fotoğraflar `failed`
  * sayılır, akış COMPLETED olur). Eşiği aşan fotoğraf `processed`/IndexState'e sayılmaz (akış ondan önce kesilir; ondan
  * önce atlanan çözme hataları sayılır).
- * `OutOfMemoryError` (ve diğer `Error`'lar) yakalanmaz: yayılır, çalıştırma durur (çözücü yalnızca kendi çözme
- * OOM'sini fotoğraf hatasına çevirir, bkz. `ContentResolverImageLoader`). Taramadan MediaStore'dan kaybolmuş fotoğraf hata sayılmaz: kaydı silinir ve işlenmiş sayılır.
+ * `OutOfMemoryError`: çözücü kendi çözme OOM'sini fotoğraf hatasına çevirir (bkz. `ContentResolverImageLoader`); kodlayıcı
+ * çağrısından yayılan OOM [IndexException.Unexpected] olur (bellek baskısı fotoğrafa özgü değil: atlayıp sürdürmek
+ * aynı hatayı tekrarlar; worker RETRY/geri çekilme ile yeniden dener, kayıtlar korunur). Diğer `Error`'lar yakalanmaz. Taramadan MediaStore'dan kaybolmuş fotoğraf hata sayılmaz: kaydı silinir ve işlenmiş sayılır.
  *
  * IndexState: tarama sonunda (`processed = 0`), her [STATE_WRITE_EVERY] fotoğrafta, bitişte ve (iptal/hata) çıkışta yazılır;
  * `lastRunAt` yalnızca tam tamamlanınca güncellenir (boş-MediaStore atlamasında da tamamlanmış sayılır ve güncellenir). Photo + PhotoEmbedding yazımı [TransactionRunner] ile tek işlemdir.
@@ -87,6 +91,8 @@ class RoomPhotoIndexer(
         val lastRunAt: Long?,
         /** Çalıştırma boyunca IndexState'e yazılan devam eden FULL hedefi (FULL: bu tur; INCREMENTAL: mevcut değer). */
         val fullTarget: Int?,
+        /** Boş-MediaStore güvenlik atlaması: hiçbir şey işlenmedi/silinmedi; tur işareti bu çalıştırmada değişmez. */
+        val skipped: Boolean = false,
     )
 
     override fun index(mode: IndexMode): Flow<IndexProgress> = flow {
@@ -134,8 +140,15 @@ class RoomPhotoIndexer(
                 }
                 from = to
             }
-            // FULL turu (başarısız fotoğraflarla bile) bitti: devam eden tur işareti kalkar. INCREMENTAL dokunmaz.
-            val fullAfter = if (mode == IndexMode.FULL) null else plan.fullTarget
+            // Tur işareti: güvenlik atlamasında (MediaStore geçici boş) hiçbir şey işlenmediği için işaret AYNEN kalır;
+            // aksi halde FULL (başarısız fotoğraflarla bile) bitince kalkar, INCREMENTAL ise yalnızca kalanın tamamını
+            // başarıyla işlediyse (failed == 0) yarım FULL turunu tamamlamış olur ve işareti kaldırır.
+            val fullAfter = when {
+                plan.skipped -> plan.fullTarget
+                mode == IndexMode.FULL -> null
+                failed == 0 -> null
+                else -> plan.fullTarget
+            }
             guarded { writeState(total, total, clock(), fullAfter) }
             completed = true
             emit(IndexProgress(IndexPhase.COMPLETED, total, total, failed))
@@ -166,7 +179,7 @@ class RoomPhotoIndexer(
         // Güvenli taraf: galeri boş görünüp Room doluysa (kısmi erişim/geçici hata) hiçbir şey silme ve işleme.
         if (mediaIds.isEmpty() && dbIds.isNotEmpty()) {
             val max = maxOf(photoDao.maxIndexVersion() ?: 0, PIPELINE_VERSION, pendingFull ?: 0)
-            return Plan(LongArray(0), max, savedState?.lastRunAt, pendingFull)
+            return Plan(LongArray(0), max, savedState?.lastRunAt, pendingFull, skipped = true)
         }
 
         // Galeride artık olmayanlar: toplu sil (CASCADE embedding'i siler).
@@ -205,6 +218,10 @@ class RoomPhotoIndexer(
             Encoded(encoder.encode(media.uri))
         } catch (e: CancellationException) {
             throw e
+        } catch (e: OutOfMemoryError) {
+            // Bellek baskısı fotoğrafa özgü sayılmaz (kodlayıcı girdisi sabit boyutlu; çözücü kendi OOM'sini zaten
+            // ImageDecodeException yapar). Yığın açıldığı için bellek serbest; akış kontrollü Unexpected ile kesilir.
+            throw IndexException.Unexpected(e)
         } catch (e: SecurityException) {
             throw IndexException.PermissionMissing()
         } catch (e: Exception) {

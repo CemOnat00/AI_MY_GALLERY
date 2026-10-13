@@ -26,11 +26,12 @@ import kotlinx.coroutines.flow.Flow
  *   Model kaynaklı hatalar (ONNX çalıştırma/çıktı) tek fotoğrafta atlanır, ancak bu çalıştırmada hiç başarı yokken
  *   ardışık hata eşiği (T-006: 20) aşılırsa akış [IndexException.Unexpected] ile kesilir (bozuk model tüm galeriyi
  *   sessizce tamamlamasın); fotoğrafa özgü çözme hataları eşiğe sayılmaz. İlk başarıdan sonra bozulan model bu eşikle
- *   yakalanmaz. Eşiği aşan fotoğraf `processed` sayımına girmez. `OutOfMemoryError` gibi `Error`'lar yakalanmaz:
- *   yayılır ve çalıştırma durur.
+ *   yakalanmaz. Eşiği aşan fotoğraf `processed` sayımına girmez. Kodlayıcıdan yayılan `OutOfMemoryError`
+ *   [IndexException.Unexpected] olur (T-015); diğer `Error`'lar yakalanmaz, yayılır ve çalıştırma durur.
  * - FULL kalıcı tur durumu taşır (Room `IndexState.fullTargetVersion`): yarım kalmış FULL, hiç yazmadan kesilse de
  *   yeniden istenince baştan başlamaz, aynı hedefle kalanı işler; FULL çalıştırması (başarısız fotoğraflarla bile)
- *   bitince tur kapanır ve sonraki FULL yeni bir tur açar. INCREMENTAL turu kapatmaz ama kalanı tamamlar.
+ *   bitince tur kapanır ve sonraki FULL yeni bir tur açar. INCREMENTAL kalanı tamamlar; kesintisiz ve başarısız fotoğrafsız bitince turu da kapatır
+ *   (T-015). Boş-MediaStore atlamasında tur işareti korunur.
  * - Boş MediaStore istisnası: MediaStore hiç fotoğraf döndürmez (izin hatası atılmadan; ör. Android 14 kısmi erişim,
  *   geçici sağlayıcı hatası) ve indeks doluysa hiçbir kayıt silinmez ve hiçbir şey işlenmez (akış SCANNING,
  *   COMPLETED(0, 0) ile biter, `lastRunAt` güncellenir). Gerçekten boşalan bir galerinin eski kayıtları bu yüzden
