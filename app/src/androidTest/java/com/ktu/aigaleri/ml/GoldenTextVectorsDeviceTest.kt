@@ -16,6 +16,8 @@ import org.junit.runner.RunWith
 /**
  * T-026: GERÇEK [OnnxTextEncoder] ile 76 altın sorgunun vektörleri, `tools/golden_text.py`'nin ORİJİNAL model
  * dosyalarıyla ürettiği altın vektörlere kosinüs >= [MIN_COSINE] olmalı (gerekçe: docs/golden-text.md).
+ * T-027: aynı test BUDANMIŞ metin modeli/sözlüğü (Katman A) için cihaz kapısıdır; masaüstünde budanmış model altınla bit özdeş
+ * (kosinüs 1,0), cihazda da >= [MIN_COSINE] beklenir (T-012 sonrası ölçülüp docs/golden-text.md'ye yazılır).
  * Altın dosya `src/test/resources/ml/golden_text_vectors.tsv`, androidTest assets olarak paketlenir (build.gradle.kts).
  * Sorgu anahtarlarındaki görünmez/ayrışık karakterler `\uXXXX` kaçışlıdır; [unescape] ile çözülür.
  *

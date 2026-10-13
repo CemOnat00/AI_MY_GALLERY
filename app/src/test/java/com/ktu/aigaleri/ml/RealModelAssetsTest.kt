@@ -48,7 +48,7 @@ class RealModelAssetsTest {
     fun textOnnx_matchesManifestSizeAndSha256() {
         requireFile(ModelManifest.TEXT_ONNX)
         val f = ModelStore(tmp.root, fileOpener()).ensure(ModelManifest.TEXT_ONNX)
-        assertEquals(135_336_307L, f.length())
+        assertEquals(97_009_267L, f.length()) // T-027: budanmış metin ONNX (orijinal 135_336_307)
         assertFalse(File(tmp.root, "models/text_model_qint8_arm64.onnx.part").exists())
     }
 
@@ -64,13 +64,22 @@ class RealModelAssetsTest {
         val vocabFile = File(assetsDir, ModelManifest.TEXT_VOCAB.assetPath)
         assumeTrue("text_vocab.txt yok (tools/fetch_models.sh)", vocabFile.isFile)
         val lines = vocabFile.readLines()
-        assertEquals(119_547, lines.size)
+        // T-027 (Katman A): 119547 satırdan 69642'si, sıra korunarak.
+        assertEquals(69_642, lines.size)
         val tok = vocabFile.inputStream().use { WordPieceTokenizer.fromVocabStream(it) }
         val idOf = lines.withIndex().associate { it.value to it.index }
         val unk = idOf.getValue("[UNK]")
         val cls = idOf.getValue("[CLS]")
         val sep = idOf.getValue("[SEP]")
-        assertEquals(listOf(100, 101, 102), listOf(unk, cls, sep))
+        // Özel token id'leri ARTIK 100/101/102 DEĞİL (budamada [unusedN] atıldı): dizeyle bulunur, sabit varsayılmaz.
+        assertEquals(5, setOf(unk, cls, sep, idOf.getValue("[PAD]"), idOf.getValue("[MASK]")).size)
+        assertEquals(listOf("[PAD]", "[UNK]", "[CLS]", "[SEP]", "[MASK]"), lines.take(5))
+        assertTrue("[unusedN] atılmış olmalı", lines.none { it.startsWith("[unused") })
+        // Katman A: Türkçe harfler (â î û dahil) ve ## devam parçaları tutulur, Latin dışı betikler atılır.
+        for (t in listOf("â", "##â", "î", "##î", "û", "##û", "ğ", "##ğ", "ı", "##ı", "ş", "ç", "ö", "ü", "İ", "Ğ", "0", "##9", ".", "!")) {
+            assertTrue("sözlükte olmalı: $t", t in idOf)
+        }
+        for (t in listOf("привет", "猫", "한", "مرحبا", "##ад")) assertTrue("atılmış olmalı: $t", t !in idOf)
 
         assertArrayEquals(intArrayOf(cls, sep), tok.encode(""))
 
@@ -89,5 +98,7 @@ class RealModelAssetsTest {
         assertEquals(128, tok.encode("🐱 ".repeat(500)).size)
         assertTrue(tok.encode("🐱").contentEquals(intArrayOf(cls, unk, sep)))
         assertArrayEquals(intArrayOf(cls, unk, sep), tok.encode("a".repeat(150)))
+        // Katman A'nın bilinen, kabul edilmiş maliyeti (K-14): Latin dışı sözcük [UNK] olur (orijinalde parçalanırdı).
+        assertArrayEquals(intArrayOf(cls, unk, sep), tok.encode("привет"))
     }
 }

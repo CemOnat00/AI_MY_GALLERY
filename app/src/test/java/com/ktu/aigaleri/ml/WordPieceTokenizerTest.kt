@@ -165,19 +165,43 @@ class WordPieceTokenizerTest {
 
     // --- Gerçek sözlük ve Python HF tokenizers referansı (model dosyası yoksa atlanır) ---
 
+    /**
+     * T-027: sözlük budandığı için id'ler değişti; referans artık token METNİne bağlıdır. `tokenizer_reference.tsv`
+     * (id'ler, ORİJİNAL sözlük) yalnızca orijinal sözlükte (119547 satır) id olarak da doğrulanır; budanmışta
+     * `tokenizer_reference_tokens.tsv` (aynı metinler, orijinal tokenizer'ın token metinleri; tools/verify_pruned_text.py
+     * --write-ref-tokens ile üretilir) ile METİN eşitliği aranır. Katman A (K-14) Latin dışı sözcükleri [UNK] yapar:
+     * budanmış sözlükte bulunmayan beklenen token [UNK] sayılır (referansta yalnızca CJK "猫", tek sözcük).
+     */
     @Test
     fun realVocab_matchesPythonTokenizersReference() {
         val vocabFile = File("src/main/assets/models/text_vocab.txt")
         assumeTrue("text_vocab.txt yok (tools/fetch_models.sh)", vocabFile.isFile)
         val real = vocabFile.inputStream().use { WordPieceTokenizer.fromVocabStream(it) }
-        val lines = javaClass.getResourceAsStream("/ml/tokenizer_reference.tsv")!!
+        val vocab = TokenVocab.fromAssetsOrNull()!!
+        val known = vocab.lines.toHashSet()
+        val refs = javaClass.getResourceAsStream("/ml/tokenizer_reference_tokens.tsv")!!
             .readBytes().toString(Charsets.UTF_8).split('\n').filter { it.isNotEmpty() }
-        assertTrue(lines.size >= 15)
-        for (line in lines) {
+        assertTrue(refs.size >= 15)
+        var budanmisToken = 0
+        for (line in refs) {
             val tab = line.lastIndexOf('\t')
             val text = line.substring(0, tab)
-            val expected = line.substring(tab + 1).trim().split(' ').map { it.toInt() }.toIntArray()
-            assertArrayEquals("referans uyuşmadı (satır uzunluğu ${text.length})", expected, real.encode(text))
+            val expected = line.substring(tab + 1).trim().split(' ').map { t ->
+                val tok = GoldenText.unescape(t)
+                if (tok in known) tok else { budanmisToken++; WordPieceTokenizer.UNK }
+            }
+            assertEquals("referans uyuşmadı (satır uzunluğu ${text.length})", expected, vocab.tokensOf(real.encode(text)))
+        }
+        // Budanmışta yalnızca CJK "猫" [UNK]e düşer; orijinal sözlükte hiçbiri düşmez.
+        assertEquals(if (vocab.size == GoldenText.ORIGINAL_VOCAB_SIZE) 0 else 1, budanmisToken)
+        if (vocab.size == GoldenText.ORIGINAL_VOCAB_SIZE) {
+            val ids = javaClass.getResourceAsStream("/ml/tokenizer_reference.tsv")!!
+                .readBytes().toString(Charsets.UTF_8).split('\n').filter { it.isNotEmpty() }
+            for (line in ids) {
+                val tab = line.lastIndexOf('\t')
+                val expected = line.substring(tab + 1).trim().split(' ').map { it.toInt() }.toIntArray()
+                assertArrayEquals(expected, real.encode(line.substring(0, tab)))
+            }
         }
     }
 }

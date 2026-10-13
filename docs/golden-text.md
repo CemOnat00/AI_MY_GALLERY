@@ -17,14 +17,14 @@ Model değişikliklerinden (T-027 sözlük budama, T-028 mmap, T-030 .ort) ÖNCE
 ```
 python3 -m venv ~/venvs/aigaleri-ort        # repo DIŞINDA bir yer
 ~/venvs/aigaleri-ort/bin/pip install numpy onnxruntime==1.30.0   # ağ yalnızca bu kurulum için; isteğe bağlı: tokenizers (çapraz kontrol)
-cd mobile && tools/fetch_models.sh --text-only                    # orijinal model dosyaları (SHA doğrulamalı)
+cd mobile && tools/fetch_models.sh --text-only                    # orijinaller mobile/.model-cache/'e (SHA doğrulamalı) + budanmış sürüm assets'e (T-027)
 ~/venvs/aigaleri-ort/bin/python -I tools/golden_text.py           # altın dosyaları üretir (geçici dosya + os.replace ile atomik)
 ~/venvs/aigaleri-ort/bin/python -I tools/golden_text.py --noise   # gürültü tabanı; dosya yazmaz
 ```
 
 Altın yenileme yalnızca AYNI platform + onnxruntime 1.30.0 ile bit bit tekrarlanır beklenir; başka platformda (ör. farklı CPU/ORT derlemesi) farkın gürültü tabanı olup olmadığına `--noise` ile ve kosinüsle bakın, bit eşitliği aramayın.
 
-Betik şunları DOĞRULAR ve biri tutmazsa dosya yazmadan çıkar (kod 1; eksik/bozuk girdi ve referans dosyaları da `die()` ile temiz çıkış): (1) `text_model_qint8_arm64.onnx`, `text_dense_768x512_f32.bin`, `text_vocab.txt` boyutu ve SHA-256'sı `ml/ModelManifest.kt` ile eşit (budanmış/değiştirilmiş model ile altın üretilmez; bu yüzden altın yenileme yalnızca ORİJİNAL dosyalarla mümkündür); (2) Python tokenizer, `tokenizer_reference.tsv`'nin tüm satırlarını birebir üretir.
+Betik şunları DOĞRULAR ve biri tutmazsa dosya yazmadan çıkar (kod 1; eksik/bozuk girdi ve referans dosyaları da `die()` ile temiz çıkış): (1) metin ONNX ve sözlük ORİJİNAL dosyalardır (budanmış/değiştirilmiş model ile altın üretilmez). T-027 sonrası `assets/models/` budanmıştır; bu yüzden `mobile/.model-cache/` (veya `MODEL_CACHE`) VARSA orijinaller oradan okunur ve `fetch_models.sh`'taki ORİJİNAL SHA-256 ile doğrulanır; yoksa eski davranış: `assets/models/` dosyalarının boyutu ve SHA-256'sı `ml/ModelManifest.kt` ile eşit olmalı (budanmış manifest + budanmış dosya ile sözlük satır sayısı kapısında durur). `text_dense_768x512_f32.bin` (değişmedi) her durumda `assets/models/`'ten ve manifest ile doğrulanır. Altın yenileme budama sonrası da bayt bayt aynı dosyaları üretti (T-027'de doğrulandı); (2) Python tokenizer, `tokenizer_reference.tsv`'nin tüm satırlarını birebir üretir.
 
 ## Tokenizasyon referansı ve ayrışma
 
@@ -65,16 +65,18 @@ Yorum:
 
 ## Budama (T-027) ve sonraki değişiklikler için kapılar
 
+T-027 (Katman A) bu kapıların HEPSİNİ geçti; ölçümler, sentetik küme ve yöntem: [vocab-pruning.md](vocab-pruning.md). Aşağıdaki liste sonraki değişiklikler (T-028 mmap, T-030 .ort) için de geçerlidir.
+
 Hepsi ORİJİNAL referansa karşı, aynı 76 sorgu (T-027 ayrıca büyük TR/EN korpus):
 0. KAPI ÇALIŞTI MI: `GoldenTextTest` asıl kapısı (`tokenTexts_equalGolden_forAllGoldenQueries`, 76 sorgu) ve `unkCountAndRate_doNotExceedGoldenBaseline` sözlük dosyası yoksa `assumeTrue` ile ATLANIR. T-027 kapısı çalıştırılırken test raporunda GoldenTextTest için `skipped` sayısının 0 olduğuna bakılmalıdır; atlanmış kapı geçmiş sayılmaz. (`originalVocab_goldenIdsMatchExactly...` budanmış sözlükte KASITLI atlanır: beklenen skipped = 1.)
 1. ASIL KAPI: token METNİ dizisi eşitliği (`GoldenTextTest.tokenTexts_equalGolden_forAllGoldenQueries`). Id'lere bağlı değil; budama id'leri yeniden numaralar (`TokenVocab` metne çevirir). Orijinal sözlükte ek olarak id eşitliği de doğrulanır, budanmışta atlanır.
 2. `[UNK]` sayısı ve oranı altın tabanı (5 / 411) aşmaz (`unkCountAndRate_doNotExceedGoldenBaseline`).
 3. Kosinüs >= 0,9999 (76 vektör, `GoldenTextVectorsDeviceTest`, cihazda; JVM'de ORT Android olmadığı için masaüstü Python ile de aynı ölçüm betikle yapılabilir). Budama yalnızca gömme satırlarını seçtiği için masaüstünde beklenen kosinüs 1,0'dır.
-4. Top-K örtüşmesi: sabit bir görüntü vektörü kümesine karşı orijinal ve değişmiş sorgu vektörlerinin top-10 ve top-50 kümeleri; öneri eşik top-10 >= 0,99 ve top-50 >= 0,98 (T-031'in koşullarıyla aynı). Veri kümesi ve ölçüm T-027'de netleşir; burada ölçülmedi.
+4. Top-K örtüşmesi: sabit bir görüntü vektörü kümesine karşı orijinal ve değişmiş sorgu vektörlerinin top-10 ve top-50 kümeleri; öneri eşik top-10 >= 0,99 ve top-50 >= 0,98 (T-031'in koşullarıyla aynı). T-027'de ölçüldü: 10000 sentetik görüntü vektörü (kümelenmiş, sabit seed), 500 sorgu (76 altın + 424 sentetik cümle), top-10 ve top-50 örtüşmesi 1,0000 (`tools/verify_pruned_text.py`). Sentetik veri gerçek galeri dağılımını temsil etmez; gerçek galeride yeterlilik doğrulanmadı.
 
 ## Eski model dosyalarını yedekleme (repo dışı)
 
-Budama/dönüşüm `assets/models/` içindeki dosyaları değiştireceği için, altın yenilemek veya karşılaştırmak gerekirse orijinaller korunmalıdır. Repo DIŞINDA (ör. `~/ModelBackups/ai-galeri-t026/`; git'e eklenmez) yedekleyin; `tools/fetch_models.sh` sabit revizyondan yeniden indirir ama yedek ağsız karşılaştırma sağlar. Geri yükleme sonrası SHA-256 denetlenmelidir:
+T-027 ile orijinaller `mobile/.model-cache/` önbelleğinde KALIR (`tools/fetch_models.sh` doldurur, git'e eklenmez; eski kurulumdaki orijinaller ağsız önbelleğe taşınır), ayrı yedek gerekmez. Başka dönüşümler (T-028, T-030) `assets/models/` dosyalarını değiştirirse orijinaller yine önbellekten alınır; `tools/fetch_models.sh` sabit revizyondan yeniden indirir. Geri yükleme/denetim için SHA-256 değerleri:
 
 | Dosya | Boyut (bayt) | SHA-256 |
 |---|---|---|
@@ -95,6 +97,7 @@ Altın, Apple Silicon masaüstünde pip `onnxruntime` 1.30.0 ile üretildi; `Gol
 
 ## Doğrulanmadı
 
+- Budanmış modelin cihazda (Android ARM, AAR ORT) kosinüsü: aynı androidTest, çalıştırılmadı (T-012). Masaüstünde budanmış model altınla bit özdeştir.
 - ARM cihazda kosinüs: androidTest yazıldı, `compileDebugAndroidTestKotlin` ile DERLENDİ, ÇALIŞTIRILMADI (cihaz/emülatör yok).
 - Java ve Python Unicode sürüm farkları (sette tetiklenmedi).
 - Top-K örtüşme eşiklerinin gerçek galeride yeterliliği.

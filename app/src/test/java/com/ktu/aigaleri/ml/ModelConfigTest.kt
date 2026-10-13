@@ -58,6 +58,28 @@ class ModelConfigTest {
     fun modelFiles_areGitIgnored() {
         val ignore = File(mobileDir, ".gitignore").readText()
         assertTrue(ignore.lines().any { it.trim() == "app/src/main/assets/models/" })
+        // T-027: orijinal (budanmamış) model önbelleği de git dışıdır (ağırlıklar asla commit'lenmez).
+        assertTrue(ignore.lines().any { it.trim() == ".model-cache/" })
+    }
+
+    @Test
+    fun fetchScript_prunesWithIsolatedStdlibPython_andDocumentsOriginalAndPrunedHashes() {
+        val script = File(mobileDir, "tools/fetch_models.sh").readText()
+        val code = script.lines().filterNot { it.trimStart().startsWith("#") }.joinToString("\n")
+        // Orijinal SHA'lar budama girdisidir, budanmışlar ModelManifest ile aynıdır.
+        assertTrue(code.contains("SHA_TEXT_ONNX=\"3bed77e83926519660b5c0833cb3321cfde952331edec4f7d501c7d384b8a8a7\""))
+        assertTrue(code.contains("SHA_VOCAB=\"fe0fda7c425b48c516fc8f160d594c8022a0808447475c1a7c6d6479763f310c\""))
+        assertTrue(code.contains("SHA_TEXT_ONNX_PRUNED=\"${ModelManifest.TEXT_ONNX.sha256}\""))
+        assertTrue(code.contains("SHA_VOCAB_PRUNED=\"${ModelManifest.TEXT_VOCAB.sha256}\""))
+        assertTrue(code.contains("python3 -I \"\$HERE/prune_text_model.py\""))
+        assertFalse("python3 -I olmadan çağrı", code.lines().any { Regex("""\bpython3\s+(?!-I)""").containsMatchIn(it) })
+        // Aynı SHA'lar prune_text_model.py'deki orijinal sabitlerle de eşit.
+        val py = File(mobileDir, "tools/prune_text_model.py").readText()
+        assertTrue(py.contains("3bed77e83926519660b5c0833cb3321cfde952331edec4f7d501c7d384b8a8a7"))
+        assertTrue(py.contains("fe0fda7c425b48c516fc8f160d594c8022a0808447475c1a7c6d6479763f310c"))
+        // Python aracı yalnızca standart kütüphane kullanır.
+        val imports = py.lines().filter { it.startsWith("import ") || it.startsWith("from ") }.map { it.removePrefix("import ").removePrefix("from ").substringBefore(' ') }
+        assertEquals(setOf("argparse", "hashlib", "os", "sys", "unicodedata"), imports.toSet())
     }
 
     @Test

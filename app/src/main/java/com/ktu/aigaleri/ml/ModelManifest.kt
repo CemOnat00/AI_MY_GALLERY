@@ -3,8 +3,8 @@ package com.ktu.aigaleri.ml
 import com.ktu.aigaleri.domain.EmbeddingSpec
 
 /**
- * Assets'teki model dosyası (assets/models/, git'te yok; tools/fetch_models.sh ile indirilir).
- * Boyut ve SHA-256, mobile/docs/model-research.md bölüm 6 ve docs/model-setup.md ile aynıdır.
+ * Assets'teki model dosyası (assets/models/, git'te yok; tools/fetch_models.sh ile indirilir ve budanır).
+ * Boyut ve SHA-256, docs/model-setup.md ile aynıdır (T-027'den sonra metin ONNX ve sözlük BUDANMIŞ sürümdür).
  */
 data class ModelFile(
     val assetPath: String,
@@ -28,12 +28,17 @@ object ModelManifest {
     const val EMBEDDING_DIMENSION = 512
     val EMBEDDING_SPEC = EmbeddingSpec(EMBEDDING_DIMENSION, MODEL_VERSION)
 
-    /** sentence-transformers/clip-ViT-B-32-multilingual-v1 onnx/model_qint8_arm64.onnx (Apache-2.0). */
+    /**
+     * sentence-transformers/clip-ViT-B-32-multilingual-v1 onnx/model_qint8_arm64.onnx (Apache-2.0), DEĞİŞTİRİLMİŞ
+     * (T-027, K-14 Katman A): `embeddings.word_embeddings.weight_quantized` [119547, 768] -> [69642, 768] satır dilimi
+     * (tools/prune_text_model.py); graf ve diğer ağırlıklar aynı. Orijinal: 135336307 bayt, SHA-256 3bed77e8...a8a7.
+     * MODEL_VERSION değişmez: metin vektörleri orijinalle bit özdeştir, görüntü indeksi geçerli kalır.
+     */
     val TEXT_ONNX = ModelFile(
         assetPath = "models/text_model_qint8_arm64.onnx",
         fileName = "text_model_qint8_arm64.onnx",
-        sizeBytes = 135_336_307L,
-        sha256 = "3bed77e83926519660b5c0833cb3321cfde952331edec4f7d501c7d384b8a8a7",
+        sizeBytes = 97_009_267L,
+        sha256 = "4e73a91f8463faaece382c033a25b035fe7adc54260910acb5d8e4a77872301c",
     )
 
     /** 2_Dense/model.safetensors içindeki linear.weight, ham float32 LE [512][768] (fetch_models.sh üretir). */
@@ -44,12 +49,17 @@ object ModelManifest {
         sha256 = "e5f6548cbcef6c62631b3946d89042ab4c8451762c7bb0a3be11eb6c480b686d",
     )
 
-    /** distilbert-base-multilingual-cased WordPiece sözlüğü (119547 satır). */
+    /**
+     * distilbert-base-multilingual-cased WordPiece sözlüğü, BUDANMIŞ (T-027, Katman A): 119547 satırdan 69642'si, sıra
+     * korunarak (id = satır numarası). Özel token id'leri artık 100/101/102 DEĞİL ([UNK]=1, [CLS]=2, [SEP]=3); id sabiti
+     * varsayılmaz, tokenizer [UNK]/[CLS]/[SEP]'i dizeyle bulur.
+     * Orijinal: 995526 bayt, SHA-256 fe0fda7c...310c.
+     */
     val TEXT_VOCAB = ModelFile(
         assetPath = "models/text_vocab.txt",
         fileName = "text_vocab.txt",
-        sizeBytes = 995_526L,
-        sha256 = "fe0fda7c425b48c516fc8f160d594c8022a0808447475c1a7c6d6479763f310c",
+        sizeBytes = 520_398L,
+        sha256 = "e3375077b9b203e67d8ed9ca271e68dc2e463af61a0c976041de6ee3e7b19cc8",
     )
 
     /** OpenAI CLIP ViT-B/32 görüntü kodlayıcı int8 (OpenAI CLIP MIT'den dönüşüm; Xenova lisans beyanı yok). T-006 kullanır; bu görevde yüklenmez. */

@@ -241,9 +241,11 @@ class ModelStoreTest {
     @Test
     fun manifest_hasExpectedSpecAndResearchHashes() {
         assertEquals(512, ModelManifest.EMBEDDING_SPEC.dimension)
-        assertEquals(135_336_307L, ModelManifest.TEXT_ONNX.sizeBytes)
-        assertEquals("3bed77e83926519660b5c0833cb3321cfde952331edec4f7d501c7d384b8a8a7", ModelManifest.TEXT_ONNX.sha256)
-        assertEquals("fe0fda7c425b48c516fc8f160d594c8022a0808447475c1a7c6d6479763f310c", ModelManifest.TEXT_VOCAB.sha256)
+        // T-027: metin ONNX ve sözlük BUDANMIŞ sürümdür (orijinal: 135_336_307 bayt, 3bed77e8...; 995_526 bayt, fe0fda7c...).
+        assertEquals(97_009_267L, ModelManifest.TEXT_ONNX.sizeBytes)
+        assertEquals("4e73a91f8463faaece382c033a25b035fe7adc54260910acb5d8e4a77872301c", ModelManifest.TEXT_ONNX.sha256)
+        assertEquals(520_398L, ModelManifest.TEXT_VOCAB.sizeBytes)
+        assertEquals("e3375077b9b203e67d8ed9ca271e68dc2e463af61a0c976041de6ee3e7b19cc8", ModelManifest.TEXT_VOCAB.sha256)
         assertEquals(512L * 768 * 4, ModelManifest.TEXT_DENSE.sizeBytes)
         assertEquals("583fd1110a514667812fee7d684952aaf82a99b959760c8d7dca7e0ab9839299", ModelManifest.VISION_ONNX.sha256)
     }

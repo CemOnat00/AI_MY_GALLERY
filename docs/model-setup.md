@@ -1,16 +1,19 @@
 # Model kurulumu (geliştirici)
 
-Model dosyaları repoda YOKTUR (büyük; `app/src/main/assets/models/` `.gitignore`'dadır). Derleme öncesi bir kez indirilir; dosyalar APK'ya assets olarak girer. Uygulama hiçbir zaman ağdan model indirmez (INTERNET izni yok).
+Model dosyaları repoda YOKTUR (büyük; `app/src/main/assets/models/` ve orijinal önbellek `.model-cache/` `.gitignore`'dadır; model ağırlıkları ASLA commit'lenmez). Derleme öncesi bir kez indirilir; dosyalar APK'ya assets olarak girer. Uygulama hiçbir zaman ağdan model indirmez (INTERNET izni yok).
+
+T-027 (K-14 Katman A) sonrası metin ONNX ve sözlük, Hugging Face'teki dosyaların BUDANMIŞ (değiştirilmiş) sürümüdür: `tools/fetch_models.sh` orijinalleri `mobile/.model-cache/` önbelleğine indirip SHA-256 doğrular, `tools/prune_text_model.py` ile budanmış sürümü `assets/models/` altına yazar ve yeni SHA-256 değerlerini doğrular. Ayrıntı, kapılar ve kanıt: [vocab-pruning.md](vocab-pruning.md).
 
 ## Kurulum
 
 ```
 cd mobile
-tools/fetch_models.sh              # metin + görüntü (yaklaşık 226 MB)
+tools/fetch_models.sh              # metin (budanmış) + görüntü; assets/models ~188 MB, orijinal önbellek ~136 MB (.model-cache)
 tools/fetch_models.sh --text-only  # yalnızca metin (T-007 için yeterli)
+MODEL_CACHE=/baska/yer tools/fetch_models.sh   # orijinal önbelleği başka yerde tut (varsayılan mobile/.model-cache)
 ```
 
-`tools/fetch_models.sh` yalnızca geliştirici makinesinde çalışır, uygulamanın parçası değildir. Gereken: bash, curl, python3 (yalnızca standart kütüphane), shasum/sha256sum. Sabitlenmiş Hugging Face revizyonlarından indirir (Ctrl-C veya hatada `*.part` ve geçici safetensors silinir), her dosyanın SHA-256 değerini doğrular (uyuşmazsa siler ve hata verir), zaten doğrulanmış dosyayı yeniden indirmez. Dense ağırlığını `model.safetensors`'tan ham float32 `.bin`'e çevirir.
+`tools/fetch_models.sh` yalnızca geliştirici makinesinde çalışır, uygulamanın parçası değildir. Gereken: bash, curl, python3 (>= 3.8, yalnızca standart kütüphane; `python3 -I` ile çalışır), shasum/sha256sum. Sabitlenmiş Hugging Face revizyonlarından indirir (Ctrl-C veya hatada `*.part` ve geçici safetensors silinir; yalnızca betiğin kendi dosyaları silinir), her dosyanın SHA-256 değerini doğrular (uyuşmazsa siler ve hata verir), zaten doğrulanmış dosyayı yeniden indirmez. Dense ağırlığını `model.safetensors`'tan ham float32 `.bin`'e çevirir. Metin ONNX ve sözlük için sıra: orijinali önbelleğe al (SHA doğrula; hedefte eski kurulumdan kalma orijinal varsa ağsız kopyalanır) -> `prune_text_model.py` (geçici dosya + atomik yeniden adlandırma, idempotent, çıktı bayt bayt deterministik) -> budanmış dosyaların SHA-256'sını doğrula (tutmazsa hedefteki budanmış dosyalar silinir, orijinaller önbellekte kalır). Hedefte doğrulanmış budanmış dosya varsa ağa çıkılmaz. Betik testi (ağsız): `tools/test_fetch_models.sh`; budama aracı testi: `tools/test_prune_text_model.py`.
 
 Dosyalar yoksa modelsiz testler yine çalışır; gerçek dosya gerektiren testler (`assumeTrue`) atlanır. Uygulama dosya eksikse `ModelException.Missing` verir.
 
@@ -18,12 +21,14 @@ Dosyalar yoksa modelsiz testler yine çalışır; gerçek dosya gerektiren testl
 
 | assets/models/ | Kaynak (revizyon) | Lisans | Boyut (bayt) | SHA-256 |
 |---|---|---|---|---|
-| `text_model_qint8_arm64.onnx` | https://huggingface.co/sentence-transformers/clip-ViT-B-32-multilingual-v1 `onnx/model_qint8_arm64.onnx` (58edf8cada9e398793dca955574a48cbb7f18be2) | Apache-2.0 | 135336307 | 3bed77e83926519660b5c0833cb3321cfde952331edec4f7d501c7d384b8a8a7 |
+| `text_model_qint8_arm64.onnx` (BUDANMIŞ, T-027) | https://huggingface.co/sentence-transformers/clip-ViT-B-32-multilingual-v1 `onnx/model_qint8_arm64.onnx` (58edf8cada9e398793dca955574a48cbb7f18be2) dosyasının DEĞİŞTİRİLMİŞ türevi: gömme tablosu 119547 -> 69642 satır (aşağıda "Değiştirilmiş model") | Apache-2.0 (türev) | 97009267 | 4e73a91f8463faaece382c033a25b035fe7adc54260910acb5d8e4a77872301c |
 | `text_dense_768x512_f32.bin` | Aynı revizyon, `2_Dense/model.safetensors` (SHA-256 d12568dc7300970a4d3dbb49068ad16cd89b99840b74b026f8e48071e9414f74) içindeki `linear.weight`, ham float32 little-endian, satır sıralı [512 çıkış][768 giriş], bias yok | Apache-2.0 | 1572864 | e5f6548cbcef6c62631b3946d89042ab4c8451762c7bb0a3be11eb6c480b686d |
-| `text_vocab.txt` | Aynı revizyon, `vocab.txt` (distilbert-base-multilingual-cased WordPiece, 119547 satır) | Apache-2.0 | 995526 | fe0fda7c425b48c516fc8f160d594c8022a0808447475c1a7c6d6479763f310c |
+| `text_vocab.txt` (BUDANMIŞ, T-027) | Aynı revizyon, `vocab.txt` (distilbert-base-multilingual-cased WordPiece, 119547 satır) dosyasının satır SIRASI korunmuş 69642 satırlık alt kümesi | Apache-2.0 (türev) | 520398 | e3375077b9b203e67d8ed9ca271e68dc2e463af61a0c976041de6ee3e7b19cc8 |
 | `vision_model_quantized.onnx` (T-006 kullanır) | https://huggingface.co/Xenova/clip-vit-base-patch32 `onnx/vision_model_quantized.onnx` (d15189d7028b43f1d3e65039190477f6af591c2a), openai/clip-vit-base-patch32 dönüşümü | Beyan yok (MIT çıkarım: OpenAI CLIP MIT, repo düzeyi; Xenova repo'sunda lisans beyanı YOK, bkz. "Lisans kanıtı") | 89117001 | 583fd1110a514667812fee7d684952aaf82a99b959760c8d7dca7e0ab9839299 |
 
-Rapora lisans atfı: sentence-transformers (Apache-2.0), github.com/openai/CLIP (MIT). Ayrıntı ve araştırma: `model-research.md`. Aynı değerler `ml/ModelManifest.kt` içindedir; bir test betikle tutarlılığı denetler. Lisansların hangi kanıta dayandığı ve nelerin doğrulanamadığı aşağıdaki "Lisans kanıtı" bölümündedir.
+ORİJİNAL (budanmamış) metin dosyaları yalnızca geliştirici önbelleğinde (`mobile/.model-cache/`, git dışı) durur ve budama girdisidir: `text_model_qint8_arm64.onnx` 135336307 bayt, SHA-256 `3bed77e83926519660b5c0833cb3321cfde952331edec4f7d501c7d384b8a8a7`; `text_vocab.txt` 995526 bayt, SHA-256 `fe0fda7c425b48c516fc8f160d594c8022a0808447475c1a7c6d6479763f310c` (`golden_text.py` ve `verify_pruned_text.py` bunları kullanır).
+
+Rapora lisans atfı: sentence-transformers (Apache-2.0), github.com/openai/CLIP (MIT). Ayrıntı ve araştırma: `model-research.md`. Aynı (budanmış) değerler `ml/ModelManifest.kt` içindedir; bir test betikle tutarlılığı denetler (`ModelConfigTest`, `ModelStoreTest`). Lisansların hangi kanıta dayandığı ve nelerin doğrulanamadığı aşağıdaki "Lisans kanıtı" bölümündedir.
 
 ## Lisans kanıtı (T-019, kontrol tarihi 2026-10-13)
 
@@ -61,6 +66,15 @@ Revizyon `a857c8de2c07bbcfa6646adfcf31b798845afa1e`. HF etiketi yok; kart yalnı
 | OpenAI CLIP (github.com/openai/CLIP) | MIT, Copyright (c) 2021 OpenAI | Repo düzeyinde doğrulandı; ağırlığa özgü ayrı beyan ve HF'de etiket doğrulanamadı |
 | Xenova/clip-vit-base-patch32 (görüntü ONNX int8) | Beyan yok | Doğrulanamadı; MIT yalnızca kaynaktan çıkarım |
 
+## Değiştirilmiş model (T-027)
+
+APK'daki metin ONNX ve sözlük, Hugging Face'teki sentence-transformers/clip-ViT-B-32-multilingual-v1 (Apache-2.0; sözlük için ayrıca distilbert-base-multilingual-cased, Apache-2.0) dosyalarının DEĞİŞTİRİLMİŞ türevleridir. Değişiklik yalnızca şudur (başka hiçbir ağırlık, düğüm veya ölçek değiştirilmedi; görüntü modeli ve Dense ağırlığı değiştirilmedi):
+1. `text_vocab.txt`: sıra korunarak 119547 satırdan 69642'si tutuldu (Katman A: özel tokenlar, tüm Latin betikli ve rakam/noktalama/sembol token'ları; Kiril, CJK, Arapça, Hangul vb. ve `[unusedN]` atıldı). Tutulan satırlar bayt bayt aynıdır; yeni id = satır numarası.
+2. `text_model_qint8_arm64.onnx`: `embeddings.word_embeddings.weight_quantized` (uint8 [119547, 768]) aynı satır kümesiyle [69642, 768] olarak dilimlendi; scale/zero_point (skaler) ve diğer her bayt aynı.
+Araç: `mobile/tools/prune_text_model.py` (Python standart kütüphanesi); yeniden üretilebilir (aynı girdiyle aynı SHA-256). Metin vektörleri orijinal modelle masaüstünde bit özdeştir (76 altın sorgu); kanıt: [vocab-pruning.md](vocab-pruning.md).
+
+Lisans gereği (Apache-2.0 Bölüm 4(b): değiştirilmiş dosyalar değiştirildiklerini belirten bir bildirim taşımalıdır; ikili model dosyaları bildirim taşıyamayacağından bildirim, kaynakta bu belgede ve uygulama içi "Lisanslar" notunda tutulur; hukuki görüş değildir): Lisanslar ekranı/notu (aşağıdaki öneri) metin modeli için "sentence-transformers/clip-ViT-B-32-multilingual-v1 (Apache-2.0) modelinden türetilmiştir; gömme tablosu ve sözlüğü Latin betikli token'larla sınırlandırılmıştır (değiştirilmiş sürüm)" cümlesini taşımalıdır. Apache-2.0 metni ve telif atfı bu bildirimle birlikte verilir; orijinal telif/atıf bilgileri korunur. Not: Latin dışı betikli sözcükler (Kiril, Arapça, CJK vb.) budanmış modelde [UNK] olur; model "çok dilli" olarak sunulmamalıdır.
+
 ## Üçüncü taraf lisansları ve uygulama içi "Lisanslar" notu
 
 Değerlendirme (T-019): uygulama içinde bir "Lisanslar" notu GEREKİR. Gerekçe (hukuki görüş değil, mühendislik değerlendirmesi):
@@ -85,7 +99,8 @@ Doğrulanamayan: ORT'nin telif satırı (hangi "Copyright (c)" metni) ve geçiş
 Öneri (uygulanmadı, kod yazılmadı; karar PO'da):
 1. Ağsız, statik bir "Lisanslar" ekranı veya `assets/` altında düz metin dosyası: yukarıdaki tablodaki her bileşen için ad, telif sahibi, lisans adı ve bağlantı; bir kez tam Apache-2.0 metni; OpenAI CLIP için tam MIT metni ("Copyright (c) 2021 OpenAI"); modeller için Bölüm "Lisans kanıtı" özeti (sentence-transformers Apache-2.0, distilbert Apache-2.0). Bağımlılık eklemez. Erişim: indeks durumu ekranından bir bağlantı. Bu bir UI/gezinti eklemesidir, architecture.md Bölüm 4'e yansıtılmalıdır.
 2. Otomatik üretim (ör. bir lisans toplama eklentisi) ek bağımlılık/eklenti gerektirir; architecture.md Bölüm 8 gereği gerekçe ve seçim kararı ayrıdır. Seçilmedi, değerlendirilmedi.
-3. Xenova dönüşümünün lisans belirsizliği ekranda "OpenAI CLIP (MIT) ağırlıklarından dönüştürülmüştür" diye dürüstçe belirtilmeli; ekranda "Xenova MIT lisansı verdi" denmemeli.
+3. Metin modeli için "değiştirilmiş model" bildirimi (yukarıdaki "Değiştirilmiş model (T-027)" bölümü): hangi dosyaların nasıl değiştirildiği ve Apache-2.0 kaynağına atıf.
+4. Xenova dönüşümünün lisans belirsizliği ekranda "OpenAI CLIP (MIT) ağırlıklarından dönüştürülmüştür" diye dürüstçe belirtilmeli; ekranda "Xenova MIT lisansı verdi" denmemeli.
 
 ## Metin hattı (arama sırasında çalışan tek ML)
 
@@ -93,13 +108,13 @@ istem -> `QueryPreprocessor` (Türkçe küçük harf, kontrol karakteri atma, bo
 
 ## Doğrulama durumu
 
-- Tokenizer: gerçek `text_vocab.txt` ile 18 metinde Python HF `tokenizers` 0.23.2 token kimlikleriyle birebir (Türkçe harfler, CJK, emoji, 300 karakterlik sözcük, 128 token kesmesi dahil).
+- Tokenizer: ORİJİNAL `text_vocab.txt` ile 18 metinde Python HF `tokenizers` 0.23.2 token kimlikleriyle birebir (Türkçe harfler, CJK, emoji, 300 karakterlik sözcük, 128 token kesmesi dahil); budanmış sözlükte aynı 18 metin token METNİ olarak eşit (`tokenizer_reference_tokens.tsv`; tek istisna Latin dışı "猫" -> [UNK], K-14 kabulü). Budama doğrulaması: [vocab-pruning.md](vocab-pruning.md).
 - Dense + L2: gerçek Dense ağırlığı ve Python (onnxruntime 1.30 masaüstü, numpy) referans vektörleriyle 1e-5 içinde.
 - ONNX Runtime Android üzerinde çalıştırma, süre ve bellek: doğrulanamadı (cihaz/emülatör yok). int8 `arm64` dosyasının x86 emülatörde çalışması da doğrulanmadı.
 
 ## İlk sorgu gecikmesi ve ısınma (T-008 için)
 
-İlk `encode` çağrısı dosya doğrulaması/kopyası (ilk kurulumda 135 MB akış kopyası + SHA-256), ORT oturumu oluşturma, 119547 satırlık sözlüğün okunması ve Dense yüklemesini içerir; bu iş `Dispatchers.IO`'da yürür, kopya sırasında iptale duyarlıdır (oturum oluşturma bölünemez). Sonraki açılışlarda işaretçi dosyası sayesinde yeniden hash'lenmez. İlk sorgu gecikmesi ÖLÇÜLMEDİ (cihaz yok). T-008, arama ekranı açılmadan önce arka planda bir ısınma (warm-up) `encode` çağrısı yapmalıdır; ilk kurulumdaki kopya süresi kullanıcıya gösterilmelidir (ilerleme/beklet). Tek bir `OnnxTextEncoder` örneği kullanılmalıdır (KDoc: tekil kullanım kuralı).
+İlk `encode` çağrısı dosya doğrulaması/kopyası (ilk kurulumda 135 MB akış kopyası + SHA-256), ORT oturumu oluşturma, 69642 satırlık (budanmış) sözlüğün okunması ve Dense yüklemesini içerir; bu iş `Dispatchers.IO`'da yürür, kopya sırasında iptale duyarlıdır (oturum oluşturma bölünemez). Sonraki açılışlarda işaretçi dosyası sayesinde yeniden hash'lenmez. İlk sorgu gecikmesi ÖLÇÜLMEDİ (cihaz yok). T-008, arama ekranı açılmadan önce arka planda bir ısınma (warm-up) `encode` çağrısı yapmalıdır; ilk kurulumdaki kopya süresi kullanıcıya gösterilmelidir (ilerleme/beklet). Tek bir `OnnxTextEncoder` örneği kullanılmalıdır (KDoc: tekil kullanım kuralı).
 
 ## Cihaz testi
 
@@ -113,4 +128,4 @@ onnxruntime-android AAR'ı Microsoft telemetri istemcisini içerir (`ai.onnxrunt
 
 ## APK boyutu ve ABI (ileri aşama kararı)
 
-Debug APK yaklaşık 375 MB: 4 ABI (arm64-v8a, armeabi-v7a, x86, x86_64) ORT yerel kütüphaneleri (~135 MB) + ~226 MB model. T-029 ile `abiFilters += "arm64-v8a"` YALNIZCA release'e uygulandı (release ~261 MB, debug tüm ABI ve ~375 MB); arm32 ve x86 cihazlar release APK'yı kuramaz. Ayrıntı, ölçüm ve dışarıda kalanlar: [release-abi.md](release-abi.md) (model-research.md 5.2).
+Debug APK (T-027 sonrası) 336,4 MB (önce 375,3): 4 ABI (arm64-v8a, armeabi-v7a, x86, x86_64) ORT yerel kütüphaneleri (~135 MB) + ~188 MB model. T-029 ile `abiFilters += "arm64-v8a"` YALNIZCA release'e uygulandı (release 222,5 MB (önce 261,0), debug tüm ABI ve 336,4 MB); arm32 ve x86 cihazlar release APK'yı kuramaz. Ayrıntı, ölçüm ve dışarıda kalanlar: [release-abi.md](release-abi.md) (model-research.md 5.2).

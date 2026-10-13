@@ -10,8 +10,11 @@ Gereken: python3 + numpy + onnxruntime==1.30.0 (kurulum notu: docs/golden-text.m
 varsa `tokenizers` yalnizca ek capraz kontrol icin kullanilir.
 
 Guvenlik kapilari (hicbiri atlanamaz):
-  1. assets/models/ icindeki text_model_qint8_arm64.onnx, text_dense_768x512_f32.bin, text_vocab.txt dosyalarinin
-     boyutu ve SHA-256'si ml/ModelManifest.kt ile ESIT olmali (budanmis/degismis model ile altin uretilmez).
+  1. Metin ONNX ve sozluk ORIJINAL dosyalar olmali (budanmis/degismis model ile altin uretilmez). T-027 sonrasi
+     assets/models/ icindeki bu iki dosya BUDANMISTIR; bu yuzden mobile/.model-cache/ (tools/fetch_models.sh doldurur)
+     VARSA orijinaller oradan okunur ve tools/fetch_models.sh'taki ORIJINAL SHA-256 ile dogrulanir; .model-cache yoksa
+     eski davranis: assets/models/ icindeki text_model_qint8_arm64.onnx ve text_vocab.txt boyutu ve SHA-256'si
+     ml/ModelManifest.kt ile ESIT olmali. Dense (degismez) her durumda assets/models/'ten, manifest ile dogrulanir.
   2. Buradaki Python tokenizer, Kotlin QueryPreprocessor + WordPieceTokenizer'in davranisinin birebir portudur;
      app/src/test/resources/ml/tokenizer_reference.tsv'nin TUM satirlarini birebir uretmedikce cikis hatalidir.
 Kotlin davranisi referanstir; ayrisma gorulurse betik raporlar ve cikis kodu 1 verir.
@@ -38,6 +41,9 @@ import numpy as np
 HERE = os.path.dirname(os.path.abspath(__file__))
 MOBILE = os.path.dirname(HERE)
 MODELS = os.path.join(MOBILE, "app", "src", "main", "assets", "models")
+ORIG_CACHE = os.environ.get("MODEL_CACHE") or os.path.join(MOBILE, ".model-cache")
+FETCH_SCRIPT = os.path.join(HERE, "fetch_models.sh")
+VOCAB_DIR = MODELS  # verify_models() ORIJINAL sozlugun bulundugu klasoru buraya yazar
 MANIFEST = os.path.join(MOBILE, "app", "src", "main", "java", "com", "ktu", "aigaleri", "ml", "ModelManifest.kt")
 RES = os.path.join(MOBILE, "app", "src", "test", "resources", "ml")
 QUERIES_IN = os.path.join(HERE, "golden_text_queries.tsv")
@@ -88,10 +94,29 @@ def manifest_entries():
     return out
 
 
+def original_sha(const):
+    """tools/fetch_models.sh icindeki ORIJINAL (budanmamis) dosya SHA-256 sabiti (T-027)."""
+    m = re.search(r'^%s="([0-9a-f]{64})"$' % const, open(FETCH_SCRIPT, encoding="utf-8").read(), re.M)
+    if not m:
+        die("%s icinde %s bulunamadi" % (FETCH_SCRIPT, const))
+    return m.group(1)
+
+
 def verify_models():
+    global VOCAB_DIR
     paths = {}
-    for name, (fn, size, sha) in manifest_entries().items():
-        p = os.path.join(MODELS, fn)
+    entries = manifest_entries()
+    dirs = {name: MODELS for name in entries}
+    if os.path.isfile(os.path.join(ORIG_CACHE, "text_model_qint8_arm64.onnx")):
+        # T-027: orijinal metin ONNX + sozluk onbellekte; manifest BUDANMIS surumu tanimlar, orijinalin SHA'si betiktedir.
+        for name, const in (("TEXT_ONNX", "SHA_TEXT_ONNX"), ("TEXT_VOCAB", "SHA_VOCAB")):
+            fn = entries[name][0]
+            dirs[name] = ORIG_CACHE
+            entries[name] = (fn, os.path.getsize(os.path.join(ORIG_CACHE, fn)) if os.path.isfile(os.path.join(ORIG_CACHE, fn)) else -1,
+                             original_sha(const))
+        VOCAB_DIR = ORIG_CACHE
+    for name, (fn, size, sha) in entries.items():
+        p = os.path.join(dirs[name], fn)
         if not os.path.isfile(p):
             die("%s yok (tools/fetch_models.sh --text-only ile indirin)" % p)
         if os.path.getsize(p) != size:
@@ -239,14 +264,15 @@ class Tokenizer:
 
 
 def load_vocab():
-    data = open(os.path.join(MODELS, "text_vocab.txt"), "rb").read().decode("utf-8")
+    data = open(os.path.join(VOCAB_DIR, "text_vocab.txt"), "rb").read().decode("utf-8")
     lines = data.split("\n")
     if lines and lines[-1] == "":
         lines.pop()
     if "\r" in data:
         die("text_vocab.txt satir sonu CR iceriyor (Kotlin readLine ile ayrisabilir)")
     if len(lines) != EXPECTED_VOCAB_LINES:
-        die("sozluk satir sayisi %d, beklenen %d" % (len(lines), EXPECTED_VOCAB_LINES))
+        die("sozluk satir sayisi %d, beklenen %d (T-027 budanmis sozluk olabilir: tools/fetch_models.sh ile "
+            "orijinalleri mobile/.model-cache/ altina indirin)" % (len(lines), EXPECTED_VOCAB_LINES))
     for i, t in enumerate(lines):
         if any(c in t for c in "\t \n"):  # TSV ve bosluk-ayracli token listesini bozar
             die("sozluk satiri %d bosluk/sekme iceriyor: %r" % (i, t))
