@@ -8,6 +8,7 @@ import com.ktu.aigaleri.domain.IndexMode
 import com.ktu.aigaleri.domain.IndexPhase
 import com.ktu.aigaleri.domain.IndexProgress
 import com.ktu.aigaleri.domain.PhotoIndexer
+import com.ktu.aigaleri.ui.IndexRunState
 import com.ktu.aigaleri.ml.ModelException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
@@ -56,6 +57,26 @@ class IndexWorkTest {
             assertFalse(s.name, IndexWork.isActive(listOf(s)))
         }
         assertTrue(IndexWork.isActive(listOf(WorkInfo.State.CANCELLED, WorkInfo.State.RUNNING)))
+    }
+
+    @Test
+    fun runState_runningWins_waitingForEnqueuedOrBlocked_idleOtherwise() {
+        assertEquals(IndexRunState.IDLE, IndexWork.runState(emptyList()))
+        assertEquals(IndexRunState.RUNNING, IndexWork.runState(listOf(WorkInfo.State.RUNNING)))
+        assertEquals(IndexRunState.WAITING, IndexWork.runState(listOf(WorkInfo.State.ENQUEUED)))
+        assertEquals(IndexRunState.WAITING, IndexWork.runState(listOf(WorkInfo.State.BLOCKED)))
+        for (s in listOf(WorkInfo.State.SUCCEEDED, WorkInfo.State.FAILED, WorkInfo.State.CANCELLED)) {
+            assertEquals(s.name, IndexRunState.IDLE, IndexWork.runState(listOf(s)))
+        }
+        assertEquals(IndexRunState.RUNNING, IndexWork.runState(listOf(WorkInfo.State.ENQUEUED, WorkInfo.State.RUNNING)))
+        assertEquals(IndexRunState.WAITING, IndexWork.runState(listOf(WorkInfo.State.CANCELLED, WorkInfo.State.ENQUEUED)))
+    }
+
+    @Test
+    fun isActive_isConsistentWithRunState() {
+        for (s in WorkInfo.State.entries) {
+            assertEquals(s.name, IndexWork.runState(listOf(s)) != IndexRunState.IDLE, IndexWork.isActive(listOf(s)))
+        }
     }
 
     @Test

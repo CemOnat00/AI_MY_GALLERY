@@ -1,6 +1,7 @@
 package com.ktu.aigaleri.ui.search
 
 import androidx.work.WorkInfo
+import com.ktu.aigaleri.ui.IndexRunState
 import com.ktu.aigaleri.work.IndexWork
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
@@ -14,8 +15,8 @@ import org.junit.Assert.fail
 import org.junit.Test
 
 /**
- * T-008 QA: SearchWarmUp ek sınır durumları ve reviewer'ın bilinen bilgi notları (KNOWN_ISSUE: MEVCUT davranışı sabitler;
- * davranış düzeltilirse bu testler bilerek güncellenmelidir).
+ * T-008 QA: SearchWarmUp ek sınır durumları. T-016: eski KNOWN_ISSUE testleri doğru davranışa güncellendi (bekleyen iş
+ * ısınmayı ertelemez; ısınma sürerken bırakılan oturum `warmed`'ı true bırakmaz).
  */
 class SearchWarmUpKnownIssuesTest {
     private var hasIndex = true
@@ -25,36 +26,79 @@ class SearchWarmUpKnownIssuesTest {
     private fun policy(warm: suspend () -> Unit = { warmCalls++ }) =
         SearchWarmUp({ hasIndex }, { indexing }, warm)
 
-    /** KNOWN_ISSUE (a): isActive ENQUEUED/BLOCKED'i da aktif sayar; pil kısıtıyla kuyrukta takılan iş ısınmayı süresiz erteler. */
+    /** isIndexing, AppDependencies'teki eşlemeyle aynı: yalnızca RUNNING "çalışıyor" sayılır (T-016). */
+    private fun indexingFor(vararg states: WorkInfo.State): suspend () -> Boolean =
+        { IndexWork.runState(states.toList()) == IndexRunState.RUNNING }
+
+    /** Pil kısıtıyla kuyrukta bekleyen (ENQUEUED/BLOCKED) iş ısınmayı ertelemez; ısınma yapılır. */
     @Test
-    fun KNOWN_ISSUE_enqueuedButNotRunningWork_countsAsIndexing_andDefersWarmUpIndefinitely() = runBlocking {
-        val p = SearchWarmUp(
-            hasSearchableIndex = { true },
-            isIndexing = { IndexWork.isActive(listOf(WorkInfo.State.ENQUEUED)) }, // AppDependencies'teki isRunning ile aynı eşleme
-            warm = { warmCalls++ },
-        )
-        repeat(10) { assertFalse(p.run()) }
-        assertEquals(0, warmCalls)
-        // BLOCKED de aynı
-        val blocked = SearchWarmUp({ true }, { IndexWork.isActive(listOf(WorkInfo.State.BLOCKED)) }, { warmCalls++ })
-        assertFalse(blocked.run())
-        assertEquals(0, warmCalls)
+    fun enqueuedOrBlockedWork_doesNotDeferWarmUp() = runBlocking {
+        for (s in listOf(WorkInfo.State.ENQUEUED, WorkInfo.State.BLOCKED)) {
+            warmCalls = 0
+            val p = SearchWarmUp({ true }, indexingFor(s), { warmCalls++ })
+            assertTrue(s.name, p.run())
+            assertEquals(s.name, 1, warmCalls)
+        }
     }
 
-    /** KNOWN_ISSUE (b): ısınma çıkarımı sürerken oturum bırakılırsa `warmed` yine true olur (bayat bayrak). */
+    /** Gerçekten çalışan (RUNNING) iş ısınmayı hâlâ erteler; iş bitince ısınır. */
     @Test
-    fun KNOWN_ISSUE_releaseDuringWarmUp_leavesWarmedFlagTrue() = runBlocking {
+    fun runningWork_defersWarmUp_untilItEnds() = runBlocking {
+        val state = java.util.concurrent.atomic.AtomicReference(WorkInfo.State.RUNNING)
+        val p = SearchWarmUp({ true }, { IndexWork.runState(listOf(state.get())) == IndexRunState.RUNNING }, { warmCalls++ })
+        repeat(3) { assertFalse(p.run()) }
+        assertEquals(0, warmCalls)
+        state.set(WorkInfo.State.SUCCEEDED)
+        assertTrue(p.run())
+        assertEquals(1, warmCalls)
+    }
+
+    /** Bekleyen iş ısınmadan sonra RUNNING olursa ısınmış bayrağı korunur (tekrar çıkarım yok). */
+    @Test
+    fun waitingThenRunning_afterWarm_doesNotRewarm() = runBlocking {
+        val state = java.util.concurrent.atomic.AtomicReference(WorkInfo.State.ENQUEUED)
+        val p = SearchWarmUp({ true }, { IndexWork.runState(listOf(state.get())) == IndexRunState.RUNNING }, { warmCalls++ })
+        assertTrue(p.run())
+        state.set(WorkInfo.State.RUNNING)
+        assertTrue(p.run())
+        assertEquals(1, warmCalls)
+    }
+
+    /** Isınma çıkarımı sürerken oturum bırakılırsa `warmed` true KALMAZ; sonraki çağrı yeniden ısıtır. */
+    @Test
+    fun releaseDuringWarmUp_doesNotLeaveWarmedFlagTrue_andNextRunRewarms() = runBlocking {
         val gate = CompletableDeferred<Unit>()
         val started = CompletableDeferred<Unit>()
-        val p = policy { warmCalls++; started.complete(Unit); gate.await() }
-        val first = async(Dispatchers.Default) { p.run() }
+        var first = true
+        val p = policy {
+            warmCalls++
+            if (first) {
+                first = false
+                started.complete(Unit)
+                gate.await()
+            }
+        }
+        val firstRun = async(Dispatchers.Default) { p.run() }
         started.await()
         p.onSessionReleased() // trim, çıkarım sürerken geldi
         gate.complete(Unit)
-        assertTrue(first.await())
-        // Beklenen doğru davranış: oturum bırakıldığı için yeniden ısıtmak (warmCalls == 2). Mevcut: ısınmış sayılır.
+        assertFalse(firstRun.await()) // bırakılan oturum için "ısınmış" denmez
+        assertTrue(p.run()) // yeniden ısıtır
+        assertEquals(2, warmCalls)
+        assertTrue(p.run()) // artık ısınmış
+        assertEquals(2, warmCalls)
+    }
+
+    /** Bırakma ısınmadan ÖNCE ve sonra gelirse eski davranış korunur. */
+    @Test
+    fun releaseAfterWarmCompleted_stillRewarms_andReleaseBeforeRunIsHarmless() = runBlocking {
+        val p = policy()
+        p.onSessionReleased()
         assertTrue(p.run())
         assertEquals(1, warmCalls)
+        p.onSessionReleased()
+        assertTrue(p.run())
+        assertEquals(2, warmCalls)
     }
 
     @Test

@@ -8,6 +8,7 @@ import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import androidx.work.testing.WorkManagerTestInitHelper
 import com.ktu.aigaleri.domain.IndexMode
+import com.ktu.aigaleri.ui.IndexRunState
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -53,6 +54,7 @@ class WorkManagerIndexLauncherTest {
         assertEquals(1, list.size)
         assertEquals(WorkInfo.State.ENQUEUED, list.single().state)
         assertTrue(launcher.isRunning.first())
+        assertEquals(IndexRunState.WAITING, launcher.runState.first()) // kuyrukta, çalışmıyor (T-016)
     }
 
     @Test

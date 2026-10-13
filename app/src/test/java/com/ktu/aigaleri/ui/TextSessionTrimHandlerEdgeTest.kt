@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION") // TRIM_MEMORY_* sabitleri Java'da deprecated; test eski API düzeylerindeki eşik davranışını doğrular (T-016)
+
 package com.ktu.aigaleri.ui
 
 import android.content.ComponentCallbacks2

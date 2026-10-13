@@ -48,6 +48,12 @@ class TextSessionTrimHandler(
     }
 
     companion object {
+        /**
+         * `TRIM_MEMORY_RUNNING_LOW` (10) yeni API düzeylerinde "kullanımdan kaldırıldı" işaretli (artık bildirilmeyebilir),
+         * ancak eski Android sürümlerinde hâlâ gelir ve eşik davranışı bunlara bağlıdır; bu yüzden değer korunur.
+         * Yalnızca bu tek ifadede uyarı bastırılır.
+         */
+        @Suppress("DEPRECATION")
         fun shouldRelease(level: Int): Boolean = level >= ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW
     }
 }

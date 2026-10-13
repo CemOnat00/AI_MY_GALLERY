@@ -3,8 +3,8 @@ package com.ktu.aigaleri.ui.search
 /**
  * Metin oturumu ısınma politikası (T-008). Isınma yalnızca yararlı ve zararsız olduğunda yapılır:
  * - İndekste aranabilir kayıt yoksa ([hasSearchableIndex] false) yapılmaz: model boşuna yüklenmez (arama boş döner).
- * - İndeksleme çalışırken ([isIndexing] true) YAPILMAZ, ertelenir: tek oturum kuralıyla metin oturumu açmak
- *   indeksleyicinin görüntü oturumunu kapatır ve ona yeniden açma maliyeti yükler. Ertelenen ısınma, bir sonraki
+ * - İndeksleme GERÇEKTEN çalışırken ([isIndexing] true; kuyrukta bekleyen/pil kısıtlı iş sayılmaz, T-016) YAPILMAZ,
+ *   ertelenir: tek oturum kuralıyla metin oturumu açmak indeksleyicinin görüntü oturumunu kapatır ve ona yeniden açma maliyeti yükler. Ertelenen ısınma, bir sonraki
  *   tetikte (ilk metin alanı odağı) yeniden denenir; kullanıcı yine de arama yaparsa model normal yoldan açılır.
  * - Zaten ısınmışsa ve oturum bırakılmadıysa ([onSessionReleased] çağrılmadıysa) tekrar çıkarım yapılmaz.
  *
@@ -18,20 +18,34 @@ class SearchWarmUp(
     private val isIndexing: suspend () -> Boolean,
     private val warm: suspend () -> Unit,
 ) {
-    @Volatile private var warmed = false
+    private val lock = Any()
+    private var warmed = false
 
-    /** Ağırlık/oturum bırakıldı (arka plan, bellek baskısı); sonraki [run] yeniden ısıtır. */
+    /** Her bırakmada artar; ısınma sürerken bırakma olduysa `warmed` true yapılmaz (bayat bayrak engeli). */
+    private var releaseGeneration = 0L
+
+    /**
+     * Ağırlık/oturum bırakıldı (arka plan, bellek baskısı); sonraki [run] yeniden ısıtır. Süren bir ısınma varsa
+     * onun sonucu geçersiz sayılır (o ısınma `warmed`'ı true yapmaz).
+     */
     fun onSessionReleased() {
-        warmed = false
+        synchronized(lock) {
+            releaseGeneration++
+            warmed = false
+        }
     }
 
-    /** @return true: oturum ısınmış durumda; false: koşullar uygun olmadığı için ertelendi/atlandı. */
+    /** @return true: oturum ısınmış durumda; false: koşullar uygun olmadığı için ertelendi/atlandı ya da ısınma sürerken oturum bırakıldı. */
     suspend fun run(): Boolean {
-        if (warmed) return true
+        val generation = synchronized(lock) { if (warmed) return true; releaseGeneration }
         if (!hasSearchableIndex()) return false
         if (isIndexing()) return false
         warm()
-        warmed = true
-        return true
+        // Isınma sürerken oturum bırakıldıysa (onSessionReleased) oturum artık açık değil: bayrak true yapılmaz,
+        // sonraki çağrı yeniden ısıtır.
+        return synchronized(lock) {
+            if (releaseGeneration == generation) warmed = true
+            warmed
+        }
     }
 }

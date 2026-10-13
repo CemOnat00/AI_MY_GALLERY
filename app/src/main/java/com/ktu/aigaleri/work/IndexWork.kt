@@ -10,6 +10,7 @@ import com.ktu.aigaleri.domain.IndexException
 import com.ktu.aigaleri.domain.IndexMode
 import com.ktu.aigaleri.domain.PhotoIndexer
 import com.ktu.aigaleri.ml.ModelException
+import com.ktu.aigaleri.ui.IndexRunState
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CancellationException
 
@@ -56,9 +57,23 @@ object IndexWork {
     /** Bilinmeyen/eksik değer INCREMENTAL (güvenli varsayılan; yalnızca eksikleri işler). */
     fun parseMode(value: String?): IndexMode = IndexMode.entries.firstOrNull { it.name == value } ?: IndexMode.INCREMENTAL
 
-    /** Kuyrukta bekleyen veya çalışan iş var mı (arayüzdeki "yeniden indeksleme sürüyor" durumu). */
-    fun isActive(states: Collection<WorkInfo.State>): Boolean =
-        states.any { it == WorkInfo.State.ENQUEUED || it == WorkInfo.State.RUNNING || it == WorkInfo.State.BLOCKED }
+    /**
+     * Kuyrukta bekleyen VEYA çalışan iş var mı. Bilerek RUNNING'den geniştir: arayüz, kuyrukta bekleyen işin
+     * üstüne yeni "yeniden indeksle" isteği kabul etmemek için bunu kullanır ([com.ktu.aigaleri.ui.IndexLauncher.isRunning]).
+     * "Gerçekten çalışıyor mu" sorusu için [runState] kullanılır (ör. ısınma kararı).
+     */
+    fun isActive(states: Collection<WorkInfo.State>): Boolean = runState(states) != IndexRunState.IDLE
+
+    /**
+     * İş durumlarından ince durum: herhangi biri RUNNING ise [IndexRunState.RUNNING]; değilse ENQUEUED/BLOCKED
+     * (ör. pil kısıtı, yeniden deneme bekleme süresi, kısıt beklemesi) varsa [IndexRunState.WAITING]; aksi halde
+     * [IndexRunState.IDLE] (boş veya yalnızca SUCCEEDED/FAILED/CANCELLED).
+     */
+    fun runState(states: Collection<WorkInfo.State>): IndexRunState = when {
+        states.any { it == WorkInfo.State.RUNNING } -> IndexRunState.RUNNING
+        states.any { it == WorkInfo.State.ENQUEUED || it == WorkInfo.State.BLOCKED } -> IndexRunState.WAITING
+        else -> IndexRunState.IDLE
+    }
 
     fun constraints(): Constraints = Constraints.Builder().setRequiresBatteryNotLow(true).build()
 

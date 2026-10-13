@@ -74,15 +74,16 @@ class AppDependencies private constructor(context: Context) {
     }
 
     /**
-     * Isınma politikası: yalnızca aranabilir indeks varsa ve indeksleme çalışmıyorsa metin oturumunu önceden açar
-     * (bkz. [SearchWarmUp]).
+     * Isınma politikası: yalnızca aranabilir indeks varsa ve indeksleme GERÇEKTEN çalışmıyorsa (RUNNING değilse)
+     * metin oturumunu önceden açar (bkz. [SearchWarmUp]). Kuyrukta bekleyen (WAITING; ör. pil kısıtı) iş ısınmayı
+     * ertelemez: görüntü oturumu açık değildir, süresiz ertelenme olmaz.
      */
     private val searchWarmUpDelegate = lazy {
         SearchWarmUp(
             hasSearchableIndex = {
                 database.photoEmbeddingDao().getPageForModel(ModelManifest.MODEL_VERSION, Long.MIN_VALUE, 1).isNotEmpty()
             },
-            isIndexing = { indexLauncher.isRunning.first() },
+            isIndexing = { indexLauncher.runState.first() == IndexRunState.RUNNING },
             warm = { textEncoder.warmUp() },
         )
     }

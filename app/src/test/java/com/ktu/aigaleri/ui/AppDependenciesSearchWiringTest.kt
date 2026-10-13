@@ -47,7 +47,7 @@ class AppDependenciesSearchWiringTest {
         assertTrue(Regex("""RoomSearchRepository\(\s*encoder = textEncoder""").containsMatchIn(deps))
         assertTrue(deps.contains("suspend fun warmUpSearch(): Boolean = searchWarmUp.run()"))
         assertTrue(deps.contains("warm = { textEncoder.warmUp() }"))
-        assertTrue(deps.contains("isIndexing = { indexLauncher.isRunning.first() }"))
+        assertTrue(deps.contains("isIndexing = { indexLauncher.runState.first() == IndexRunState.RUNNING }"))
         assertTrue(deps.contains("registerComponentCallbacks("))
         assertTrue(deps.contains("TextSessionTrimHandler("))
         val activity = File(mainSrc, "ui/MainActivity.kt").readText()
