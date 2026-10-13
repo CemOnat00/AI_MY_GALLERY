@@ -52,7 +52,7 @@ object ModelManifest {
         sha256 = "fe0fda7c425b48c516fc8f160d594c8022a0808447475c1a7c6d6479763f310c",
     )
 
-    /** OpenAI CLIP ViT-B/32 görüntü kodlayıcı int8 (Xenova, MIT). T-006 kullanır; bu görevde yüklenmez. */
+    /** OpenAI CLIP ViT-B/32 görüntü kodlayıcı int8 (OpenAI CLIP MIT'den dönüşüm; Xenova lisans beyanı yok). T-006 kullanır; bu görevde yüklenmez. */
     val VISION_ONNX = ModelFile(
         assetPath = "models/vision_model_quantized.onnx",
         fileName = "vision_model_quantized.onnx",

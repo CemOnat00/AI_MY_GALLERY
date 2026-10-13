@@ -42,7 +42,7 @@ class ImageEmbeddingPipeline(private val runner: ImageEmbeddingRunner) {
 
 /**
  * ONNX Runtime ile OpenAI CLIP ViT-B/32 görüntü kodlayıcı (T-006). Model: Xenova/clip-vit-base-patch32
- * `onnx/vision_model_quantized.onnx` (int8; openai/clip-vit-base-patch32 dönüşümü, MIT lisansı; kaynak ve
+ * `onnx/vision_model_quantized.onnx` (int8; openai/clip-vit-base-patch32 dönüşümü; OpenAI CLIP MIT'den dönüşüm, Xenova lisans beyanı yok; kaynak ve
  * SHA-256: docs/model-research.md, docs/model-setup.md). Girdi `pixel_values` [1,3,224,224], çıktı
  * `image_embeds` [1,512] (masaüstünde doğrulandı).
  *
