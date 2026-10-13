@@ -107,10 +107,10 @@ fun AppNavHost(
             if (granted) {
                 val searchState by searchViewModel.state.collectAsStateWithLifecycle()
                 val indexUiState by indexStatusViewModel.state.collectAsStateWithLifecycle()
-                val indexRunning by indexStatusViewModel.reindexInProgress.collectAsStateWithLifecycle()
+                val indexRunState by indexStatusViewModel.runState.collectAsStateWithLifecycle()
                 SearchContent(
                     state = searchState,
-                    indexing = indexingBanner(indexUiState, indexRunning),
+                    indexing = indexingBanner(indexUiState, indexRunState),
                     onQueryChange = searchViewModel::onQueryChange,
                     onSearch = searchViewModel::search,
                     onQueryFocused = searchViewModel::warmUp,
@@ -135,9 +135,11 @@ fun AppNavHost(
                 val indexState by indexStatusViewModel.state.collectAsStateWithLifecycle()
                 val inProgress by indexStatusViewModel.reindexInProgress.collectAsStateWithLifecycle()
                 val reindexError by indexStatusViewModel.reindexError.collectAsStateWithLifecycle()
+                val runState by indexStatusViewModel.runState.collectAsStateWithLifecycle()
                 IndexStatusContent(
                     state = indexState,
                     reindexError = reindexError,
+                    runState = runState,
                     reindexAvailable = indexStatusViewModel.reindexAvailable,
                     reindexInProgress = inProgress,
                     onReindex = indexStatusViewModel::reindex,

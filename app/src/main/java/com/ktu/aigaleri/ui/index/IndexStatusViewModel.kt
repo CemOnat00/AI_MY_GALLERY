@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.ktu.aigaleri.data.IndexState
 import com.ktu.aigaleri.domain.IndexMode
 import com.ktu.aigaleri.ui.IndexLauncher
+import com.ktu.aigaleri.ui.IndexRunState
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
@@ -83,6 +84,14 @@ class IndexStatusViewModel(
 
     val reindexInProgress: StateFlow<Boolean> = combine(launching, launcherRunning) { l, r -> l || r }
         .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
+    /**
+     * İş hattının ince durumu (T-016): IDLE/WAITING/RUNNING. Banner ve durum ekranı "beklemede" ile "çalışıyor"u buradan
+     * ayırır; kilit ([reindexInProgress]) bundan bağımsız olarak kuyruktaki işi de kapsar. Akış hatası IDLE sayılır.
+     */
+    val runState: StateFlow<IndexRunState> = launcher.runState
+        .catch { emit(IndexRunState.IDLE) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), IndexRunState.IDLE)
 
     private val _reindexError = MutableStateFlow(false)
 

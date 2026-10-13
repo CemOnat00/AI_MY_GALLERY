@@ -66,6 +66,13 @@ class SearchScreenTest {
     }
 
     @Test
+    fun indexingBanner_waiting_showsQueuedText_withoutProgress() {
+        show(SearchUiState(), indexing = IndexingBanner(null, null, waiting = true))
+        rule.onNodeWithText("İndeksleme sırada", substring = true).assertExists()
+        rule.onNodeWithText("cihaz uygun olunca", substring = true).assertExists()
+    }
+
+    @Test
     fun blankQuery_disablesSearchButton() {
         show(SearchUiState(query = ""))
         rule.onNodeWithTag(TAG_SEARCH_BUTTON).assertIsNotEnabled()

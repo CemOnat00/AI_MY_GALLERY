@@ -10,6 +10,7 @@ import com.ktu.aigaleri.ui.index.IndexStatusContent
 import com.ktu.aigaleri.ui.index.IndexStatusUiState
 import com.ktu.aigaleri.ui.index.TAG_REINDEX_BUTTON
 import com.ktu.aigaleri.ui.index.TAG_RETRY_BUTTON
+import com.ktu.aigaleri.ui.index.TAG_RUN_STATE
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -22,10 +23,11 @@ class IndexStatusScreenTest {
         state: IndexStatusUiState,
         available: Boolean = true,
         inProgress: Boolean = false,
+        runState: IndexRunState = IndexRunState.IDLE,
         onReindex: () -> Unit = {},
         onRetry: () -> Unit = {},
     ) = rule.setContent {
-        IndexStatusContent(state, available, inProgress, onReindex = onReindex, onRetry = onRetry, onBack = {})
+        IndexStatusContent(state, available, inProgress, onReindex = onReindex, onRetry = onRetry, onBack = {}, runState = runState)
     }
 
     @Test
@@ -54,6 +56,27 @@ class IndexStatusScreenTest {
     fun reindexInProgress_disablesReindex() {
         show(IndexStatusUiState.NeverRun, inProgress = true)
         rule.onNodeWithTag(TAG_REINDEX_BUTTON).assertIsNotEnabled()
+    }
+
+    @Test
+    fun runState_waiting_andRunning_areShownSeparately_andIdleShowsNone() {
+        show(IndexStatusUiState.NeverRun, inProgress = true, runState = IndexRunState.WAITING)
+        rule.onNodeWithText("Beklemede", substring = true).assertExists()
+        rule.onNodeWithText("Çalışıyor", substring = true).assertDoesNotExist()
+        rule.onNodeWithTag(TAG_REINDEX_BUTTON).assertIsNotEnabled()
+    }
+
+    @Test
+    fun runState_running_showsRunning() {
+        show(IndexStatusUiState.NeverRun, inProgress = true, runState = IndexRunState.RUNNING)
+        rule.onNodeWithText("Çalışıyor", substring = true).assertExists()
+        rule.onNodeWithText("Beklemede", substring = true).assertDoesNotExist()
+    }
+
+    @Test
+    fun runState_idle_showsNoRunState() {
+        show(IndexStatusUiState.NeverRun)
+        rule.onNodeWithTag(TAG_RUN_STATE).assertDoesNotExist()
     }
 
     @Test

@@ -11,26 +11,36 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import com.ktu.aigaleri.R
+import com.ktu.aigaleri.ui.IndexRunState
 
 const val TAG_INDEXING_BANNER = "indexing_banner"
 
-/** Arama ekranındaki kısa indeksleme ipucu; [processed]/[total] bilinmiyorsa (henüz taranıyor) null. */
-data class IndexingBanner(val processed: Int?, val total: Int?)
+/**
+ * Arama ekranındaki kısa indeksleme ipucu. [waiting]: iş kuyrukta ama çalışmıyor (T-016). [processed]/[total]
+ * yalnızca çalışırken ve geçerliyse dolu; bilinmiyorsa (henüz taranıyor, geçersiz değer) null.
+ */
+data class IndexingBanner(val processed: Int?, val total: Int?, val waiting: Boolean = false)
 
 /**
- * İpucunu döndürür; iş kuyrukta/çalışıyor değilse ([running] false) null.
- *
- * Sınır: [running] iş hattının "ENQUEUED/BLOCKED/RUNNING" durumundan türer; kısıtlar (ör. düşük pil) yüzünden iş
- * beklemedeyken de true olabilir. Bu yüzden metin nötrdür ("sürüyor veya sırada"). "X / Y" yalnızca
- * `total > 0 && processed < total` iken gösterilir; aksi halde (önceki çalışmadan kalan tamamlanmış sayılar, veri
+ * İpucunu döndürür; [IndexRunState.IDLE] iken null. [IndexRunState.WAITING] iken sayısız "sırada" metni (kısıt
+ * nedeni, ör. pil, iddia edilmez). [IndexRunState.RUNNING] iken "X / Y" yalnızca `processed >= 0 && total > 0 &&
+ * processed < total` ise gösterilir; aksi halde (önceki çalışmadan kalan tamamlanmış sayılar, geçersiz değer, veri
  * yok/okunamadı) sayısız metin gösterilir.
  */
-fun indexingBanner(state: IndexStatusUiState, running: Boolean): IndexingBanner? = when {
-    !running -> null
-    state is IndexStatusUiState.Data && state.total > 0 && state.processed < state.total ->
-        IndexingBanner(state.processed, state.total)
-    else -> IndexingBanner(null, null)
+fun indexingBanner(state: IndexStatusUiState, runState: IndexRunState): IndexingBanner? = when (runState) {
+    IndexRunState.IDLE -> null
+    IndexRunState.WAITING -> IndexingBanner(null, null, waiting = true)
+    IndexRunState.RUNNING ->
+        if (state is IndexStatusUiState.Data && state.processed >= 0 && state.total > 0 && state.processed < state.total) {
+            IndexingBanner(state.processed, state.total)
+        } else {
+            IndexingBanner(null, null)
+        }
 }
+
+/** Boolean sürümü: true çalışıyor sayılır (geriye uyumluluk); beklemeyi ayırt etmek için [IndexRunState] sürümünü kullan. */
+fun indexingBanner(state: IndexStatusUiState, running: Boolean): IndexingBanner? =
+    indexingBanner(state, if (running) IndexRunState.RUNNING else IndexRunState.IDLE)
 
 /** Dokununca indeks durumu ekranını açan tek satırlık ipucu. */
 @Composable
@@ -38,10 +48,10 @@ fun IndexingBannerContent(banner: IndexingBanner, onOpen: () -> Unit) {
     val processed = banner.processed
     val total = banner.total
     Text(
-        text = if (processed != null && total != null) {
-            stringResource(R.string.indexing_progress, processed, total)
-        } else {
-            stringResource(R.string.indexing_started)
+        text = when {
+            banner.waiting -> stringResource(R.string.indexing_waiting)
+            processed != null && total != null -> stringResource(R.string.indexing_progress, processed, total)
+            else -> stringResource(R.string.indexing_running)
         },
         style = MaterialTheme.typography.bodySmall,
         maxLines = 3,

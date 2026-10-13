@@ -321,7 +321,9 @@ class MainViewModelIndexingEdgeCaseTest {
     @Test
     fun banner_neutralAndProgressStrings_matchAcceptanceText() {
         val strings = File(System.getProperty("user.dir")!!, "src/main/res/values/strings.xml").readText()
-        assertTrue(strings.contains("sürüyor veya sırada; sonuçlar eksik olabilir"))
+        // T-016: çalışıyor / beklemede metinleri ayrıldı; "sürüyor veya sırada" belirsiz metni kalktı.
+        assertTrue(strings.contains("İndeksleniyor; sonuçlar eksik olabilir"))
+        assertTrue(strings.contains("İndeksleme sırada; cihaz uygun olunca başlayacak. Sonuçlar eksik olabilir."))
         assertTrue(strings.contains("(%1\$d / %2\$d)"))
     }
 

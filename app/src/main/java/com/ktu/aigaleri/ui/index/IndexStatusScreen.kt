@@ -18,11 +18,13 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.ktu.aigaleri.R
+import com.ktu.aigaleri.ui.IndexRunState
 import java.text.DateFormat
 import java.util.Date
 
 const val TAG_REINDEX_BUTTON = "reindex_button"
 const val TAG_RETRY_BUTTON = "retry_button"
+const val TAG_RUN_STATE = "index_run_state"
 
 /** Durumsuz indeks durumu ekranı: işlenen/toplam, ilerleme çubuğu, son çalışma ve yeniden indeksleme butonu. */
 @Composable
@@ -34,12 +36,18 @@ fun IndexStatusContent(
     onRetry: () -> Unit,
     onBack: () -> Unit,
     reindexError: Boolean = false,
+    runState: IndexRunState = IndexRunState.IDLE,
 ) {
     Column(
         modifier = Modifier.fillMaxSize().padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
+        when (runState) {
+            IndexRunState.RUNNING -> Text(stringResource(R.string.index_run_state_running), modifier = Modifier.testTag(TAG_RUN_STATE))
+            IndexRunState.WAITING -> Text(stringResource(R.string.index_run_state_waiting), modifier = Modifier.testTag(TAG_RUN_STATE))
+            IndexRunState.IDLE -> Unit
+        }
         when (state) {
             IndexStatusUiState.Loading -> CircularProgressIndicator()
             IndexStatusUiState.NeverRun -> Text(stringResource(R.string.index_never_run))
