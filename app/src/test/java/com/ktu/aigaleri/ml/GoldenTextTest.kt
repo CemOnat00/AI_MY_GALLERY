@@ -27,7 +27,7 @@ class GoldenTextTest {
     fun goldenFiles_haveExpectedShape() {
         assertEquals(GoldenText.QUERY_COUNT, golden.size)
         assertEquals(golden.size, golden.map { it.query }.toSet().size)
-        assertEquals(12, golden.map { it.category }.toSet().size)
+        assertEquals(14, golden.map { it.category }.toSet().size)
         for (g in golden) {
             assertEquals(g.query, g.tokens.size, g.originalIds.size)
             assertEquals("[CLS]", g.tokens.first())
@@ -49,8 +49,25 @@ class GoldenTextTest {
         val body = golden.sumOf { it.tokens.size - 2 }
         assertEquals(GoldenText.BASELINE_UNK_COUNT, unk)
         assertEquals(GoldenText.BASELINE_BODY_TOKENS, body)
-        // [UNK] yalnızca iki emoji sorgusunda.
-        assertEquals(setOf("🐱 kedi", "plaj 🏖️ tatil"), golden.filter { WordPieceTokenizer.UNK in it.tokens }.map { it.query }.toSet())
+        // [UNK] yalnızca emoji (3) ve NFD (2) sorgularında; Türkçe harfli sorguların hiçbirinde yok.
+        assertEquals(
+            setOf("🐱 kedi", "plaj 🏖\uFE0F tatil", "c\u0327ocuk plajda gu\u0308len", "ka\u0302g\u0306ıt", "aile 👨\u200D👩\u200D👧 piknik"),
+            golden.filter { WordPieceTokenizer.UNK in it.tokens }.map { it.query }.toSet(),
+        )
+        assertTrue(golden.filter { it.category == "turkce_ozel" }.none { WordPieceTokenizer.UNK in it.tokens })
+    }
+
+    @Test
+    fun goldenSet_coversTurkishSpecialLetters_circumflexAndCapitals() {
+        // K-14 (Türkçe öncelikli): budama â, î, û ve devam parçalarını yanlışlıkla atarsa altın set yakalamalı.
+        val tokens = golden.flatMap { it.tokens }.toSet()
+        for (t in listOf("â", "##â", "î", "##î", "û", "##û")) assertTrue("altın sette yok: $t", t in tokens)
+        val chars = tokens.joinToString("")
+        for (c in "çğıöşüÇĞİÖŞÜ".lowercase(java.util.Locale.forLanguageTag("tr-TR"))) assertTrue("altın token'larda yok: $c", c in chars)
+        val queries = golden.map { it.query }.joinToString("")
+        for (c in "ĞÜŞÖÇÂÎÛİ") assertTrue("altın sorgularda büyük harf yok: $c", c in queries)
+        // NFD ve biçim karakteri (ZWJ) örnekleri
+        assertTrue(golden.any { "\u0327" in it.query } && golden.any { "\u200D" in it.query })
     }
 
     @Test
@@ -68,7 +85,7 @@ class GoldenTextTest {
     // ---- Gerçek sözlükle (yoksa atlanır) ----
 
     @Test
-    fun tokenTexts_equalGolden_forAll60Queries() {
+    fun tokenTexts_equalGolden_forAllGoldenQueries() {
         val v = vocab
         assumeTrue("text_vocab.txt yok (tools/fetch_models.sh)", v != null)
         val tok = tokenizer(v!!)

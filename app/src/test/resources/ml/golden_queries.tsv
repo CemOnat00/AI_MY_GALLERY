@@ -53,8 +53,24 @@ cocuk plajda gulen	aksan	[CLS] co ##cu ##k pla ##jda gul ##en [SEP]	101 11170 12
 ÇOCUK ve KÖPEK	aksan	[CLS] çocuk ve k ##öp ##ek [SEP]	101 80099 10323 179 97387 10707 102
 Işık ve ışık, İnek ve inek	aksan	[CLS] ı ##şık ve ı ##şık , in ##ek ve in ##ek [SEP]	101 321 49476 10323 321 49476 117 10106 10707 10323 10106 10707 102
 🐱 kedi	emoji	[CLS] [UNK] ke ##di [SEP]	101 100 11163 10703 102
-plaj 🏖️ tatil	emoji	[CLS] pla ##j [UNK] tat ##il [SEP]	101 71393 10418 100 22795 11030 102
+plaj 🏖\ufe0f tatil	emoji	[CLS] pla ##j [UNK] tat ##il [SEP]	101 71393 10418 100 22795 11030 102
 a cat sitting on a sofa	ing	[CLS] a cat sitting on a so ##fa [SEP]	101 169 41163 62151 10135 169 10380 13369 102
 people walking on the beach	ing	[CLS] people walking on the beach [SEP]	101 11426 59381 10135 10105 45405 102
 birthday party	ing	[CLS] birthday party [SEP]	101 56396 14039 102
 snowy mountain	ing	[CLS] snow ##y mountain [SEP]	101 64321 10157 25233 102
+kâğıt	turkce_ozel	[CLS] k ##â ##ğı ##t [SEP]	101 179 42560 15756 10123 102
+hâlâ	turkce_ozel	[CLS] h ##â ##l ##â [SEP]	101 176 42560 10161 42560 102
+Pazartesi'nin ışığı	turkce_ozel	[CLS] paz ##arte ##si ' nin ı ##şı ##ğı [SEP]	101 30301 36582 10449 112 13587 321 23589 15756 102
+ÜÇ ĞÜŞ	turkce_ozel	[CLS] üç ğ ##üş [SEP]	101 26285 309 48261 102
+dükkân	turkce_ozel	[CLS] d ##ük ##k ##ân [SEP]	101 172 17053 10174 15218 102
+mevsim hâli	turkce_ozel	[CLS] me ##vs ##im h ##â ##li [SEP]	101 10911 30168 11759 176 42560 10390 102
+îmâ	turkce_ozel	[CLS] î ##m ##â [SEP]	101 268 10147 42560 102
+Ûlî ÂLÎ	turkce_ozel	[CLS] û ##l ##î â ##l ##î [SEP]	101 281 10161 25790 256 10161 25790 102
+ĞÖL ÜZERİNDE ÖRDEK	turkce_ozel	[CLS] ğ ##öl üzerinde ö ##rde ##k [SEP]	101 309 28565 34037 276 17229 10174 102
+ağabeyim ve yeğenim	turkce_ozel	[CLS] ağ ##abe ##yi ##m ve ye ##ğe ##nim [SEP]	101 109122 40929 13641 10147 10323 11023 59542 13550 102
+mahkûm ve rûh	turkce_ozel	[CLS] mah ##k ##û ##m ve r ##û ##h [SEP]	101 29325 10174 71323 10147 10323 186 71323 10237 102
+c\u0327ocuk plajda gu\u0308len	unicode	[CLS] c ##\u0327 ##oc ##uk pla ##jda [UNK] [SEP]	101 171 111021 25125 13013 71393 95693 100 102
+ka\u0302g\u0306ıt	unicode	[CLS] [UNK] [SEP]	101 100 102
+ev\u200dim ve kedi	unicode	[CLS] evi ##m ve ke ##di [SEP]	101 41588 10147 10323 11163 10703 102
+aile 👨\u200d👩\u200d👧 piknik	unicode	[CLS] aile [UNK] pi ##k ##nik [SEP]	101 53798 100 24109 10174 12027 102
+tatil\u00a0anısı	unicode	[CLS] tat ##il an ##ısı [SEP]	101 22795 11030 10151 34589 102

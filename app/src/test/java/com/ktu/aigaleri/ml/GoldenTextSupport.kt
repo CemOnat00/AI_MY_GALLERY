@@ -43,18 +43,26 @@ class TokenVocab(val lines: List<String>) {
 }
 
 object GoldenText {
-    const val QUERY_COUNT = 60
+    const val QUERY_COUNT = 76
     const val VECTOR_DIM = 512
 
     /** ORİJİNAL (budanmamış) sözlüğün satır sayısı; id'lerin birebir karşılaştırılabildiği tek durum. */
     const val ORIGINAL_VOCAB_SIZE = 119_547
 
     /**
-     * ALTIN [UNK] TABANI (T-026, orijinal model + sözlük; tools/golden_text.py çıktısı): 329 içerik token'ından
-     * 2'si [UNK] (iki emoji sorgusu: "🐱 kedi", "plaj 🏖️ tatil"). Budama sonrası ne sayı ne oran artmamalı.
+     * ALTIN [UNK] TABANI (T-026, orijinal model + sözlük; tools/golden_text.py çıktısı): 411 içerik token'ından
+     * 5'i [UNK]: emoji sorguları ("🐱 kedi", "plaj 🏖️ tatil", "aile 👨‍👩‍👧 piknik": ZWJ atılır, emojiler tek [UNK])
+     * ve iki NFD (ayrışık aksan) sorgusu. Budama sonrası ne sayı ne oran artmamalı.
      */
-    const val BASELINE_UNK_COUNT = 2
-    const val BASELINE_BODY_TOKENS = 329
+    const val BASELINE_UNK_COUNT = 5
+    const val BASELINE_BODY_TOKENS = 411
+
+    /**
+     * Altın dosyalarda görünmez/ayrışık karakterler `\uXXXX` (BMP) olarak yazılır (tools/golden_text.py `escape`);
+     * burada geri çözülür. Sorgularda ters bölü yoktur; sözlük token'ında olabilir ve `\uXXXX` kalıbına uymazsa dokunulmaz.
+     */
+    fun unescape(s: String): String =
+        Regex("""\\u([0-9A-Fa-f]{4})""").replace(s) { it.groupValues[1].toInt(16).toChar().toString() }
 
     private fun resource(name: String): String =
         GoldenText::class.java.getResourceAsStream("/ml/$name")!!.use { it.readBytes().toString(Charsets.UTF_8) }
@@ -62,13 +70,13 @@ object GoldenText {
     fun queries(): List<GoldenQuery> = resource("golden_queries.tsv").split('\n').filter { it.isNotEmpty() }.map { line ->
         val p = line.split('\t')
         require(p.size == 4) { "golden_queries.tsv: 4 sütun bekleniyor, ${p.size} var" }
-        GoldenQuery(p[0], p[1], p[2].split(' '), p[3].split(' ').map { it.toInt() })
+        GoldenQuery(unescape(p[0]), p[1], p[2].split(' ').map(::unescape), p[3].split(' ').map { it.toInt() })
     }
 
     /** golden_text_vectors.tsv: sorgu -> 512 boyutlu L2 normalize vektör (ORİJİNAL model, 1 iş parçacığı). */
     fun vectors(): Map<String, FloatArray> = resource("golden_text_vectors.tsv").split('\n').filter { it.isNotEmpty() }
         .associate { line ->
             val tab = line.indexOf('\t')
-            line.substring(0, tab) to line.substring(tab + 1).split(' ').map { it.toFloat() }.toFloatArray()
+            unescape(line.substring(0, tab)) to line.substring(tab + 1).split(' ').map { it.toFloat() }.toFloatArray()
         }
 }

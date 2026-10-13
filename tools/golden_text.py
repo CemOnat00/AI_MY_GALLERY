@@ -17,8 +17,12 @@ Guvenlik kapilari (hicbiri atlanamaz):
 Kotlin davranisi referanstir; ayrisma gorulurse betik raporlar ve cikis kodu 1 verir.
 
 Kullanim (mobile/ icinden):
-  python3 tools/golden_text.py              # altin dosyalari uret
-  python3 tools/golden_text.py --noise      # kosinus gurultu tabani olc (dosya yazmaz)
+  python3 -I tools/golden_text.py           # altin dosyalari uret
+  python3 -I tools/golden_text.py --noise   # kosinus gurultu tabani olc (dosya yazmaz)
+
+Girdi dosyasinda gorunmez/ayrisik karakterler \\uXXXX (BMP) kacisiyle yazilir; ayni kacisli metin cikti
+dosyalarina da yazilir (Kotlin tarafi GoldenText.unescape ile cozer). Bu yuzden sorguda ters bolu yok.
+Uretilen dosyalar ayni platform + onnxruntime 1.30.0 ile BIT BIT tekrarlanir; baska platformda --noise ile bakin.
 
 Gizlilik: yalnizca bu repodaki sabit test sorgulari islenir; fotograf ve kullanici istemi yoktur.
 """
@@ -41,6 +45,7 @@ TOKENIZER_REF = os.path.join(RES, "tokenizer_reference.tsv")
 OUT_QUERIES = os.path.join(RES, "golden_queries.tsv")
 OUT_VECTORS = os.path.join(RES, "golden_text_vectors.tsv")
 
+EXPECTED_QUERIES = 76
 EXPECTED_VOCAB_LINES = 119547
 HIDDEN, OUT_DIM = 768, 512
 MAX_LEN = 128
@@ -250,12 +255,17 @@ def load_vocab():
 
 def check_tokenizer_reference(tok):
     """Mevcut Kotlin referansi (tokenizer_reference.tsv): bu dosya normalize EDILMEMIS metni dogrudan encode eder."""
+    if not os.path.isfile(TOKENIZER_REF):
+        die("tokenizer referansi yok: %s" % TOKENIZER_REF)
     bad = n = 0
-    for line in open(TOKENIZER_REF, encoding="utf-8").read().split("\n"):
+    for k, line in enumerate(open(TOKENIZER_REF, encoding="utf-8").read().split("\n"), 1):
         if not line:
             continue
-        tab = line.rindex("\t")
-        text, exp = line[:tab], [int(x) for x in line[tab + 1:].split()]
+        try:
+            tab = line.rindex("\t")
+            text, exp = line[:tab], [int(x) for x in line[tab + 1:].split()]
+        except ValueError:
+            die("%s satir %d bozuk ('metin<TAB>id id ...' bekleniyordu)" % (TOKENIZER_REF, k))
         n += 1
         got = tok.encode(text)
         if got != exp:
@@ -330,14 +340,44 @@ def cosine(a, b):
     return float(a @ b / (np.linalg.norm(a) * np.linalg.norm(b)))
 
 
+def unescape(q):
+    """\\uXXXX -> karakter (yalnizca BMP; GoldenText.unescape ile ayni kural)."""
+    return re.sub(r"\\u([0-9A-Fa-f]{4})", lambda m: chr(int(m.group(1), 16)), q)
+
+
+def escape(t):
+    """Gorunmez/ayrisik karakterleri (Mn/Mc/Me/Cf/Cc/Z* bosluk disi, BMP) \\uXXXX yap; unescape ile geri donusumlu."""
+    out = "".join(
+        "\\u%04x" % ord(c) if (ord(c) < 0x10000 and c != " " and
+                               unicodedata.category(c) in ("Mn", "Mc", "Me", "Cf", "Cc", "Zs", "Zl", "Zp")) else c
+        for c in t)
+    if unescape(out) != t:
+        die("kacis geri donusumlu degil: %r" % t)
+    return out
+
+
 def read_queries():
+    """Satirlar: kategori <TAB> sorgu (kacisli). Doner: (kategori, kacisli sorgu, cozulmus sorgu)."""
+    if not os.path.isfile(QUERIES_IN):
+        die("girdi dosyasi yok: %s" % QUERIES_IN)
     rows = []
-    for line in open(QUERIES_IN, encoding="utf-8").read().split("\n"):
+    for n, line in enumerate(open(QUERIES_IN, encoding="utf-8").read().split("\n"), 1):
         if not line:
             continue
-        cat, q = line.split("\t")
-        rows.append((cat, q))
+        parts = line.split("\t")
+        if len(parts) != 2 or not parts[0] or not parts[1]:
+            die("%s satir %d: 'kategori<TAB>sorgu' bekleniyordu" % (QUERIES_IN, n))
+        if "\\" in unescape(parts[1]):
+            die("%s satir %d: sorguda kacissiz ters bolu / gecersiz kacis" % (QUERIES_IN, n))
+        rows.append((parts[0], parts[1], unescape(parts[1])))
     return rows
+
+
+def write_atomic(path, text):
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8", newline="\n") as f:
+        f.write(text)
+    os.replace(tmp, path)
 
 
 def fmt(v):
@@ -355,9 +395,11 @@ def main():
         die("Python tokenizer Kotlin referansindan ayriliyor; altin uretilmedi")
 
     rows = read_queries()
-    if len(rows) != 60:
-        die("60 sorgu bekleniyordu, %d var" % len(rows))
-    normalized = [normalize(q) for _, q in rows]
+    if len(rows) != EXPECTED_QUERIES:
+        die("%d sorgu bekleniyordu, %d var" % (EXPECTED_QUERIES, len(rows)))
+    if len({r[1] for r in rows}) != len(rows):
+        die("yinelenen sorgu var")
+    normalized = [normalize(q) for _, _, q in rows]
     if hf_cross_check(tok, normalized):
         print("UYARI: HF tokenizers ile ayrisma var (Kotlin davranisi referanstir; raporla)", file=sys.stderr)
     ids = [tok.encode(q) for q in normalized]
@@ -377,10 +419,12 @@ def main():
         s2 = make_session(paths["TEXT_ONNX"], 2)
         s_basic = make_session(paths["TEXT_ONNX"], 1, ort.GraphOptimizationLevel.ORT_ENABLE_BASIC)
         s_off = make_session(paths["TEXT_ONNX"], 1, ort.GraphOptimizationLevel.ORT_DISABLE_ALL)
+        s_ext = make_session(paths["TEXT_ONNX"], 1, ort.GraphOptimizationLevel.ORT_ENABLE_EXTENDED)
         pairs = {
             "1 is parcacigi, tekrar (ayni oturum)": lambda seq, a: embed(s1, dense, seq),
             "1 vs 2 is parcacigi": lambda seq, a: embed(s2, dense, seq),
             "2 is parcacigi, tekrar": None,
+            "1 is parcacigi: ENABLE_ALL vs ENABLE_EXTENDED": lambda seq, a: embed(s_ext, dense, seq),
             "1 is parcacigi: ENABLE_ALL vs ENABLE_BASIC": lambda seq, a: embed(s_basic, dense, seq),
             "1 is parcacigi: ENABLE_ALL vs DISABLE_ALL": lambda seq, a: embed(s_off, dense, seq),
         }
@@ -402,12 +446,10 @@ def main():
         return 0
 
     vecs = [embed(s1, dense, seq) for seq in ids]
-    with open(OUT_QUERIES, "w", encoding="utf-8", newline="\n") as f:
-        for (cat, q), t, seq in zip(rows, toks, ids):
-            f.write("%s\t%s\t%s\t%s\n" % (q, cat, " ".join(t), " ".join(map(str, seq))))
-    with open(OUT_VECTORS, "w", encoding="utf-8", newline="\n") as f:
-        for (_, q), v in zip(rows, vecs):
-            f.write("%s\t%s\n" % (q, fmt(v)))
+    write_atomic(OUT_QUERIES, "".join(
+        "%s\t%s\t%s\t%s\n" % (q, cat, " ".join(escape(x) for x in t), " ".join(map(str, seq)))
+        for (cat, q, _), t, seq in zip(rows, toks, ids)))
+    write_atomic(OUT_VECTORS, "".join("%s\t%s\n" % (q, fmt(v)) for (_, q, _), v in zip(rows, vecs)))
     print("yazildi: %s (%d bayt), %s (%d bayt)" % (
         OUT_QUERIES, os.path.getsize(OUT_QUERIES), OUT_VECTORS, os.path.getsize(OUT_VECTORS)))
     # Yazilan dosyadan okunan vektor ile bellekteki vektor arasindaki bicimleme kaybi

@@ -14,15 +14,20 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * T-026: GERÇEK [OnnxTextEncoder] ile 60 altın sorgunun vektörleri, `tools/golden_text.py`'nin ORİJİNAL model
+ * T-026: GERÇEK [OnnxTextEncoder] ile 76 altın sorgunun vektörleri, `tools/golden_text.py`'nin ORİJİNAL model
  * dosyalarıyla ürettiği altın vektörlere kosinüs >= [MIN_COSINE] olmalı (gerekçe: docs/golden-text.md).
  * Altın dosya `src/test/resources/ml/golden_text_vectors.tsv`, androidTest assets olarak paketlenir (build.gradle.kts).
+ * Sorgu anahtarlarındaki görünmez/ayrışık karakterler `\uXXXX` kaçışlıdır; [unescape] ile çözülür.
  *
- * DURUM: YAZILDI ve DERLENİR, ÇALIŞTIRILMADI (cihaz/emülatör yok). Model dosyaları APK'da yoksa test başarısız olur
- * (sessiz atlama yok). UYARI: eşik masaüstü (Apple Silicon arm64) referansına karşı Android ARM cihazda uygulanır; farklı çekirdek yolu (ör.
- * int8 MatMul/LayerNorm) kosinüsü düşürebilir (masaüstünde graf optimizasyonu kapatınca 1-kosinüs ~2e-3 ölçüldü,
- * cihaz tabanı ÖLÇÜLMEDİ). Bu test cihazda ilk kez düşerse eşiği körlemesine gevşetmeyin; en kötü kosinüs ve
- * dağılım docs/golden-text.md'ye işlenip karar verilir. Sorgu metni ve vektör log'a yazılmaz (yalnızca sıra no ve kosinüs).
+ * DURUM: YAZILDI ve `compileDebugAndroidTestKotlin` ile DERLENDİ; ÇALIŞTIRILMADI (cihaz/emülatör yok). Model
+ * dosyaları APK'da yoksa test başarısız olur (sessiz atlama yok).
+ *
+ * PLATFORM UYARISI: altın, Apple Silicon masaüstünde pip `onnxruntime` 1.30.0 ile üretildi; bu test Android AAR
+ * ORT'siyle (farklı derleme ve ARM çekirdekleri) çalışır. x86_64 emülatör, arm64 için nicemlenmiş modeli farklı bir
+ * çekirdek yoluyla çalıştırabilir. Masaüstünde graf optimizasyonu BASIC/kapalıyken 1-kosinüs ~2,2e-3 ölçüldü; cihaz
+ * tabanı ÖLÇÜLMEDİ (ilk cihaz ölçümü T-012'ye bağlı; sonuç docs/golden-text.md "Cihaz ölçümü" bölümüne yazılır).
+ * Test ilk kez cihazda düşerse eşiği körlemesine gevşetmeyin: en kötü kosinüs ve dağılım belgeye işlenip karar verilir.
+ * Sorgu metni ve vektör log'a yazılmaz (yalnızca sıra no ve kosinüs).
  */
 @RunWith(AndroidJUnit4::class)
 class GoldenTextVectorsDeviceTest {
@@ -41,9 +46,12 @@ class GoldenTextVectorsDeviceTest {
             .open("ml/golden_text_vectors.tsv").use { it.readBytes().toString(Charsets.UTF_8) }
         return text.split('\n').filter { it.isNotEmpty() }.map { line ->
             val tab = line.indexOf('\t')
-            line.substring(0, tab) to line.substring(tab + 1).split(' ').map { it.toFloat() }.toFloatArray()
+            unescape(line.substring(0, tab)) to line.substring(tab + 1).split(' ').map { it.toFloat() }.toFloatArray()
         }
     }
+
+    private fun unescape(s: String): String =
+        Regex("""\\u([0-9A-Fa-f]{4})""").replace(s) { it.groupValues[1].toInt(16).toChar().toString() }
 
     private fun cosine(a: FloatArray, b: FloatArray): Double {
         var dot = 0.0
@@ -60,7 +68,7 @@ class GoldenTextVectorsDeviceTest {
     @Test
     fun all60GoldenQueries_haveCosineAtLeastThreshold() = runBlocking {
         val golden = goldenVectors()
-        assertEquals(60, golden.size)
+        assertEquals(76, golden.size)
         var worst = 1.0
         val failures = ArrayList<String>()
         for ((index, entry) in golden.withIndex()) {
