@@ -1,0 +1,60 @@
+nesne	kedi
+nesne	köpek
+nesne	kırmızı araba
+nesne	bisiklet
+nesne	çiçek buketi
+nesne	yemek tabağı
+nesne	laptop ve kahve fincanı
+nesne	kitap
+sahne	gün batımı
+sahne	karlı dağ manzarası
+sahne	gece şehir ışıkları
+sahne	sisli orman
+sahne	denizde dalgalar
+sahne	yağmurlu sokak
+renk	mavi elbiseli kadın
+renk	sarı çiçekler
+renk	yeşil çimenlik
+renk	siyah beyaz fotoğraf
+renk	turuncu gökyüzü
+eylem	plajda gülen çocuk
+eylem	koşan köpek
+eylem	dağda kar kayağı yapan insanlar
+eylem	yüzen kız
+eylem	gitar çalan adam
+eylem	doğum günü pastası ve mumlar
+kisi_sayisi	tek bir kişi
+kisi_sayisi	iki kişi el ele
+kisi_sayisi	üç arkadaş selfie çekiyor
+kisi_sayisi	kalabalık bir grup insan
+kisi_sayisi	bebek
+mekan	İstanbul'da Boğaz manzarası
+mekan	Ankara'da Kızılay
+mekan	İzmir sahili
+mekan	Trabzon'da yayla
+mekan	camide ibadet eden insanlar
+mekan	okulda sınıf
+mekan	mutfakta yemek yapan anne
+ek_var	anneannemle bayram yemeği
+ek_var	sahilde yürüyen insanlar
+ek_var	çocuklarımızın doğum günü
+ek_var	arabalarımızdan biri
+ek_var	köpeğimle parkta
+ek_yok	anne
+ek_yok	deniz kum güneş
+ek_yok	kedi köpek
+sayi	2024 yılbaşı
+sayi	3 kişi
+sayi	17 Mayıs
+sayi	100 tane balon
+aksan	IŞIK ALTINDA KEDİ
+aksan	ışık altında kedi
+aksan	cocuk plajda gulen
+aksan	ÇOCUK ve KÖPEK
+aksan	Işık ve ışık, İnek ve inek
+emoji	🐱 kedi
+emoji	plaj 🏖️ tatil
+ing	a cat sitting on a sofa
+ing	people walking on the beach
+ing	birthday party
+ing	snowy mountain

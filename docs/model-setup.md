@@ -103,6 +103,8 @@ istem -> `QueryPreprocessor` (Türkçe küçük harf, kontrol karakteri atma, bo
 
 ## Cihaz testi
 
+Altın metin vektörleri (T-026, model değişikliklerinden önce alınan referans), eşikler ve budama kapıları: `golden-text.md`.
+
 `OnnxTextEncoderDeviceTest` (androidTest) gerçek modelle ONNX yolunu (encode, oturum, release, slot eviction, Python referans vektörlerine kosinüs >= 0.99) sınar. YAZILDI ve DERLENDİ ama ÇALIŞTIRILMADI (cihaz/emülatör yok). ORT'nin Android'de çalışması, telemetri provider'ı kaldırıldığında yüklemenin bozulmaması, süre ve bellek bu yüzden doğrulanamadı.
 
 ## ORT telemetrisi

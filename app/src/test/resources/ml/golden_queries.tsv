@@ -1,0 +1,60 @@
+kedi	nesne	[CLS] ke ##di [SEP]	101 11163 10703 102
+köpek	nesne	[CLS] k ##öp ##ek [SEP]	101 179 97387 10707 102
+kırmızı araba	nesne	[CLS] k ##ırmızı arab ##a [SEP]	101 179 52401 45131 10113 102
+bisiklet	nesne	[CLS] bis ##ik ##let [SEP]	101 10467 10896 12630 102
+çiçek buketi	nesne	[CLS] ç ##i ##çe ##k bu ##ket ##i [SEP]	101 261 10116 31687 10174 11499 13650 10116 102
+yemek tabağı	nesne	[CLS] ye ##mek taba ##ğı [SEP]	101 11023 18342 47651 15756 102
+laptop ve kahve fincanı	nesne	[CLS] lap ##top ve ka ##hv ##e fin ##can ##ı [SEP]	101 38553 37253 10323 10730 96389 10112 11826 24154 10713 102
+kitap	nesne	[CLS] kita ##p [SEP]	101 40091 10410 102
+gün batımı	sahne	[CLS] gün bat ##ımı [SEP]	101 31282 11519 52065 102
+karlı dağ manzarası	sahne	[CLS] kar ##lı dağ man ##zara ##sı [SEP]	101 25085 12407 86936 10817 64983 13836 102
+gece şehir ışıkları	sahne	[CLS] ge ##ce şehir ı ##şık ##ları [SEP]	101 46503 10419 66513 321 49476 11933 102
+sisli orman	sahne	[CLS] sis ##li or ##man [SEP]	101 45581 10390 10345 10589 102
+denizde dalgalar	sahne	[CLS] deniz ##de dal ##gala ##r [SEP]	101 97777 10253 10740 69215 10129 102
+yağmurlu sokak	sahne	[CLS] ya ##ğ ##mur ##lu sok ##ak [SEP]	101 10549 32467 33246 11435 29509 10710 102
+mavi elbiseli kadın	renk	[CLS] ma ##vi el ##bis ##eli kadın [SEP]	101 10824 11310 10125 24345 17641 73344 102
+sarı çiçekler	renk	[CLS] sa ##rı ç ##i ##çe ##kler [SEP]	101 10148 18729 261 10116 31687 41172 102
+yeşil çimenlik	renk	[CLS] ye ##şi ##l ç ##imen ##lik [SEP]	101 11023 33219 10161 261 69979 11863 102
+siyah beyaz fotoğraf	renk	[CLS] siya ##h beyaz foto ##ğ ##raf [SEP]	101 34543 10237 110744 27218 32467 29552 102
+turuncu gökyüzü	renk	[CLS] turun ##cu g ##ök ##yü ##z ##ü [SEP]	101 85253 12352 175 21592 58316 10305 12369 102
+plajda gülen çocuk	eylem	[CLS] pla ##jda g ##ülen çocuk [SEP]	101 71393 95693 175 69497 80099 102
+koşan köpek	eylem	[CLS] ko ##şan k ##öp ##ek [SEP]	101 11252 53647 179 97387 10707 102
+dağda kar kayağı yapan insanlar	eylem	[CLS] dağ ##da kar kaya ##ğı yapan insanlar [SEP]	101 86936 10229 25085 35473 15756 54196 101236 102
+yüzen kız	eylem	[CLS] y ##üze ##n k ##ız [SEP]	101 193 97210 10115 179 30471 102
+gitar çalan adam	eylem	[CLS] gitar ça ##lan adam [SEP]	101 30194 78323 12055 103784 102
+doğum günü pastası ve mumlar	eylem	[CLS] do ##ğu ##m günü pasta ##sı ve mu ##mlar [SEP]	101 10149 31747 10147 55800 63941 13836 10323 12361 81751 102
+tek bir kişi	kisi_sayisi	[CLS] tek bir kişi [SEP]	101 20351 10561 37435 102
+iki kişi el ele	kisi_sayisi	[CLS] iki kişi el ele [SEP]	101 12322 37435 10125 12637 102
+üç arkadaş selfie çekiyor	kisi_sayisi	[CLS] üç ark ##ada ##ş self ##ie ç ##eki ##yor [SEP]	101 26285 64062 11153 12843 16567 10400 261 36181 26101 102
+kalabalık bir grup insan	kisi_sayisi	[CLS] kala ##bal ##ık bir grup insan [SEP]	101 84844 17140 24596 10561 15615 40840 102
+bebek	kisi_sayisi	[CLS] be ##bek [SEP]	101 10347 25047 102
+İstanbul'da Boğaz manzarası	mekan	[CLS] ista ##n ##bul ' da bo ##ğa ##z man ##zara ##sı [SEP]	101 95139 10115 50400 112 10143 20506 25163 10305 10817 64983 13836 102
+Ankara'da Kızılay	mekan	[CLS] an ##kara ' da k ##ızıl ##ay [SEP]	101 10151 33066 112 10143 179 82288 13998 102
+İzmir sahili	mekan	[CLS] iz ##mir sah ##ili [SEP]	101 10793 20825 36612 13784 102
+Trabzon'da yayla	mekan	[CLS] tra ##b ##zon ' da ya ##yla [SEP]	101 11264 10457 22742 112 10143 10549 20227 102
+camide ibadet eden insanlar	mekan	[CLS] cam ##ide iba ##det eden insanlar [SEP]	101 88406 13315 22791 15172 28423 101236 102
+okulda sınıf	mekan	[CLS] ok ##uld ##a s ##ını ##f [SEP]	101 14302 43165 10113 187 19901 10575 102
+mutfakta yemek yapan anne	mekan	[CLS] mu ##t ##fa ##kta ye ##mek yapan ann ##e [SEP]	101 12361 10123 13369 26988 11023 18342 54196 28481 10112 102
+anneannemle bayram yemeği	ek_var	[CLS] ann ##ean ##nem ##le bay ##ram ye ##me ##ği [SEP]	101 28481 14654 19920 10284 16184 13845 11023 10627 16054 102
+sahilde yürüyen insanlar	ek_var	[CLS] sah ##ild ##e y ##ür ##ü ##yen insanlar [SEP]	101 36612 65820 10112 193 19093 12369 18130 101236 102
+çocuklarımızın doğum günü	ek_var	[CLS] çocuk ##ları ##mı ##zı ##n do ##ğu ##m günü [SEP]	101 80099 11933 36544 44047 10115 10149 31747 10147 55800 102
+arabalarımızdan biri	ek_var	[CLS] arab ##aları ##mı ##zda ##n biri [SEP]	101 45131 108914 36544 33642 10115 20263 102
+köpeğimle parkta	ek_var	[CLS] k ##öp ##e ##ği ##mle park ##ta [SEP]	101 179 97387 10112 16054 94288 14900 10213 102
+anne	ek_yok	[CLS] ann ##e [SEP]	101 28481 10112 102
+deniz kum güneş	ek_yok	[CLS] deniz ku ##m gün ##eş [SEP]	101 97777 15694 10147 31282 80040 102
+kedi köpek	ek_yok	[CLS] ke ##di k ##öp ##ek [SEP]	101 11163 10703 179 97387 10707 102
+2024 yılbaşı	sayi	[CLS] 202 ##4 yıl ##ba ##şı [SEP]	101 22171 11011 25890 10537 23589 102
+3 kişi	sayi	[CLS] 3 kişi [SEP]	101 124 37435 102
+17 Mayıs	sayi	[CLS] 17 may ##ı ##s [SEP]	101 10273 11387 10713 10107 102
+100 tane balon	sayi	[CLS] 100 tan ##e bal ##on [SEP]	101 10407 15176 10112 20873 10263 102
+IŞIK ALTINDA KEDİ	aksan	[CLS] ı ##şık altında ke ##di [SEP]	101 321 49476 32344 11163 10703 102
+ışık altında kedi	aksan	[CLS] ı ##şık altında ke ##di [SEP]	101 321 49476 32344 11163 10703 102
+cocuk plajda gulen	aksan	[CLS] co ##cu ##k pla ##jda gul ##en [SEP]	101 11170 12352 10174 71393 95693 108155 10136 102
+ÇOCUK ve KÖPEK	aksan	[CLS] çocuk ve k ##öp ##ek [SEP]	101 80099 10323 179 97387 10707 102
+Işık ve ışık, İnek ve inek	aksan	[CLS] ı ##şık ve ı ##şık , in ##ek ve in ##ek [SEP]	101 321 49476 10323 321 49476 117 10106 10707 10323 10106 10707 102
+🐱 kedi	emoji	[CLS] [UNK] ke ##di [SEP]	101 100 11163 10703 102
+plaj 🏖️ tatil	emoji	[CLS] pla ##j [UNK] tat ##il [SEP]	101 71393 10418 100 22795 11030 102
+a cat sitting on a sofa	ing	[CLS] a cat sitting on a so ##fa [SEP]	101 169 41163 62151 10135 169 10380 13369 102
+people walking on the beach	ing	[CLS] people walking on the beach [SEP]	101 11426 59381 10135 10105 45405 102
+birthday party	ing	[CLS] birthday party [SEP]	101 56396 14039 102
+snowy mountain	ing	[CLS] snow ##y mountain [SEP]	101 64321 10157 25233 102
