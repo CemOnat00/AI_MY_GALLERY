@@ -80,9 +80,13 @@ class MergedManifestTest {
                 "androidx.profileinstaller.ProfileInstallReceiver",
                 "androidx.work.impl.utils.ForceStopRunnable\$BroadcastReceiver",
                 "androidx.work.impl.background.systemalarm.RescheduleReceiver",
-                "androidx.work.impl.diagnostics.DiagnosticsReceiver",
             ),
             names(doc, "receiver"),
+        )
+        // T-017: WorkManager'ın adb hata ayıklama alıcısı manifestte tools:node=remove ile çıkarılır.
+        assertFalse(
+            "$variant: DiagnosticsReceiver birleşik manifestte",
+            names(doc, "receiver").contains("androidx.work.impl.diagnostics.DiagnosticsReceiver"),
         )
         val debugOnlyActivities = setOf("androidx.compose.ui.tooling.PreviewActivity", "androidx.activity.ComponentActivity")
         val expectedActivities = setOf("$pkg.ui.MainActivity") + if (variant == "debug") debugOnlyActivities else emptySet()

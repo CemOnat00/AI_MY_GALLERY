@@ -15,8 +15,11 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DEST="${1:-$HERE/../app/src/main/assets/models}"
 mkdir -p "$DEST"
 
-# Ctrl-C/hata/çıkışta yarım dosyaları sil (.part ve geçici safetensors); tamamlanmış dosyalara dokunulmaz.
-cleanup() { rm -f "$DEST"/*.part "$DEST/.dense.safetensors"; }
+# Ctrl-C/hata/çıkışta YALNIZCA bu betiğin kendi başlattığı yarım dosyaları sil (.part ve geçici safetensors).
+# Hedef klasörde başka birine ait *.part varsa dokunulmaz; tamamlanmış dosyalara da dokunulmaz.
+# (bash 3.2: boş dizi uzunluk kontrolüyle korunur.)
+OWN_TEMP=()
+cleanup() { if (( ${#OWN_TEMP[@]} )); then rm -f "${OWN_TEMP[@]}"; fi; }
 trap cleanup EXIT
 trap 'echo "iptal edildi" >&2; exit 130' INT TERM
 
@@ -44,7 +47,8 @@ fetch() {
   fi
   local url="https://huggingface.co/${repo}/resolve/${rev}/${path}"
   echo "indiriliyor: ${repo}@${rev:0:8} ${path}"
-  curl -fsSL --retry 3 -o "$out.part" "$url"
+  OWN_TEMP+=("$out.part")
+  curl -fsSL --proto '=https' --proto-redir '=https' --retry 3 -o "$out.part" "$url"
   local got; got="$(sha256 "$out.part")"
   if [[ "$got" != "$want" ]]; then
     rm -f "$out.part"
@@ -57,6 +61,7 @@ fetch() {
 # Dense ağırlığı: safetensors (F32, [512,768], satır sıralı [çıkış][giriş]) -> ham float32 little-endian .bin
 convert_dense() {
   local src="$1" out="$2"
+  OWN_TEMP+=("$out.part")
   python3 - "$src" "$out" <<'PY'
 import json, struct, sys
 src, out = sys.argv[1], sys.argv[2]
@@ -81,11 +86,14 @@ fetch "$TEXT_REPO" "$TEXT_REV" "vocab.txt" "$DEST/text_vocab.txt" "$SHA_VOCAB"
 
 if [[ ! -f "$DEST/text_dense_768x512_f32.bin" || "$(sha256 "$DEST/text_dense_768x512_f32.bin")" != "$SHA_DENSE_BIN" ]]; then
   TMP="$DEST/.dense.safetensors"
+  OWN_TEMP+=("$TMP")
   fetch "$TEXT_REPO" "$TEXT_REV" "2_Dense/model.safetensors" "$TMP" "$SHA_DENSE_SAFETENSORS"
   convert_dense "$TMP" "$DEST/text_dense_768x512_f32.bin"
   rm -f "$TMP"
   if [[ "$(sha256 "$DEST/text_dense_768x512_f32.bin")" != "$SHA_DENSE_BIN" ]]; then
-    echo "HATA: dönüştürülen Dense .bin SHA-256 uyuşmuyor" >&2; exit 1
+    # SHA'sı tutmayan dönüştürülmüş .bin'i bırakma: sonraki çalıştırma/derleme bozuk dosyayı kullanmasın.
+    rm -f "$DEST/text_dense_768x512_f32.bin"
+    echo "HATA: dönüştürülen Dense .bin SHA-256 uyuşmuyor (dosya silindi)" >&2; exit 1
   fi
 fi
 echo "tamam: text_dense_768x512_f32.bin"

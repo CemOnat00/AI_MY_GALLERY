@@ -19,12 +19,13 @@
     <!-- WorkManager (T-006) AAR manifesti ek olarak WAKE_LOCK, RECEIVE_BOOT_COMPLETED, FOREGROUND_SERVICE izinlerini,
          SystemForegroundService'i ve RescheduleReceiver/DiagnosticsReceiver alıcılarını ekler. Foreground servis/bildirim
          bu görevin kapsamı dışı: FOREGROUND_SERVICE izni ve servis çıkarılır; setForeground çağrılırsa çalışmaz,
-         eklenmesi ayrı karardır.
+         eklenmesi ayrı karardır. DiagnosticsReceiver (T-017): yalnızca adb ile tetiklenen hata ayıklama alıcısıdır
+         (exported, DUMP izni korumalı); üretimde gerekmediği için çıkarılır.
          BİLİNÇLİ BIRAKILANLAR (doğrulanmadı): WAKE_LOCK ve RECEIVE_BOOT_COMPLETED ile RescheduleReceiver (BOOT_COMPLETED
          dinler) KALDIRILMADI. minSdk 26'da işlerin yeniden başlatma sonrası yeniden planlanması JobScheduler'a aittir;
          RECEIVE_BOOT_COMPLETED'ın bu yolda (JobScheduler persisted davranışı) gerçekten gerekli olup olmadığı cihazda
          doğrulanamadı, bu yüzden güvenli tarafta kalındı. İleri aşamada cihazda bu izin ve alıcının kaldırılması
-         denenebilir. DiagnosticsReceiver (DUMP izinli, yalnızca adb/sistem erişir) da kaldırılabilir, bilinçli bırakıldı. -->
+         denenebilir. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" tools:node="remove" />
 
     <application
@@ -43,6 +44,9 @@
             tools:node="remove" />
         <service
             android:name="androidx.work.impl.foreground.SystemForegroundService"
+            tools:node="remove" />
+        <receiver
+            android:name="androidx.work.impl.diagnostics.DiagnosticsReceiver"
             tools:node="remove" />
 
         <activity

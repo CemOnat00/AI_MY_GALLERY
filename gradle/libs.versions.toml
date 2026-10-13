@@ -26,7 +26,9 @@ navigationCompose = "2.9.7"
 lifecycle = "2.9.4"
 # Coil 3: MediaStore content:// URI'lerinden boyuta uygun decode, EXIF yönü, bellek önbelleği (T-009).
 # YALNIZCA ağsız artefakt (coil-compose -> coil, coil-core); coil-network-*, okhttp ve ktor EKLENMEZ,
-# bu yüzden http(s) yükleme yeteneği yoktur. 3.5.0: compileSdk 36 ile uyumlu en yeni sürüm (3.6.x compileSdk 37 ister).
+# bu yüzden http(s) yükleme yeteneği yoktur. Seçili sürüm 3.4.0 (AAR minCompileSdk=35). 3.5.0 (minCompileSdk=36)
+# da compileSdk 36 ile uyumludur ama kullanılmıyor; 3.6.x minCompileSdk=37 ister, compileSdk 36'da çözülemez.
+# Yükseltme gerekirse 3.5.0 ile sınırlı kalın (derleme ve testler ayrıca doğrulanmalı).
 coil = "3.4.0"
 # ONNX Runtime Android: metin (ve T-006'da görüntü) kodlayıcıyı cihaz üstünde çalıştırır (T-007, model-research.md
 # bölüm 5.2). 1.30.0: araştırmada Maven Central'daki en son sürüm (2026-10-04), AAR 53 MB (dört ABI .so).
