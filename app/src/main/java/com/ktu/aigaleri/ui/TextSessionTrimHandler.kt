@@ -15,15 +15,18 @@ import kotlinx.coroutines.launch
  * (indeksleme) dokunulmaz: yalnızca metin anahtarı kapatılır. Hatalar yutulur, log yazılmaz.
  *
  * Eşik: [ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW] (10) ve üstü; yani ön planda baskı (düşük/kritik), arayüz
- * gizlendi (20, arka plana alma) ve arka plan kademeleri. Daha hafif baskı ([TRIM_MEMORY_RUNNING_MODERATE]) yok sayılır.
+ * gizlendi (20, arka plana alma) ve arka plan kademeleri. Daha hafif baskı (TRIM_MEMORY_RUNNING_MODERATE) yok sayılır.
  *
  * @param release metin oturumunu bırakır (`OnnxTextEncoder.release`).
- * @param afterRelease bırakma sonrası (ör. ısınma durumunu sıfırlama).
+ * @param beforeRelease bırakmadan ÖNCE çalışır (ör. ısınma sayacını artırıp süren ısınmayı geçersiz kılma); hata yutulur.
+ * @param afterRelease bırakma sonrası (ör. ısınma durumunu sıfırlama). [release] hata verse veya iptal edilse de
+ *   (slot yarı boşalmış olabilir) HER ZAMAN çalışır, böylece ısınma bayrağı bayat kalmaz; hatası yutulur.
  */
 class TextSessionTrimHandler(
     private val scope: CoroutineScope,
     private val release: suspend () -> Unit,
     private val afterRelease: () -> Unit = {},
+    private val beforeRelease: () -> Unit = {},
 ) : ComponentCallbacks2 {
     override fun onTrimMemory(level: Int) {
         if (shouldRelease(level)) launchRelease()
@@ -37,12 +40,19 @@ class TextSessionTrimHandler(
     private fun launchRelease() {
         scope.launch {
             try {
+                beforeRelease()
                 release()
-                afterRelease()
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 // En iyi çaba: ayrıntı loglanmaz.
+            } finally {
+                // release() istisna atsa bile slot boşalmış olabilir; ısınma durumu her durumda sıfırlanır.
+                try {
+                    afterRelease()
+                } catch (e: Exception) {
+                    // afterRelease askıya alınmaz, dolayısıyla CancellationException burada oluşmaz; hata yutulur.
+                }
             }
         }
     }

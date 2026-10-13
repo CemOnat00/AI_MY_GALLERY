@@ -18,7 +18,7 @@ class AppDependenciesSearchWiringTest {
     @Test
     fun singleModelStoreAndSlot_sharedByBothEncoders() {
         assertEquals(1, Regex("""\bModelStore\(""").findAll(deps).count())
-        assertTrue(deps.contains("OnnxTextEncoder(modelStore, sessionSlot)"))
+        assertTrue(deps.contains("OnnxTextEncoder(modelStore, sessionSlot,"))
         assertTrue(deps.contains("OnnxImageEncoder.create(appContext, modelStore, sessionSlot)"))
         assertTrue(deps.contains("SingleSessionSlot.shared"))
         assertEquals(1, Regex("""SingleSessionSlot\.shared""").findAll(deps).count())
@@ -47,7 +47,7 @@ class AppDependenciesSearchWiringTest {
         assertTrue(Regex("""RoomSearchRepository\(\s*encoder = textEncoder""").containsMatchIn(deps))
         assertTrue(deps.contains("suspend fun warmUpSearch(): Boolean = searchWarmUp.run()"))
         assertTrue(deps.contains("warm = { textEncoder.warmUp() }"))
-        assertTrue(deps.contains("isIndexing = { indexLauncher.runState.first() == IndexRunState.RUNNING }"))
+        assertTrue(deps.contains("indexLauncher.isIndexingNow()")) // eşleme tek yerde (IndexLauncher.isIndexingNow); davranış IndexLauncherRunStateTest'te
         assertTrue(deps.contains("registerComponentCallbacks("))
         assertTrue(deps.contains("TextSessionTrimHandler("))
         val activity = File(mainSrc, "ui/MainActivity.kt").readText()

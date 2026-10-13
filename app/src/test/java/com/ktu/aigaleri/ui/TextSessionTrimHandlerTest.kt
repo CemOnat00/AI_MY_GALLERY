@@ -50,11 +50,59 @@ class TextSessionTrimHandlerTest {
     }
 
     @Test
-    fun releaseFailure_isSwallowed_andAfterReleaseNotRun() {
+    fun releaseFailure_isSwallowed_andAfterReleaseStillRuns() {
         val h = handler(IllegalStateException("x"))
         h.onTrimMemory(ComponentCallbacks2.TRIM_MEMORY_COMPLETE) // fırlatmaz
         assertEquals(1, releases.get())
+        assertEquals(1, afters.get()) // slot yarı boşalmış olabilir: ısınma durumu yine sıfırlanır
+    }
+
+    @Test
+    fun afterReleaseFailure_isSwallowed() {
+        val h = TextSessionTrimHandler(CoroutineScope(UnconfinedTestDispatcher()), release = { releases.incrementAndGet() },
+            afterRelease = { afters.incrementAndGet(); throw IllegalStateException("after") })
+        h.onTrimMemory(ComponentCallbacks2.TRIM_MEMORY_COMPLETE) // fırlatmaz
+        assertEquals(1, afters.get())
+    }
+
+    @Test
+    fun beforeRelease_runsBeforeRelease_andAfterAfterOrderIsBeforeReleaseAfter() {
+        val order = mutableListOf<String>()
+        val h = TextSessionTrimHandler(
+            CoroutineScope(UnconfinedTestDispatcher()),
+            release = { order += "release" },
+            afterRelease = { order += "after" },
+            beforeRelease = { order += "before" },
+        )
+        h.onTrimMemory(ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN)
+        assertEquals(listOf("before", "release", "after"), order)
+    }
+
+    @Test
+    fun cancelledRelease_stillRunsAfterRelease_andRethrows() {
+        val gate = kotlinx.coroutines.CompletableDeferred<Unit>()
+        val scope = CoroutineScope(UnconfinedTestDispatcher())
+        val h = TextSessionTrimHandler(scope, release = { releases.incrementAndGet(); gate.await() }, afterRelease = { afters.incrementAndGet() })
+        h.onTrimMemory(ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN)
         assertEquals(0, afters.get())
+        scope.coroutineContext[kotlinx.coroutines.Job]!!.cancel()
+        assertEquals(1, afters.get())
+    }
+
+    /** Bırakma istisna atar -> afterRelease sayaç artırır -> ısınma bayrağı sıfırlanır, sonraki run() yeniden ısıtır. */
+    @Test
+    fun releaseThrows_warmUpFlagIsReset_andNextRunRewarms() = kotlinx.coroutines.runBlocking {
+        var warmCalls = 0
+        val warmUp = com.ktu.aigaleri.ui.search.SearchWarmUp({ true }, { false }, { warmCalls++ })
+        assertTrue(warmUp.run())
+        val h = TextSessionTrimHandler(
+            CoroutineScope(UnconfinedTestDispatcher()),
+            release = { throw IllegalStateException("closeLocked") },
+            afterRelease = warmUp::onSessionReleased,
+        )
+        h.onTrimMemory(ComponentCallbacks2.TRIM_MEMORY_COMPLETE)
+        assertTrue(warmUp.run())
+        assertEquals(2, warmCalls)
     }
 
     @Test

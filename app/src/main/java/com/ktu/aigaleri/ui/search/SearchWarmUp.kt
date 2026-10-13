@@ -21,7 +21,12 @@ class SearchWarmUp(
     private val lock = Any()
     private var warmed = false
 
-    /** Her bırakmada artar; ısınma sürerken bırakma olduysa `warmed` true yapılmaz (bayat bayrak engeli). */
+    /**
+     * Her bırakmada artar; ısınma sürerken bırakma olduysa `warmed` true yapılmaz (bayat bayrak engeli). Bırakma
+     * üç noktadan bildirilir (AppDependencies): trim işleyicisinin `beforeRelease`'i (bırakma BAŞLAMADAN, süren ısınmayı
+     * geçersiz kılar), slot `onClosed` geri çağrısı (oturum fiilen kapanırken; indeksleme görüntü oturumunu açıp metin
+     * oturumunu çıkarınca da) ve `afterRelease` (hata olsa da). Hepsi idempotenttir.
+     */
     private var releaseGeneration = 0L
 
     /**

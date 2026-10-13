@@ -52,7 +52,12 @@ class AppDependencies private constructor(context: Context) {
     /** Tek ONNX oturum kuralı yuvası; görüntü ve metin kodlayıcı aynı örneği kullanır. */
     val sessionSlot: SingleSessionSlot get() = SingleSessionSlot.shared
 
-    private val textEncoderDelegate = lazy { OnnxTextEncoder(modelStore, sessionSlot) }
+    private val textEncoderDelegate = lazy {
+        // Oturum kapanınca (release veya görüntü oturumu açılıp metin oturumu çıkarılınca) ısınma bayrağı sıfırlanır.
+        OnnxTextEncoder(modelStore, sessionSlot, onSessionClosed = {
+            if (searchWarmUpDelegate.isInitialized()) searchWarmUp.onSessionReleased()
+        })
+    }
 
     /** Arama metin kodlayıcısı (tek örnek; [modelStore] ve [sessionSlot] paylaşılır). */
     val textEncoder: OnnxTextEncoder by textEncoderDelegate
@@ -83,7 +88,7 @@ class AppDependencies private constructor(context: Context) {
             hasSearchableIndex = {
                 database.photoEmbeddingDao().getPageForModel(ModelManifest.MODEL_VERSION, Long.MIN_VALUE, 1).isNotEmpty()
             },
-            isIndexing = { indexLauncher.runState.first() == IndexRunState.RUNNING },
+            isIndexing = { indexLauncher.isIndexingNow() },
             warm = { textEncoder.warmUp() },
         )
     }
@@ -101,6 +106,7 @@ class AppDependencies private constructor(context: Context) {
                 scope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
                 release = { if (textEncoderDelegate.isInitialized()) textEncoder.release() },
                 afterRelease = { if (searchWarmUpDelegate.isInitialized()) searchWarmUp.onSessionReleased() },
+                beforeRelease = { if (searchWarmUpDelegate.isInitialized()) searchWarmUp.onSessionReleased() },
             ),
         )
     }

@@ -50,6 +50,11 @@ class OnnxTextEncoder(
     private val store: ModelStore,
     private val slot: SingleSessionSlot = SingleSessionSlot.shared,
     private val dispatcher: CoroutineDispatcher = Dispatchers.IO,
+    /**
+     * Metin oturumu kapandığında (release VEYA başka anahtar yüzünden slot'tan çıkarılma, ör. indeksleme görüntü
+     * oturumunu açınca) slot kilidi altında çağrılır; kısa ve askıya alınmaz olmalı. Isınma bayrağını sıfırlamak içindir (T-016).
+     */
+    private val onSessionClosed: () -> Unit = {},
 ) : TextEncoder {
     override val embeddingSpec: EmbeddingSpec = ModelManifest.EMBEDDING_SPEC
 
@@ -69,7 +74,7 @@ class OnnxTextEncoder(
             slot.withSession(
                 SESSION_KEY,
                 open = { openSession(cancelCheck) },
-                onClosed = ::dropReferences,
+                onClosed = { dropReferences(); onSessionClosed() },
             ) { session ->
                 pipelineFor(session, cancelCheck).embed(normalized)
             }

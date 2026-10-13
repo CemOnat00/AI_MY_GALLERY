@@ -2,6 +2,7 @@ package com.ktu.aigaleri.ui
 
 import com.ktu.aigaleri.domain.IndexMode
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 
@@ -33,6 +34,9 @@ interface IndexLauncher {
      * launcher'lar/sahteler bozulmaz. Tutarlılık: `isRunning == (runState != IDLE)`. Isınma yalnızca RUNNING iken ertelenir.
      */
     val runState: Flow<IndexRunState> get() = isRunning.map { if (it) IndexRunState.RUNNING else IndexRunState.IDLE }
+
+    /** İndeksleme şu an GERÇEKTEN çalışıyor mu (yalnızca [IndexRunState.RUNNING]; WAITING/IDLE false). Isınma kararı bunu kullanır. */
+    suspend fun isIndexingNow(): Boolean = runState.first() == IndexRunState.RUNNING
 
     fun launch(mode: IndexMode)
 }

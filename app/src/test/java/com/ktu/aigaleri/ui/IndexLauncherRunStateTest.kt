@@ -21,6 +21,19 @@ class IndexLauncherRunStateTest {
         assertEquals(IndexRunState.IDLE, RunningOnly(false).runState.first())
     }
 
+    private class Fake(state: IndexRunState) : IndexLauncher {
+        override val runState: Flow<IndexRunState> = flowOf(state)
+        override val isRunning: Flow<Boolean> = flowOf(state != IndexRunState.IDLE)
+        override fun launch(mode: IndexMode) = Unit
+    }
+
+    @Test
+    fun isIndexingNow_trueOnlyForRunning() = runBlocking {
+        assertEquals(false, Fake(IndexRunState.IDLE).isIndexingNow())
+        assertEquals(false, Fake(IndexRunState.WAITING).isIndexingNow())
+        assertEquals(true, Fake(IndexRunState.RUNNING).isIndexingNow())
+    }
+
     @Test
     fun defaultLauncher_isIdle() = runBlocking {
         val l = object : IndexLauncher {
