@@ -43,7 +43,9 @@
             android:authorities="${applicationId}.onnxruntime_telemetry_initializer"
             tools:node="remove" />
         <!-- T-024: EmojiCompatInitializer (androidx.emoji2, Compose/AppCompat üzerinden gelir) açılışta emoji
-             yazı tipi yüklemesini başlatır; uygulama EmojiCompat kullanmaz, sistem emoji gösterimi yeterlidir.
+             yazı tipi yüklemesini başlatır; uygulama EmojiCompat kullanmaz.
+             Cihazda doğrulanmadı (T-012 sonrası emülatörde arama alanına emoji girilerek kontrol edilecek); eski
+             API 26-31 yazı tiplerinde yeni emojiler kutu görünebilir; kabul edilen ödünleşim.
              Yalnızca bu meta-data çıkarılır; WorkManager, ProcessLifecycle ve ProfileInstaller initializer'larına
              dokunulmaz (provider tools:node=merge ile korunur). -->
         <provider

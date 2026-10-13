@@ -42,7 +42,9 @@ android {
         // ONNX modelleri zaten az sıkışır; açılışta gereksiz açma süresi olmasın, assets'ten akış kopyası hızlansın
         // (model-research.md 5.1). Model dosyaları repoda yoktur: docs/model-setup.md.
         noCompress += "onnx"
-        // T-024: yalnızca uygulamanın dilleri (tr, en); bağımlılıkların diğer yerel kaynakları paketten çıkar.
+        // T-024: bağımlılıkların tr/en dışındaki yerel kaynakları paketten çıkar. Uygulamada values-en yok, varsayılan
+        // `values` Türkçedir: "en" filtresi fiilen etkisizdir (yalnızca kütüphane metinlerini etkiler); tr/en dışı
+        // cihaz dillerinde kütüphane metinleri varsayılana düşer.
         localeFilters += listOf("tr", "en")
     }
     sourceSets {
