@@ -18,7 +18,7 @@ Metin kodlayıcı OpenAI CLIP ViT-B/32 metin uzayına damıtılmış çok dilli 
 |---|---|
 | Kaynak (metin) | https://huggingface.co/sentence-transformers/clip-ViT-B-32-multilingual-v1 (revizyon 58edf8cada9e398793dca955574a48cbb7f18be2). Repoda hazır `onnx/` klasörü var |
 | Kaynak (görüntü) | https://huggingface.co/Xenova/clip-vit-base-patch32 (revizyon d15189d7028b43f1d3e65039190477f6af591c2a; `onnx/vision_model*.onnx`, openai/clip-vit-base-patch32 dönüşümü). Alternatif: https://huggingface.co/immich-app/ViT-B-32__openai `visual/model.onnx` (revizyon a857c8de2c07bbcfa6646adfcf31b798845afa1e; fp32, 351.6 MB; fp16/int8 yok) |
-| Lisans | Metin: Apache-2.0 (kart etiketi, doğrulandı). Görüntü: OpenAI CLIP, MIT (github.com/openai/CLIP lisansı MIT, doğrulandı). Xenova repo'sunda lisans etiketi yok, kaynak modelin lisansının geçerli olduğu varsayımı; Xenova repo'sunun ayrıca lisans beyanı doğrulanamadı |
+| Lisans | Metin: Apache-2.0 (kart etiketi, doğrulandı). Görüntü: OpenAI CLIP, MIT (github.com/openai/CLIP lisansı MIT, doğrulandı). Xenova repo'sunda lisans etiketi yok; MIT, kaynaktan çıkarım (repo beyanı yok), doğrulanamadı |
 | Giriş çözünürlüğü (görüntü) | 224x224; en kısa kenar 224'e bicubic yeniden boyutlandırma, merkez kırpma, mean [0.48145466, 0.4578275, 0.40821073], std [0.26862954, 0.26130258, 0.27577711] (preprocessor_config, doğrulandı) |
 | Metin girişi | WordPiece (distilbert-base-multilingual-cased, 119547 token sözlük, vocab.txt ~1 MB), `[CLS] ... [SEP]`, max 128 token, küçük harfe çevirme YOK (cased) |
 | Vektör boyutu | 512 (görüntü: `image_embeds` çıktısı 512, doğrulandı; metin: Dense çıkışı 512) |
@@ -36,7 +36,7 @@ Metin kodlayıcı OpenAI CLIP ViT-B/32 metin uzayına damıtılmış çok dilli 
 | Özellik | Değer |
 |---|---|
 | Kaynak | https://huggingface.co/onnx-community/siglip2-base-patch16-224-ONNX (revizyon ba1f3b0843f24bc5417d38e19c37b287d719b2f4; orijinal: google/siglip2-base-patch16-224) |
-| Lisans | Orijinal model Apache-2.0 (kart etiketi, doğrulandı). ONNX repo'sunda lisans etiketi yok, kaynak lisansı varsayımı; doğrulanamadı |
+| Lisans | Orijinal model Apache-2.0 (kart etiketi, doğrulandı). ONNX repo'sunda lisans etiketi yok; kaynak lisansı çıkarım (repo beyanı yok), doğrulanamadı |
 | Giriş çözünürlüğü | 224x224 (kare, kırpmasız yeniden boyutlandırma), mean/std 0.5 (preprocessor_config, doğrulandı) |
 | Metin girişi | Gemma SentencePiece, 256000 token sözlük (tokenizer.json 34 MB, tokenizer.model 4.2 MB). Önerilen kullanım: küçük harf, 64 token'a pad (HF pratiği; kartta doğrulanmadı, denemede böyle kullandım) |
 | Vektör boyutu | 768 (`pooler_output`, doğrulandı) |
@@ -54,7 +54,7 @@ LAION-5B (çok dilli) üzerinde OpenCLIP ile uçtan uca eğitilmiş: ViT-B/32 g�
 | Özellik | Değer |
 |---|---|
 | Kaynak | Orijinal: https://huggingface.co/laion/CLIP-ViT-B-32-xlm-roberta-base-laion5B-s13B-b90k (rev. 506d40eb551f4801a1c27fc20a31c7b8f590deda). ONNX: https://huggingface.co/immich-app/XLM-Roberta-Base-ViT-B-32__laion5b_s13b_b90k (rev. 111f6ddca817bb6cd8343c3e3dc5ce39d9ba54b0, `textual/model.onnx`, `visual/model.onnx`) |
-| Lisans | MIT (orijinal kart, doğrulandı). immich ONNX repo'sunda lisans etiketi yok, kaynak lisansı varsayımı; doğrulanamadı |
+| Lisans | MIT (orijinal kart, doğrulandı). immich ONNX repo'sunda lisans etiketi yok; kaynak lisansı çıkarım (repo beyanı yok), doğrulanamadı |
 | Giriş çözünürlüğü | 224x224, OpenAI CLIP ile aynı mean/std, bicubic, en kısa kenar + merkez kırpma (`preprocess_cfg.json`, doğrulandı) |
 | Metin girişi | XLM-R SentencePiece (`sentencepiece.bpe.model` 5.1 MB, tokenizer.json 17 MB), mean pooler |
 | Vektör boyutu | 512 (`config.json`, doğrulandı) |
@@ -97,7 +97,7 @@ Ortam: Python onnxruntime 1.30 CPU, Apple silicon Mac. Bu ölçümler telefon ba
 
 Gerekçe (dayanak boyut, lisans ve basitliktir; Türkçe kalitesi bu seçimin kanıtı DEĞİLDİR):
 1. Boyut/süre bütçesi: Toplam ~224 MB (ana yol); Aday B ~378 MB, Aday C ~1.46 GB. Görüntü kodlayıcı ViT-B/32 yalnızca 49 token işler; masaüstünde SigLIP2 B/16'dan 2.3-3.4 kat hızlı (telefonda doğrulanamadı). Arama anında yalnızca metin kodlayıcı çalışır, görüntü modeli yalnızca indekslemede yüklenir ve sonra kapatılır; bellek ayak izi iki aşamaya bölünür.
-2. Lisans: Apache-2.0 (metin) + MIT (görüntü); ticari olmayan veya araştırma-only kısıtı yok. ONNX dönüşüm repolarında (Xenova/immich) lisans etiketi eksik, kaynak lisansının geçerli olduğu varsayımına dayanıyor. Rapora yazılacak lisans metni için kaynak repolara (sentence-transformers, openai/CLIP) atıf yapılmalı.
+2. Lisans: Apache-2.0 (metin) + MIT (görüntü); ticari olmayan veya araştırma-only kısıtı yok. ONNX dönüşüm repolarında (Xenova/immich) lisans etiketi eksik; kaynak lisansının geçerli olduğu çıkarımdır (repo beyanı yok), doğrulanamadı. Rapora yazılacak lisans metni için kaynak repolara (sentence-transformers, openai/CLIP) atıf yapılmalı.
 3. Basitlik: Metin ve görüntü için hazır int8 ONNX var (kendi dönüşüm hattı gerekmez); WordPiece tokenizer Kotlin'de ek kütüphanesiz yazılabilir. Aday B ve C için SentencePiece çözümü ayrıca karar gerektirir (bağımlılık gerekçesi, architecture.md Bölüm 8).
 4. Türkçe: Türkçe, hizalama dillerinin içinde açıkça listeli; küçük sağlama testinde bozuk görünmüyor. Gerçek Türkçe geri getirme kalitesi bu araştırmada KANITLANMADI; ml görevinde gerçek galeri + Türkçe istem kümesiyle ölçülmeli.
 
