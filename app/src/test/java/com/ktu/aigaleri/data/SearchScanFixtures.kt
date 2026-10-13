@@ -10,6 +10,10 @@ import kotlinx.coroutines.ensureActive
  * (b) ESKİ davranışı (JOIN'li sayfa: photo satırı olmayan yetim embedding hiç görünmez) taklit eden kaynak ve
  * (c) eski taramanın BİREBİR kopyası ([legacySearch], bayt bayt çözme dahil). Üretim koduna bağımlılık yalnızca
  * [TopKCollector], [RoomSearchRepository.dot] ve (yeni yol için) [VectorCodec]'tir.
+ *
+ * SINIR: referans [TopKCollector]'ı ve `RoomSearchRepository.dot`'u üretim kodundan PAYLAŞIR (kopyalanmadı). Bunlar
+ * değişirse eşdeğerlik karşılaştırması iki tarafı birlikte kaydırır ve değişikliği YAKALAMAZ (karşılaştırma gücü azalır);
+ * onların davranışı kendi testleriyle (TopKCollectorTest, SearchTestSupport.bruteForce) güvence altındadır.
  */
 internal class SyntheticIndex(
     val ids: LongArray,

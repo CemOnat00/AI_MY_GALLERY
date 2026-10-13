@@ -15,8 +15,10 @@ object VectorCodec {
     }
 
     /**
-     * [blob]'u yeni dizi ayırmadan [out]'a çözer (arama taramasında satır başına tahsisi önler; [out] yeniden
-     * kullanılır). [blob] uzunluğu tam `out.size * 4` olmalıdır, aksi halde [IllegalArgumentException].
+     * [blob]'u yeni `FloatArray` ayırmadan [out]'a çözer ([out] yeniden kullanılır). Çağrı başına yalnızca iki küçük
+     * sarmalayıcı nesne ayrılır (HeapByteBuffer + FloatBuffer görünümü; ~2 KB'lık BLOB'un yanında önemsiz, yeniden
+     * kullanılmaz). Bayt bayt birleştirmeye göre hız kazancı JVM'de ölçüldü (docs/search-scan-benchmark.md); ART'ta
+     * (Android) ÖLÇÜLMEDİ. [blob] uzunluğu tam `out.size * 4` olmalıdır, aksi halde [IllegalArgumentException].
      */
     fun decodeInto(blob: ByteArray, out: FloatArray) {
         require(blob.size == out.size * Float.SIZE_BYTES) { "BLOB uzunluğu out.size*4 olmalı" }

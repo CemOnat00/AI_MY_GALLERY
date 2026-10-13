@@ -47,7 +47,7 @@ import kotlinx.coroutines.withContext
  * [PhotoEmbeddingDao.getPageForModel] ile [pageSize] (varsayılan 256) satırlık keyset sayfalarla tarar (T-025: yalnızca
  * `photo_embedding`, JOIN yok; `uri`/`dateTaken` yalnızca top-K adayları için toplu sorguyla gelir):
  * - Tepe ek bellek: bir sayfa (~256 x 2,1 KB ≈ 0,55 MB BLOB) + tek `FloatArray(512)` tarama tamponu
- *   ([VectorCodec.decodeInto], satır başına tahsis yok) + aday heap'i ([TopKCollector]: `limit + 32` giriş, vektör
+ *   ([VectorCodec.decodeInto]: satır başına yalnızca iki küçük sarmalayıcı nesne, `FloatArray` tahsisi yok; ART'taki hız kazancı ÖLÇÜLMEDİ) + aday heap'i ([TopKCollector]: `limit + 32` giriş, vektör
  *   yok) + bozuk/şüpheli kimlik listesi (olağan veride boş). Toplam birkaç MB, indeks boyutundan bağımsız.
  * - Süre (ÖLÇÜLMEDİ; cihazda DOĞRULANMADI): 100 bin kayıtta ~51 milyon çarpma-toplama + ~51 milyon bayt->float
  *   çözme (CPU) ve SQLite okuması. Room her satır için ~2 KB `ByteArray` ayırır ve CursorWindow'dan kopyalar:
@@ -116,8 +116,9 @@ class RoomSearchRepository(
      * `uri`/`dateTaken` tek toplu sorguyla ([PhotoEmbeddingDao.getPhotoRefsByIds], <= [REF_CHUNK] kimlik/çağrı)
      * alınır; `photo` satırı olmayan (yetim, eski INNER JOIN gibi görünmez) veya uri'si boş aday atlanır. Atlama
      * sonucu `limit`'ten az kalırsa ve elenen aday varsa, aday kapasitesi 8 katına çıkarılıp (en çok `offered`)
-     * tarama yinelenir; olağan veride (uri'siz kayıt yok) ikinci geçiş HİÇ olmaz. Sonuç eski JOIN'li tek aşamalı
-     * taramayla bit-bit aynıdır (skorlar aynı `dot`, sıra aynı toplam düzen).
+     * tarama yinelenir; olağan veride (uri'siz kayıt yok) ikinci geçiş HİÇ olmaz. PATOLOJİK durum: tüm kayıtlar
+     * boş uri'li/yetimse kapasite 82, 656, 5248, 41984, ardından `offered` olur (~5 tam tarama); gerçek veride oluşmaz.
+     * Sonuç eski JOIN'li tek aşamalı taramayla bit-bit aynıdır (skorlar aynı `dot`, sıra aynı toplam düzen).
      */
     private suspend fun scan(modelVersion: String, q: FloatArray, limit: Int): List<SearchResult> {
         var capacity = (limit.toLong() + CANDIDATE_SLACK).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()

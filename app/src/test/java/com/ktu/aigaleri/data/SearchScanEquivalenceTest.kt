@@ -204,6 +204,46 @@ class SearchScanEquivalenceTest {
         assertEquals(Outcome.Ok(emptyList<SearchResult>()), o)
     }
 
+    @Test
+    fun manyBadAndBelowMinIds_exerciseChunkedLookup_andLongBufGrowth() {
+        // 1500 bozuk kayıt (>500 kimlik: 3 parça, LongBuf 16 -> 2048 büyür); hepsi photo'lu, uri dolu; iyi kayıt YOK.
+        val allBad = SyntheticIndex.build(n = 1500, dim = dim, seed = 31L, corruptFraction = 1.0)
+        val q = query(14)
+        val dao = allBad.NewDao()
+        assertEquals(Outcome.Failed("IllegalStateException"), current(allBad, q, 50, 64, null, dao))
+        assertEquals(legacy(allBad, q, 50, 64, null), current(allBad, q, 50, 64, null))
+        assertEquals(listOf(500), dao.refCallSizes) // ilk parçada photo'lu kayıt bulunur, hata kararı için yeter
+        // 1500 bozuk, hepsi photo'suz (yetim): görünür kayıt yok -> boş liste, yine parçalı sorgu
+        val orphanBad = SyntheticIndex.build(n = 1500, dim = dim, seed = 32L, corruptFraction = 1.0, orphanFraction = 1.0)
+        assertEquals(Outcome.Ok(emptyList<SearchResult>()), assertEquivalent(orphanBad, q, 50, 64, label = "yetim bozuk"))
+        val daoO = orphanBad.NewDao()
+        current(orphanBad, q, 50, 64, null, daoO)
+        assertEquals(listOf(500, 500, 500), daoO.refCallSizes) // photo'lu kayıt çıkmadığından tüm parçalar gezilir
+        // 1500 eşik altı (minScore üstte), uri dolu: "eşleşme yok" (hata değil); ilk parçada iyi bulunur
+        val below = SyntheticIndex.build(n = 1500, dim = dim, seed = 33L)
+        assertEquals(Outcome.Ok(emptyList<SearchResult>()), assertEquivalent(below, q, 50, 64, minScore = 2f, label = "eşik altı"))
+        // 1500 eşik altı, hepsi boş uri: iyi kayıt yok, photo'lu kayıt var -> hata (eski davranış); 3 parça gezilir
+        val belowBlank = SyntheticIndex.build(n = 1500, dim = dim, seed = 34L, blankUriFraction = 1.0)
+        val dao2 = belowBlank.NewDao()
+        assertEquals(Outcome.Failed("IllegalStateException"), current(belowBlank, q, 50, 64, 2f, dao2))
+        assertEquals(listOf(500, 500, 500), dao2.refCallSizes)
+        assertEquals(legacy(belowBlank, q, 50, 64, 2f), current(belowBlank, q, 50, 64, 2f))
+    }
+
+    @Test
+    fun minScoreWithBlankUris_mediumScale_sameAsLegacy() {
+        val idx = SyntheticIndex.build(
+            n = 20_000, dim = dim, seed = 41L, blankUriFraction = 0.2, orphanFraction = 0.05,
+            corruptFraction = 0.02, otherModelFraction = 0.1, tieFraction = 0.3, maxGap = 3,
+        )
+        val q = query(15)
+        for (min in listOf<Float?>(null, -1f, 0.0f, 0.15f, 0.4f, 0.9f)) {
+            for (limit in listOf(1, 50, 400, 20_000)) {
+                assertEquivalent(idx, q, limit, 128, min, "minScore+boş uri")
+            }
+        }
+    }
+
     // --- VectorCodec.decodeInto: bit-bit aynı ---
 
     @Test

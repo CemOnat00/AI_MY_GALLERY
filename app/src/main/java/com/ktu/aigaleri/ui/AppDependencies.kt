@@ -85,6 +85,8 @@ class AppDependencies private constructor(context: Context) {
      */
     private val searchWarmUpDelegate = lazy {
         SearchWarmUp(
+            // Not: getPageForModel (T-025) JOIN'siz olduğundan photo satırı olmayan (yetim) embedding'i de sayar. Gerçekte
+            // yetim yoktur (FK CASCADE + Room foreign_keys=ON); olsaydı yalnızca ısınma gereksiz yere yapılırdı.
             hasSearchableIndex = {
                 database.photoEmbeddingDao().getPageForModel(ModelManifest.MODEL_VERSION, Long.MIN_VALUE, 1).isNotEmpty()
             },
