@@ -95,7 +95,7 @@ class SearchScreenTest {
     @Test
     fun errorStatus_showsExplanation() {
         show(SearchUiState(query = "kedi", status = SearchStatus.Error))
-        rule.onNodeWithText("Arama sırasında bir hata oluştu", substring = true).assertExists()
+        rule.onNodeWithText("Arama şu an yapılamadı", substring = true).assertExists()
     }
 
     @Test

@@ -1,6 +1,7 @@
 package com.ktu.aigaleri.ui.image
 
 import android.net.Uri
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -16,7 +17,8 @@ import coil3.request.ImageRequest
  * (coil-compose/coil-core); http(s) yükleme yeteneği yoktur, content:// URI'leri ve EXIF yönü Coil'de
  * çözülür. Decode boyutu yerleşim boyutuna göre seçilir (grid'de küçük, tam ekranda büyük), bellek
  * önbelleği Coil varsayılanıdır. Yükleme/hata sırasında spinner yerine statik renkli yer tutucu
- * gösterilir (kaydırırken titreme olmaz).
+ * gösterilir (kaydırırken titreme olmaz). Yükleme başarısız olursa (ör. dosya silinmiş) [onError] çağrılır; ayrıntı
+ * (URI/yol) iletilmez ve loglanmaz.
  */
 @Composable
 fun PhotoImage(
@@ -24,7 +26,8 @@ fun PhotoImage(
     contentDescription: String?,
     modifier: Modifier = Modifier,
     contentScale: ContentScale = ContentScale.Crop,
-    placeholderColor: Color = Color(0xFFE0E0E0),
+    placeholderColor: Color = MaterialTheme.colorScheme.surfaceContainerHigh,
+    onError: (() -> Unit)? = null,
 ) {
     val context = LocalContext.current
     val request = remember(uri, context) { ImageRequest.Builder(context).data(uri).build() }
@@ -36,5 +39,6 @@ fun PhotoImage(
         placeholder = placeholder,
         error = placeholder,
         contentScale = contentScale,
+        onError = onError?.let { callback -> { callback() } },
     )
 }

@@ -1,45 +1,89 @@
 package com.ktu.aigaleri.ui.search
 
 import android.net.Uri
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import com.ktu.aigaleri.R
 import com.ktu.aigaleri.domain.InvalidQueryException
 import com.ktu.aigaleri.ui.image.PhotoImage
 import com.ktu.aigaleri.ui.index.IndexingBanner
 import com.ktu.aigaleri.ui.index.IndexingBannerContent
+import com.ktu.aigaleri.ui.theme.AiGaleriDimens
+import com.ktu.aigaleri.ui.theme.AppIcons
 
 const val TAG_QUERY_FIELD = "query_field"
 const val TAG_SEARCH_BUTTON = "search_button"
 const val TAG_RESULT_GRID = "result_grid"
+const val TAG_CLEAR_BUTTON = "clear_button"
+const val TAG_SUGGESTION_LIST = "suggestion_list"
+const val TAG_EMPTY_INDEX_LINK = "empty_index_link"
+const val TAG_ERROR_RETRY = "search_error_retry"
 
-/** Durumsuz arama ekranı: istem alanı, arama butonu ve duruma göre sonuç grid'i/mesaj. */
+private const val SKELETON_CELL_COUNT = 12
+private const val DISABLED_ALPHA = 0.38f
+private const val SKELETON_ALPHA = 0.35f
+
+/**
+ * Durumsuz arama ekranı (T-022 tasarımı): pill arama alanı, indeksleme bandı ve duruma göre örnek istemler /
+ * yükleniyor / sonuç grid'i / sonuç yok / hata. Arama tetikleyicisi (TAG_SEARCH_BUTTON) alanın başındaki arama
+ * simgesidir; klavyedeki arama tuşu da aynı işi yapar.
+ */
 @Composable
 fun SearchContent(
     state: SearchUiState,
@@ -50,48 +94,359 @@ fun SearchContent(
     indexing: IndexingBanner? = null,
     onQueryFocused: () -> Unit = {},
 ) {
-    Column(modifier = Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        OutlinedTextField(
+    Column(
+        modifier = Modifier.fillMaxSize()
+            .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(start = AiGaleriDimens.Margin, top = AiGaleriDimens.SpaceSm, end = AiGaleriDimens.SpaceSm),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            SearchPill(
+                state = state,
+                onQueryChange = onQueryChange,
+                onSearch = onSearch,
+                onQueryFocused = onQueryFocused,
+                modifier = Modifier.weight(1f),
+            )
+            IconButton(onClick = onOpenIndexStatus) {
+                Icon(
+                    imageVector = AppIcons.Info,
+                    contentDescription = stringResource(R.string.index_status_open),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+        InlineValidation(state)
+        if (indexing != null) {
+            IndexingBannerContent(
+                banner = indexing,
+                onOpen = onOpenIndexStatus,
+                modifier = Modifier.padding(horizontal = AiGaleriDimens.Margin, vertical = AiGaleriDimens.SpaceSm),
+            )
+        }
+        Box(modifier = Modifier.fillMaxSize()) {
+            when (val status = state.status) {
+                SearchStatus.Idle, is SearchStatus.InvalidQuery -> SuggestionList(
+                    onPick = { suggestion ->
+                        onQueryChange(suggestion)
+                        onSearch()
+                    },
+                )
+                SearchStatus.Loading -> LoadingState()
+                SearchStatus.Empty -> EmptyState(onOpenIndexStatus)
+                SearchStatus.Error -> ErrorState(canRetry = state.canSearch, onRetry = onSearch)
+                is SearchStatus.Success -> ResultGrid(status, onOpenPhoto)
+            }
+        }
+    }
+}
+
+/** 56dp pill: arama düğmesi (simge), metin alanı ve (doluysa) temizle düğmesi. */
+@Composable
+private fun SearchPill(
+    state: SearchUiState,
+    onQueryChange: (String) -> Unit,
+    onSearch: () -> Unit,
+    onQueryFocused: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colors = MaterialTheme.colorScheme
+    val hint = stringResource(R.string.search_hint)
+    Row(
+        modifier = modifier.heightIn(min = AiGaleriDimens.SearchBarHeight)
+            .clip(RoundedCornerShape(AiGaleriDimens.SearchBarCorner))
+            .background(colors.surfaceContainer),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        IconButton(
+            onClick = onSearch,
+            enabled = state.canSearch,
+            modifier = Modifier.testTag(TAG_SEARCH_BUTTON),
+            colors = IconButtonDefaults.iconButtonColors(
+                contentColor = colors.primary,
+                disabledContentColor = colors.onSurfaceVariant.copy(alpha = DISABLED_ALPHA),
+            ),
+        ) {
+            Icon(AppIcons.Search, contentDescription = stringResource(R.string.search_button))
+        }
+        BasicTextField(
             value = state.query,
             onValueChange = onQueryChange,
-            modifier = Modifier.fillMaxWidth().testTag(TAG_QUERY_FIELD)
-                .onFocusChanged { if (it.isFocused) onQueryFocused() },
-            label = { Text(stringResource(R.string.search_hint)) },
-            supportingText = { Text("${state.query.length}/$MAX_QUERY_LENGTH") },
+            modifier = Modifier.weight(1f)
+                .testTag(TAG_QUERY_FIELD)
+                .onFocusChanged { if (it.isFocused) onQueryFocused() }
+                .semantics { if (state.query.isEmpty()) contentDescription = hint },
+            textStyle = MaterialTheme.typography.bodyLarge.copy(color = colors.onSurface),
+            cursorBrush = SolidColor(colors.primary),
             singleLine = true,
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
             keyboardActions = KeyboardActions(onSearch = { if (state.canSearch) onSearch() }),
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Button(onClick = onSearch, enabled = state.canSearch, modifier = Modifier.testTag(TAG_SEARCH_BUTTON)) {
-                Text(stringResource(R.string.search_button))
-            }
-            OutlinedButton(onClick = onOpenIndexStatus) { Text(stringResource(R.string.index_status_open)) }
-        }
-        if (indexing != null) IndexingBannerContent(indexing, onOpenIndexStatus)
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            when (val status = state.status) {
-                SearchStatus.Idle -> Message(R.string.search_idle)
-                SearchStatus.Loading -> CircularProgressIndicator()
-                SearchStatus.Empty -> Message(R.string.search_empty)
-                SearchStatus.Error -> Message(R.string.search_error)
-                is SearchStatus.InvalidQuery -> Message(invalidQueryMessage(status.reason))
-                is SearchStatus.Success -> LazyVerticalGrid(
-                    columns = GridCells.Adaptive(minSize = 110.dp),
-                    modifier = Modifier.fillMaxSize().testTag(TAG_RESULT_GRID),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
-                ) {
-                    items(status.results, key = { it.photoId }) { result ->
-                        PhotoImage(
-                            uri = Uri.parse(result.uri),
-                            contentDescription = stringResource(R.string.photo_content_description),
-                            modifier = Modifier.aspectRatio(1f).clickable { onOpenPhoto(result.photoId) },
+            decorationBox = { innerTextField ->
+                Box(contentAlignment = Alignment.CenterStart) {
+                    if (state.query.isEmpty()) {
+                        Text(
+                            text = hint,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = colors.onSurfaceVariant,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
                         )
                     }
+                    innerTextField()
                 }
+            },
+        )
+        if (state.query.isNotEmpty()) {
+            IconButton(onClick = { onQueryChange("") }, modifier = Modifier.testTag(TAG_CLEAR_BUTTON)) {
+                Icon(
+                    AppIcons.Close,
+                    contentDescription = stringResource(R.string.search_clear),
+                    tint = colors.onSurfaceVariant,
+                )
+            }
+        } else {
+            Box(Modifier.size(AiGaleriDimens.SpaceSm))
+        }
+    }
+}
+
+/** Alanın altında satır içi doğrulama: geçersiz istem nedeni veya karakter sınırı. */
+@Composable
+private fun InlineValidation(state: SearchUiState) {
+    val status = state.status
+    val message = when {
+        status is SearchStatus.InvalidQuery -> stringResource(invalidQueryMessage(status.reason))
+        state.query.length >= MAX_QUERY_LENGTH -> stringResource(R.string.search_max_length, MAX_QUERY_LENGTH)
+        else -> null
+    } ?: return
+    Row(
+        modifier = Modifier.fillMaxWidth()
+            .padding(horizontal = AiGaleriDimens.Margin + AiGaleriDimens.SpaceMd, vertical = AiGaleriDimens.SpaceXs)
+            .semantics { liveRegion = LiveRegionMode.Polite },
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(AiGaleriDimens.SpaceXs),
+    ) {
+        Icon(
+            AppIcons.Info,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.error,
+            modifier = Modifier.size(AiGaleriDimens.IconChevron),
+        )
+        Text(message, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+    }
+}
+
+/** Boşta durumu: basit satırlar (kutu yok, simgesiz dekor yok), satır dokununca istem yazılır ve aranır. */
+@Composable
+private fun SuggestionList(onPick: (String) -> Unit) {
+    Column(
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())
+            .padding(horizontal = AiGaleriDimens.Margin, vertical = AiGaleriDimens.SpaceSm)
+            .testTag(TAG_SUGGESTION_LIST),
+    ) {
+        Text(
+            stringResource(R.string.search_suggestions_title),
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.semantics { heading() },
+        )
+        Text(
+            stringResource(R.string.search_suggestions_subtitle),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = AiGaleriDimens.SpaceXs, bottom = AiGaleriDimens.SpaceSm),
+        )
+        SearchSuggestions.ALL.forEachIndexed { index, suggestion ->
+            if (index > 0) HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            Row(
+                modifier = Modifier.fillMaxWidth()
+                    .heightIn(min = AiGaleriDimens.MinTouchTarget)
+                    .clickable(role = Role.Button, onClickLabel = stringResource(R.string.search_suggestion_action)) { onPick(suggestion) }
+                    .padding(vertical = AiGaleriDimens.SpaceSm),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(AiGaleriDimens.SpaceSm),
+            ) {
+                Icon(
+                    AppIcons.Search,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(AiGaleriDimens.IconSmall),
+                )
+                Text(suggestion, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
             }
         }
+    }
+}
+
+/** "Aranıyor..." satırı, ince belirsiz ilerleme çizgisi ve soluk iskelet grid. */
+@Composable
+private fun LoadingState() {
+    Column(modifier = Modifier.fillMaxSize()) {
+        Text(
+            stringResource(R.string.search_loading),
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = AiGaleriDimens.Margin, vertical = AiGaleriDimens.SpaceSm)
+                .semantics { liveRegion = LiveRegionMode.Polite },
+        )
+        LinearProgressIndicator(
+            modifier = Modifier.fillMaxWidth().heightIn(max = AiGaleriDimens.ProgressLineThin),
+            color = MaterialTheme.colorScheme.primary,
+            trackColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+        )
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(AiGaleriDimens.GridColumns),
+            modifier = Modifier.fillMaxSize().padding(top = AiGaleriDimens.SpaceSm).alpha(SKELETON_ALPHA),
+            userScrollEnabled = false,
+            horizontalArrangement = Arrangement.spacedBy(AiGaleriDimens.Gutter),
+            verticalArrangement = Arrangement.spacedBy(AiGaleriDimens.Gutter),
+        ) {
+            items(SKELETON_CELL_COUNT) {
+                Box(Modifier.aspectRatio(1f).background(MaterialTheme.colorScheme.surfaceContainerHigh))
+            }
+        }
+    }
+}
+
+/** "En yakın eşleşmeler / N fotoğraf" satırı ve kenardan kenara 3 sütunlu 1:1 grid. */
+@Composable
+private fun ResultGrid(status: SearchStatus.Success, onOpenPhoto: (Long) -> Unit) {
+    Column(modifier = Modifier.fillMaxSize()) {
+        Row(
+            modifier = Modifier.fillMaxWidth()
+                .padding(horizontal = AiGaleriDimens.Margin, vertical = AiGaleriDimens.SpaceSm),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(AiGaleriDimens.SpaceSm),
+        ) {
+            Text(
+                stringResource(R.string.search_results_title),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(1f).semantics { heading() },
+            )
+            Text(
+                stringResource(R.string.search_result_count, status.results.size),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(AiGaleriDimens.GridColumns),
+            modifier = Modifier.fillMaxSize().testTag(TAG_RESULT_GRID),
+            contentPadding = WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom).asPaddingValues(),
+            horizontalArrangement = Arrangement.spacedBy(AiGaleriDimens.Gutter),
+            verticalArrangement = Arrangement.spacedBy(AiGaleriDimens.Gutter),
+        ) {
+            items(status.results, key = { it.photoId }) { result ->
+                PhotoImage(
+                    uri = Uri.parse(result.uri),
+                    contentDescription = stringResource(R.string.photo_content_description),
+                    modifier = Modifier.aspectRatio(1f)
+                        .clickable(role = Role.Button, onClickLabel = stringResource(R.string.photo_open_label)) { onOpenPhoto(result.photoId) },
+                )
+            }
+        }
+    }
+}
+
+/** Sonuç yok: kısa açıklama ve indeks durumuna bağlantı (indeks boşken tipik). */
+@Composable
+private fun EmptyState(onOpenIndexStatus: () -> Unit) {
+    CenteredColumn {
+        IconCircle(AppIcons.Search, size = AiGaleriDimens.IconCircleMedium, glyph = AiGaleriDimens.IconCircleMediumGlyph)
+        Text(
+            stringResource(R.string.search_empty),
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+        )
+        Text(
+            stringResource(R.string.search_empty_detail),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
+        TextButton(
+            onClick = onOpenIndexStatus,
+            modifier = Modifier.heightIn(min = AiGaleriDimens.MinTouchTarget).testTag(TAG_EMPTY_INDEX_LINK),
+        ) {
+            Text(stringResource(R.string.search_empty_index_link), style = MaterialTheme.typography.labelLarge)
+            Icon(
+                AppIcons.ArrowForward,
+                contentDescription = null,
+                modifier = Modifier.padding(start = AiGaleriDimens.SpaceXs).size(AiGaleriDimens.IconChevron),
+            )
+        }
+    }
+}
+
+/** Genel hata: hata kapsayıcısında başlık, kısa açıklama ve "Tekrar dene" (aynı istemle yeniden arar). */
+@Composable
+private fun ErrorState(canRetry: Boolean, onRetry: () -> Unit) {
+    val colors = MaterialTheme.colorScheme
+    Column(
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(AiGaleriDimens.Margin),
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().clip(MaterialTheme.shapes.medium).background(colors.errorContainer)
+                .padding(AiGaleriDimens.SpaceMd)
+                .semantics { liveRegion = LiveRegionMode.Polite },
+            verticalArrangement = Arrangement.spacedBy(AiGaleriDimens.SpaceSm),
+        ) {
+            Row(horizontalArrangement = Arrangement.spacedBy(AiGaleriDimens.SpaceSm)) {
+                Icon(AppIcons.ErrorOutline, contentDescription = null, tint = colors.error)
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        stringResource(R.string.search_error),
+                        style = MaterialTheme.typography.titleSmall,
+                        color = colors.onErrorContainer,
+                    )
+                    Text(
+                        stringResource(R.string.search_error_detail),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = colors.onErrorContainer,
+                        modifier = Modifier.padding(top = AiGaleriDimens.SpaceXs),
+                    )
+                }
+            }
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                Button(
+                    onClick = onRetry,
+                    enabled = canRetry,
+                    shape = RoundedCornerShape(AiGaleriDimens.ButtonCorner),
+                    modifier = Modifier.heightIn(min = AiGaleriDimens.MinTouchTarget).testTag(TAG_ERROR_RETRY),
+                ) { Text(stringResource(R.string.search_error_retry), style = MaterialTheme.typography.labelLarge) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CenteredColumn(content: @Composable () -> Unit) {
+    Column(
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())
+            .padding(horizontal = AiGaleriDimens.Margin, vertical = AiGaleriDimens.SpaceLg),
+        verticalArrangement = Arrangement.spacedBy(AiGaleriDimens.SpaceSm, Alignment.CenterVertically),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Column(
+            modifier = Modifier.widthIn(max = AiGaleriDimens.ContentMaxWidth),
+            verticalArrangement = Arrangement.spacedBy(AiGaleriDimens.SpaceSm),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) { content() }
+    }
+}
+
+/** Yuvarlak, tonlu simge kapsayıcısı (boş durum). */
+@Composable
+private fun IconCircle(icon: ImageVector, size: Dp, glyph: Dp) {
+    Box(
+        modifier = Modifier.size(size).background(MaterialTheme.colorScheme.surfaceContainerHigh, CircleShape),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(glyph))
     }
 }
 
@@ -99,9 +454,4 @@ fun SearchContent(
 internal fun invalidQueryMessage(reason: InvalidQueryException.Reason): Int = when (reason) {
     InvalidQueryException.Reason.EMPTY -> R.string.search_invalid_empty
     InvalidQueryException.Reason.TOO_LONG -> R.string.search_invalid_too_long
-}
-
-@Composable
-private fun Message(resId: Int) {
-    Text(stringResource(resId), style = MaterialTheme.typography.bodyLarge)
 }

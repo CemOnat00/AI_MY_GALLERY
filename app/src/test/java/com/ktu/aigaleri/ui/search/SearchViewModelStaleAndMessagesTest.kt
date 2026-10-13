@@ -100,7 +100,7 @@ class SearchViewModelStaleAndMessagesTest {
             assertFalse(m.contains("%")) // istem metni basılmaz
             assertTrue(m.any { it in "çğıöşüÇĞİÖŞÜ" } || m.contains("İstem"))
         }
-        assertTrue(empty.contains("boş"))
+        assertTrue(empty.contains("yaz")) // T-022: "Lütfen bir şey yaz."
         assertTrue(tooLong.contains("uzun"))
     }
 }

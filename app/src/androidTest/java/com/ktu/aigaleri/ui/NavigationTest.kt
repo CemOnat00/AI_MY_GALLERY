@@ -5,6 +5,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -70,7 +71,7 @@ class NavigationTest {
         show(PermissionState.NotRequested)
         rule.runOnUiThread { navController.navigate(Routes.INDEX_STATUS) }
         rule.waitForIdle()
-        rule.onNodeWithText("galeri erişimine izin vermen gerekiyor", substring = true).assertExists()
+        rule.onNodeWithText("galeri erişimine ihtiyaç duyar", substring = true).assertExists()
     }
 
     @Test
@@ -79,7 +80,7 @@ class NavigationTest {
         rule.runOnUiThread { navController.navigate(Routes.viewer(1L)) }
         rule.waitForIdle()
         assertEquals(Routes.VIEWER, route())
-        rule.onNodeWithText("Geri").performClick()
+        rule.onNodeWithContentDescription("Geri").performClick()
         rule.waitForIdle()
         assertEquals(Routes.SEARCH, route())
     }
@@ -127,10 +128,10 @@ class NavigationTest {
     @Test
     fun indexStatus_openFromSearch_thenBack() {
         show(PermissionState.Granted)
-        rule.onNodeWithText("İndeks durumu").performClick()
+        rule.onNodeWithContentDescription("İndeks durumu").performClick()
         rule.waitForIdle()
         assertEquals(Routes.INDEX_STATUS, route())
-        rule.onNodeWithText("Geri").performClick()
+        rule.onNodeWithContentDescription("Geri").performClick()
         rule.waitForIdle()
         assertEquals(Routes.SEARCH, route())
     }

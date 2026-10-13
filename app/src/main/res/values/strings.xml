@@ -1,8 +1,16 @@
 <resources>
     <string name="app_name">Ai-galeri</string>
-    <string name="permission_needed_message">Fotoğraflarını aramak için galeri erişimine izin vermen gerekiyor. Fotoğrafların cihazından çıkmaz.</string>
-    <string name="permission_denied_message">Galeri izni verilmedi. Arama yapabilmek için izin vermelisin.</string>
-    <string name="permission_permanently_denied_message">Galeri izni kalıcı olarak reddedildi. Ayarlar &gt; İzinler bölümünden fotoğraf erişimine izin ver.</string>
+
+    <!-- İzin ekranı (T-022): yüz işlenmez, "yüzler" ifadesi kullanılmaz -->
+    <string name="permission_title_needed">Fotoğraflarınıza erişim izni</string>
+    <string name="permission_title_denied">Galeri izni verilmedi</string>
+    <string name="permission_title_permanently_denied">Galeri izni kapatıldı</string>
+    <string name="permission_needed_message">Ai-galeri, fotoğraflarınızı yalnızca bu cihaz üzerinde arayabilmek için galeri erişimine ihtiyaç duyar. Fotoğraflarınız ve arama verileriniz asla cihazınızdan dışarı çıkmaz; sunucu, bulut veya hesap bağlantısı yoktur.</string>
+    <string name="permission_denied_message">Fotoğraflarınızı arayabilmek için galeri erişimine izin vermeniz gerekiyor. Fotoğraflarınız ve arama verileriniz asla cihazınızdan dışarı çıkmaz; sunucu, bulut veya hesap bağlantısı yoktur.</string>
+    <string name="permission_permanently_denied_message">Galeri izni kalıcı olarak reddedildi. Cihazınızdaki fotoğrafları arayabilmek için Ayarlar üzerinden fotoğraf erişimine izin vermeniz gerekiyor.</string>
+    <string name="permission_badge">Tamamen çevrimdışı ve yerel model</string>
+    <string name="permission_howto_title">Nasıl etkinleştirilir?</string>
+    <string name="permission_howto_body">Ayarlar &gt; İzinler bölümünden fotoğraflara erişime izin verin, sonra uygulamaya dönün.</string>
     <string name="permission_grant_button">İzin ver</string>
     <string name="permission_open_settings_button">Ayarları aç</string>
     <string name="permission_granted_loading">Fotoğraflar sayılıyor…</string>
@@ -11,30 +19,67 @@
         <item quantity="one">%d fotoğraf bulundu</item>
         <item quantity="other">%d fotoğraf bulundu</item>
     </plurals>
-    <string name="search_hint">Ne arıyorsun? (ör. plajda gülen çocuk)</string>
+
+    <!-- Arama ekranı -->
+    <string name="search_hint">Ne arıyorsun? Örn. plajda gülen çocuk</string>
     <string name="search_button">Ara</string>
-    <string name="search_idle">Aramak için bir istem yaz.</string>
-    <string name="search_empty">Eşleşen fotoğraf bulunamadı. Farklı bir istem dene veya indeksin hazır olduğunu kontrol et.</string>
-    <string name="search_error">Arama sırasında bir hata oluştu. Lütfen tekrar dene.</string>
-    <string name="search_invalid_empty">İstem boş görünüyor. Aramak istediğin şeyi yaz (ör. plajda gülen çocuk).</string>
+    <string name="search_clear">Aramayı temizle</string>
+    <string name="search_suggestions_title">Arama önerileri</string>
+    <string name="search_suggestions_subtitle">Cihazınızdaki fotoğrafları doğal cümlelerle arayın.</string>
+    <string name="search_suggestion_action">Bu istemle ara</string>
+    <string name="search_loading">Aranıyor...</string>
+    <string name="search_results_title">En yakın eşleşmeler</string>
+    <string name="search_result_count">%d fotoğraf</string>
+    <string name="search_empty">Eşleşen fotoğraf bulunamadı.</string>
+    <string name="search_empty_detail">Farklı bir istem dene veya indeksin hazır olduğunu kontrol et.</string>
+    <string name="search_empty_index_link">İndeksleme durumunu gör</string>
+    <string name="search_error">Arama şu an yapılamadı.</string>
+    <string name="search_error_detail">Lütfen biraz sonra tekrar dene.</string>
+    <string name="search_error_retry">Tekrar dene</string>
+    <string name="search_invalid_empty">Lütfen bir şey yaz.</string>
     <string name="search_invalid_too_long">İstem çok uzun. Daha kısa bir istem dene.</string>
+    <string name="search_max_length">En fazla %d karakter girebilirsin.</string>
     <string name="photo_content_description">Fotoğraf</string>
-    <string name="viewer_not_found">Fotoğraf bulunamadı. Aramaya dönüp tekrar dene.</string>
+    <string name="photo_open_label">Fotoğrafı büyüt</string>
+
+    <!-- Büyük görünüm -->
+    <string name="viewer_not_found">Fotoğraf bulunamadı</string>
+    <string name="viewer_not_found_detail">Dosya cihazdan silinmiş veya yeri değiştirilmiş olabilir.</string>
+    <string name="viewer_back_action">Geri dön</string>
     <string name="back_button">Geri</string>
+
+    <!-- İndeks durumu -->
     <string name="index_status_open">İndeks durumu</string>
+    <string name="index_overline">Cihaz içi işlem</string>
+    <string name="index_headline_running">Fotoğraf kitaplığı taranıyor</string>
+    <string name="index_headline_waiting">İndeksleme sırada</string>
+    <string name="index_headline_done">İndeksleme güncel</string>
+    <string name="index_headline_partial">Bazı fotoğraflar henüz indekslenmedi</string>
     <string name="index_never_run">İndeksleme henüz çalışmadı.</string>
     <string name="index_status_error">İndeks durumu okunamadı.</string>
-    <string name="index_processed_of_total">%1$d / %2$d fotoğraf işlendi</string>
-    <string name="index_last_run">Son çalışma: %1$s</string>
-    <string name="index_last_run_none">Son çalışma: henüz yok</string>
+    <string name="index_processed_counts">%1$d / %2$d</string>
+    <string name="index_processed_unit">öğe işlendi</string>
+    <string name="index_percent">%%%1$d</string>
+    <string name="index_running_note">İndeksleme arka planda sürüyor; sonuçlar eksik olabilir.</string>
+    <string name="index_done_note">Yeni fotoğraflar uygulamayı açtığında indekslenir.</string>
+    <string name="index_details_title">Dizin ayrıntıları</string>
+    <string name="index_detail_last_run">Son çalışma</string>
+    <string name="index_detail_last_run_none">Henüz yok</string>
+    <string name="index_detail_model">Kullanılan yerel model</string>
+    <string name="index_detail_model_value">CLIP ViT-B/32 (çok dilli metin, int8)</string>
+    <string name="index_detail_storage">Depolama konumu</string>
+    <string name="index_detail_storage_value">Yalnızca uygulama korumalı alanı</string>
     <string name="reindex_button">Yeniden indeksle</string>
     <string name="reindex_unavailable">İndeksleme henüz bağlı değil; yeniden indeksleme şimdilik kullanılamıyor.</string>
     <string name="retry_button">Yeniden dene</string>
     <string name="reindex_failed">Yeniden indeksleme başlatılamadı. Lütfen tekrar dene.</string>
+
+    <!-- İndeksleme bandı ve çalışma durumu (T-016 metinleri aynen korunur) -->
     <string name="indexing_progress">İndeksleniyor (%1$d / %2$d); sonuçlar eksik olabilir. Ayrıntı için dokun.</string>
     <string name="indexing_running">İndeksleniyor; sonuçlar eksik olabilir. Ayrıntı için dokun.</string>
     <string name="indexing_waiting">İndeksleme sırada; birazdan ya da cihaz uygun olunca başlayacak. Sonuçlar eksik olabilir.</string>
     <string name="indexing_banner_open_label">İndeks durumunu aç</string>
+    <string name="indexing_banner_detail">Detay</string>
     <string name="index_run_state_running">Durum: Çalışıyor</string>
     <string name="index_run_state_waiting">Durum: Beklemede; birazdan ya da cihaz uygun olunca başlayacak</string>
 </resources>

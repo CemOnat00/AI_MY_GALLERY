@@ -1,0 +1,4 @@
+<resources>
+    <!-- Koyu tema sistem ayarını izler (T-022); pencere arka planı/durum çubuğu açık temaya düşmesin. -->
+    <style name="Theme.AiGaleri" parent="android:Theme.Material.NoActionBar" />
+</resources>
