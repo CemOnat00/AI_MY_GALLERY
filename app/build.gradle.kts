@@ -20,6 +20,8 @@ android {
 
     buildTypes {
         release {
+            // T-029 (K-13): release yalnızca arm64-v8a; debug tüm ABI'lerde kalır (x86 emülatör için).
+            ndk { abiFilters += "arm64-v8a" }
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
