@@ -67,7 +67,7 @@ import kotlinx.coroutines.withContext
  * sayılır, akış COMPLETED olur). Eşiği aşan fotoğraf `processed`/IndexState'e sayılmaz (akış ondan önce kesilir; ondan
  * önce atlanan çözme hataları sayılır).
  * `OutOfMemoryError`: çözücü kendi çözme OOM'sini fotoğraf hatasına çevirir (bkz. `ContentResolverImageLoader`); kodlayıcı
- * çağrısından yayılan OOM [IndexException.Unexpected] olur (bellek baskısı fotoğrafa özgü değil: atlayıp sürdürmek
+ * çağrısından ve [guarded] sarmalı her işlemden (tarama, loadByIds, vektör kodlama, DAO yazımı) yayılan OOM [IndexException.Unexpected] olur (bellek baskısı fotoğrafa özgü değil: atlayıp sürdürmek
  * aynı hatayı tekrarlar; worker RETRY/geri çekilme ile yeniden dener, kayıtlar korunur). Diğer `Error`'lar yakalanmaz. Taramadan MediaStore'dan kaybolmuş fotoğraf hata sayılmaz: kaydı silinir ve işlenmiş sayılır.
  *
  * IndexState: tarama sonunda (`processed = 0`), her [STATE_WRITE_EVERY] fotoğrafta, bitişte ve (iptal/hata) çıkışta yazılır;
@@ -255,6 +255,9 @@ class RoomPhotoIndexer(
             throw e
         } catch (e: SecurityException) {
             throw IndexException.PermissionMissing()
+        } catch (e: OutOfMemoryError) {
+            // Tek tutarlı yol: kodlayıcı dışındaki OOM (tarama, loadByIds, VectorCodec, DAO yazımı) da kontrollü Unexpected.
+            throw IndexException.Unexpected(e)
         } catch (e: Exception) {
             throw IndexException.Unexpected(e)
         }

@@ -415,10 +415,14 @@ class RoomPhotoIndexerEdgeCaseTest {
         cancelAfterEncodes(e, IndexMode.FULL, 1)
         assertEquals(2, e.db.state!!.fullTargetVersion) // yarım FULL
         // INCREMENTAL kalanı kesintisiz tamamlar: tur kapanır, işaret kalkar (T-015); ara yazımlarda hâlâ 2'dir.
+        val writesBefore = e.db.stateWrites.size
         e.indexer.index().run()
+        val runWrites = e.db.stateWrites.drop(writesBefore)
+        assertTrue(runWrites.size >= 2)
+        assertTrue(runWrites.dropLast(1).all { it.fullTargetVersion == 2 }) // yalnızca bitiş yazımı işareti kaldırır
+        assertNull(runWrites.last().fullTargetVersion)
         assertEquals(setOf(2), e.db.photos.values.map { it.indexVersion }.toSet())
         assertNull(e.db.state!!.fullTargetVersion)
-        assertTrue(e.db.stateWrites.dropLast(1).takeLast(2).all { it.fullTargetVersion == 2 })
         // Sonraki FULL boşa gitmez: yeni tur (3) açar, tüm galeriyi işler, bitince işaret kalkar.
         e.encoder.encoded.clear()
         assertEquals(4, e.indexer.index(IndexMode.FULL).run().last().total)
@@ -494,6 +498,43 @@ class RoomPhotoIndexerEdgeCaseTest {
         assertEquals(1, e.indexer.index(IndexMode.FULL).run().last().total)
         assertEquals(setOf(2), e.db.photos.values.map { it.indexVersion }.toSet())
         assertNull(e.db.state!!.fullTargetVersion)
+    }
+
+    @Test
+    fun incrementalAbortedByError_withPendingFull_keepsMarker() = runTest {
+        for (kind in listOf("modelThreshold", "unexpected", "oomInWrite", "oomInScan", "oomInLoadByIds")) {
+            val n = RoomPhotoIndexer.MAX_MODEL_FAILURES_WITHOUT_SUCCESS + 3
+            val e = env((1L..n.toLong()).toList())
+            e.indexer.index().run()
+            cancelAfterEncodes(e, IndexMode.FULL, 1) // yarım FULL, hedef 2
+            assertEquals(kind, 2, e.db.state!!.fullTargetVersion)
+            when (kind) {
+                "modelThreshold" -> for (id in 1L..n) e.encoder.failures[uri(id)] = ModelException.Inference("run", RuntimeException("ort"))
+                "unexpected" -> e.db.failAllIdsWith = IllegalStateException("disk")
+                "oomInWrite" -> e.db.failEmbeddingUpsertWith = OutOfMemoryError("test")
+                "oomInScan" -> e.source.idsFailure = OutOfMemoryError("test")
+                "oomInLoadByIds" -> Unit
+            }
+            val ex = try {
+                if (kind == "oomInLoadByIds") {
+                    val failing = RoomPhotoIndexer(
+                        FailingBatchSource(e.source.gallery, OutOfMemoryError("test")), e.db.photoDao, e.db.embeddingDao,
+                        e.db.stateDao, e.db.transactions, e.encoder, clock = { now++ },
+                        dispatcher = StandardTestDispatcher(testScheduler),
+                    )
+                    failing.index().run()
+                } else {
+                    e.indexer.index().run()
+                }
+                null
+            } catch (x: IndexException.Unexpected) {
+                x
+            }
+            assertTrue(kind, ex != null)
+            if (kind.startsWith("oom")) assertTrue(kind, causes(ex!!).any { it is OutOfMemoryError })
+            // Hata yolunda IndexState ya hiç yazılmadı (tarama) ya da işaret korunarak yazıldı.
+            assertEquals(kind, 2, e.db.state!!.fullTargetVersion)
+        }
     }
 
     @Test
