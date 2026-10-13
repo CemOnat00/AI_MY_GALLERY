@@ -19,7 +19,12 @@ class ReleaseAbiConfigTest {
     /** `buildTypes { ... }` içindeki `name { ... }` bloğunun gövdesi (süslü parantez dengeli). */
     private fun buildTypeBlock(gradle: String, name: String): String {
         val buildTypes = Regex("buildTypes\\s*\\{").find(gradle)!!
-        val start = Regex("\\b$name\\s*\\{").find(gradle, buildTypes.range.last)?.range?.last ?: return ""
+        return block(gradle, name, buildTypes.range.last)
+    }
+
+    /** `from` konumundan sonraki ilk `name { ... }` gövdesi; blok yoksa boş. */
+    private fun block(gradle: String, name: String, from: Int = 0): String {
+        val start = Regex("\\b$name\\s*\\{").find(gradle, from)?.range?.last ?: return ""
         var depth = 1
         var i = start + 1
         while (i < gradle.length && depth > 0) {
@@ -46,10 +51,14 @@ class ReleaseAbiConfigTest {
     @Test
     fun gradle_debugAndDefaultConfigHaveNoAbiFilter() {
         val gradle = File(appDir, "build.gradle.kts").readText()
-        // abiFilters yalnızca release bloğunda; debug/defaultConfig/splits'te yok (debug tüm ABI).
-        assertEquals(1, Regex("abiFilters").findAll(gradle).count())
-        assertFalse(buildTypeBlock(gradle, "debug").contains("abiFilters"))
-        assertFalse(Regex("\\bsplits\\s*\\{").containsMatchIn(gradle))
+        // Yorum satırları sayılmasın: önce `//` kısmı atılır.
+        val code = gradle.lines().joinToString("\n") { it.substringBefore("//") }
+        // abiFilters yalnızca release bloğunda; defaultConfig/debug/splits'te yok (debug tüm ABI).
+        assertEquals(1, Regex("abiFilters").findAll(code).count())
+        assertFalse(block(code, "defaultConfig").contains("abiFilters"))
+        // Şu an `debug { }` bloğu tanımlı değil (boş döner); ileride eklenirse abiFilters içermemeli.
+        assertFalse(buildTypeBlock(code, "debug").contains("abiFilters"))
+        assertFalse(Regex("\\bsplits\\s*\\{").containsMatchIn(code))
     }
 
     private fun libAbis(apk: File): Set<String> = ZipFile(apk).use { zip ->
@@ -61,14 +70,14 @@ class ReleaseAbiConfigTest {
     @Test
     fun releaseApk_containsOnlyArm64Libs() {
         val apk = File(appDir, "build/outputs/apk/release/app-release-unsigned.apk")
-        assumeTrue("assembleRelease çalışmadı: release APK yok", apk.isFile)
+        assumeTrue("release APK yok (bayat APK uyarısı: yalnızca assembleRelease sonrası geçerli)", apk.isFile)
         assertEquals(setOf("arm64-v8a"), libAbis(apk))
     }
 
     @Test
     fun debugApk_keepsAllAbis() {
         val apk = File(appDir, "build/outputs/apk/debug/app-debug.apk")
-        assumeTrue("assembleDebug çalışmadı: debug APK yok", apk.isFile)
+        assumeTrue("debug APK yok (bayat APK uyarısı: yalnızca assembleDebug sonrası geçerli)", apk.isFile)
         assertEquals(setOf("arm64-v8a", "armeabi-v7a", "x86", "x86_64"), libAbis(apk))
     }
 }

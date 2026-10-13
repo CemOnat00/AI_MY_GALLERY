@@ -113,4 +113,4 @@ onnxruntime-android AAR'ı Microsoft telemetri istemcisini içerir (`ai.onnxrunt
 
 ## APK boyutu ve ABI (ileri aşama kararı)
 
-Debug APK şu an yaklaşık 375 MB: 4 ABI (arm64-v8a, armeabi-v7a, x86, x86_64) ORT yerel kütüphaneleri (~135 MB) + ~226 MB model. `abiFilters += "arm64-v8a"` ile ~100 MB kazanılır ama arm32 cihazlar ve x86 emülatör çalışmaz; bu karar ileri aşamaya bırakıldı ve `build.gradle.kts`'de UYGULANMADI (model-research.md 5.2).
+Debug APK yaklaşık 375 MB: 4 ABI (arm64-v8a, armeabi-v7a, x86, x86_64) ORT yerel kütüphaneleri (~135 MB) + ~226 MB model. T-029 ile `abiFilters += "arm64-v8a"` YALNIZCA release'e uygulandı (release ~261 MB, debug tüm ABI ve ~375 MB); arm32 ve x86 cihazlar release APK'yı kuramaz. Ayrıntı, ölçüm ve dışarıda kalanlar: [release-abi.md](release-abi.md) (model-research.md 5.2).
