@@ -86,6 +86,23 @@ class NavigationTest {
     }
 
     @Test
+    fun viewer_routeWithDate_showsDateRow() {
+        show(PermissionState.Granted)
+        rule.runOnUiThread { navController.navigate(Routes.viewer(1L, 1_790_000_000_000L)) }
+        rule.waitForIdle()
+        assertEquals(Routes.VIEWER, route())
+        rule.onNodeWithTag(com.ktu.aigaleri.ui.viewer.TAG_VIEWER_DATE).assertExists()
+    }
+
+    @Test
+    fun viewer_routeWithoutDate_hasNoDateRow() {
+        show(PermissionState.Granted)
+        rule.runOnUiThread { navController.navigate(Routes.viewer(1L)) }
+        rule.waitForIdle()
+        rule.onNodeWithTag(com.ktu.aigaleri.ui.viewer.TAG_VIEWER_DATE).assertDoesNotExist()
+    }
+
+    @Test
     fun backButtonTwice_onViewer_doesNotEmptyTheStack() {
         show(PermissionState.Granted)
         rule.runOnUiThread { navController.navigate(Routes.viewer(1L)) }

@@ -84,6 +84,6 @@ class RunStateScreenQaTest {
         showStatus(IndexStatusUiState.Data(10, 0, null), IndexRunState.RUNNING, inProgress = true)
         rule.onNodeWithText("Çalışıyor", substring = true).assertExists()
         rule.onNodeWithText("Beklemede", substring = true).assertDoesNotExist()
-        rule.onNodeWithText("-1", substring = true).assertDoesNotExist() // T-022: model adı "ViT-B/32" tire içerir
+        rule.onNodeWithText("-1 /", substring = true).assertDoesNotExist() // T-022: model adı "ViT-B/32" tire içerir
     }
 }

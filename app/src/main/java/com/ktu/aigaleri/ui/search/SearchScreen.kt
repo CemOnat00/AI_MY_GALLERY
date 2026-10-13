@@ -44,7 +44,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
@@ -76,8 +81,6 @@ const val TAG_EMPTY_INDEX_LINK = "empty_index_link"
 const val TAG_ERROR_RETRY = "search_error_retry"
 
 private const val SKELETON_CELL_COUNT = 12
-private const val DISABLED_ALPHA = 0.38f
-private const val SKELETON_ALPHA = 0.35f
 
 /**
  * Durumsuz arama ekranı (T-022 tasarımı): pill arama alanı, indeksleme bandı ve duruma göre örnek istemler /
@@ -125,7 +128,11 @@ fun SearchContent(
                 modifier = Modifier.padding(horizontal = AiGaleriDimens.Margin, vertical = AiGaleriDimens.SpaceSm),
             )
         }
-        Box(modifier = Modifier.fillMaxSize()) {
+        // Klavye (IME) ve gezinti çubuğu içeriği örtmesin; sonuç grid'i kenardan kenara kaydığı için kendi alt boşluğunu
+        // (contentPadding) kullanır, bu yüzden boşluk yalnızca grid dışı durumlara uygulanır.
+        val bottomInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom)
+        val isGrid = state.status is SearchStatus.Success
+        Box(modifier = Modifier.fillMaxSize().then(if (isGrid) Modifier else Modifier.windowInsetsPadding(bottomInsets))) {
             when (val status = state.status) {
                 SearchStatus.Idle, is SearchStatus.InvalidQuery -> SuggestionList(
                     onPick = { suggestion ->
@@ -153,10 +160,13 @@ private fun SearchPill(
 ) {
     val colors = MaterialTheme.colorScheme
     val hint = stringResource(R.string.search_hint)
+    val focusRequester = remember { FocusRequester() }
     Row(
         modifier = modifier.heightIn(min = AiGaleriDimens.SearchBarHeight)
             .clip(RoundedCornerShape(AiGaleriDimens.SearchBarCorner))
-            .background(colors.surfaceContainer),
+            .background(colors.surfaceContainer)
+            // Pill'in boş kısmına dokununca da odak gelir (tıklama semantiği eklemeden).
+            .pointerInput(Unit) { detectTapGestures { focusRequester.requestFocus() } },
         verticalAlignment = Alignment.CenterVertically,
     ) {
         IconButton(
@@ -165,7 +175,7 @@ private fun SearchPill(
             modifier = Modifier.testTag(TAG_SEARCH_BUTTON),
             colors = IconButtonDefaults.iconButtonColors(
                 contentColor = colors.primary,
-                disabledContentColor = colors.onSurfaceVariant.copy(alpha = DISABLED_ALPHA),
+                disabledContentColor = colors.onSurfaceVariant.copy(alpha = AiGaleriDimens.DisabledContentAlpha),
             ),
         ) {
             Icon(AppIcons.Search, contentDescription = stringResource(R.string.search_button))
@@ -174,6 +184,8 @@ private fun SearchPill(
             value = state.query,
             onValueChange = onQueryChange,
             modifier = Modifier.weight(1f)
+                .heightIn(min = AiGaleriDimens.MinTouchTarget)
+                .focusRequester(focusRequester)
                 .testTag(TAG_QUERY_FIELD)
                 .onFocusChanged { if (it.isFocused) onQueryFocused() }
                 .semantics { if (state.query.isEmpty()) contentDescription = hint },
@@ -183,7 +195,10 @@ private fun SearchPill(
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
             keyboardActions = KeyboardActions(onSearch = { if (state.canSearch) onSearch() }),
             decorationBox = { innerTextField ->
-                Box(contentAlignment = Alignment.CenterStart) {
+                Box(
+                    modifier = Modifier.fillMaxWidth().heightIn(min = AiGaleriDimens.MinTouchTarget),
+                    contentAlignment = Alignment.CenterStart,
+                ) {
                     if (state.query.isEmpty()) {
                         Text(
                             text = hint,
@@ -297,7 +312,7 @@ private fun LoadingState() {
         )
         LazyVerticalGrid(
             columns = GridCells.Fixed(AiGaleriDimens.GridColumns),
-            modifier = Modifier.fillMaxSize().padding(top = AiGaleriDimens.SpaceSm).alpha(SKELETON_ALPHA),
+            modifier = Modifier.fillMaxSize().padding(top = AiGaleriDimens.SpaceSm).alpha(AiGaleriDimens.SkeletonAlpha),
             userScrollEnabled = false,
             horizontalArrangement = Arrangement.spacedBy(AiGaleriDimens.Gutter),
             verticalArrangement = Arrangement.spacedBy(AiGaleriDimens.Gutter),

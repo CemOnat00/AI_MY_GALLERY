@@ -99,7 +99,7 @@ class DesignContentTest {
 
     @Test
     fun bannerTexts_t016_areKeptVerbatim() {
-        assertEquals("İndeksleniyor (%1\$d / %2\$d); sonuçlar eksik olabilir. Ayrıntı için dokun.", text("indexing_progress"))
+        assertEquals("İndeksleniyor (%1\$s / %2\$s); sonuçlar eksik olabilir. Ayrıntı için dokun.", text("indexing_progress"))
         assertEquals("İndeksleniyor; sonuçlar eksik olabilir. Ayrıntı için dokun.", text("indexing_running"))
         assertEquals("İndeksleme sırada; birazdan ya da cihaz uygun olunca başlayacak. Sonuçlar eksik olabilir.", text("indexing_waiting"))
         assertEquals("Durum: Çalışıyor", text("index_run_state_running"))
@@ -141,7 +141,7 @@ class DesignContentTest {
         val all = uiSources().joinToString("\n") { it.readText() }
         // Alt gezinti, profil avatarı, oynat/önceki/sonraki, tema anahtarı yok.
         for (word in listOf("NavigationBar", "BottomAppBar", "NavigationBarItem", "PlayArrow", "SkipNext", "SkipPrevious", "Avatar", "AccountCircle")) {
-            assertFalse("uygulanmayan öğe: $word", all.contains(word))
+            assertFalse("uygulanmayan öğe: $word", Regex("\\b$word\\b").containsMatchIn(all)) // tam sözcük: isAppearanceLightNavigationBars serbest
         }
         // Yeni bağımlılık: ikon kütüphanesi eklenmedi.
         val gradle = File(appDir, "build.gradle.kts").readText()

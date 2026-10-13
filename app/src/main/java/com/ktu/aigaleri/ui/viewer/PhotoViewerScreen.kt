@@ -1,5 +1,6 @@
 package com.ktu.aigaleri.ui.viewer
 
+import android.app.Activity
 import android.content.ContentUris
 import android.net.Uri
 import android.provider.MediaStore
@@ -7,6 +8,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -24,6 +26,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -31,6 +34,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
@@ -38,7 +42,9 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
+import androidx.core.view.WindowCompat
 import com.ktu.aigaleri.R
+import com.ktu.aigaleri.ui.formatDateTime
 import com.ktu.aigaleri.ui.image.PhotoImage
 import com.ktu.aigaleri.ui.theme.AiGaleriDimens
 import com.ktu.aigaleri.ui.theme.AiGaleriExtras
@@ -46,6 +52,7 @@ import com.ktu.aigaleri.ui.theme.AppIcons
 
 const val TAG_VIEWER_NOT_FOUND = "viewer_not_found"
 const val TAG_VIEWER_BACK = "viewer_back"
+const val TAG_VIEWER_DATE = "viewer_date"
 
 /**
  * Fotoğrafın MediaStore URI'si; veri katmanıyla ([com.ktu.aigaleri.data.MediaStorePhotoSource]) aynı
@@ -57,14 +64,19 @@ fun mediaStoreImageUri(photoId: Long): Uri =
 /** [photoId] null veya geçersizse (<= 0) fotoğraf aranmaz, doğrudan "bulunamadı" gösterilir. */
 internal fun isValidPhotoId(photoId: Long?): Boolean = photoId != null && photoId > 0
 
+/** "Bulunamadı" durumu: kimlik geçersiz ya da görüntü yüklenemedi (dosya silinmiş/taşınmış/okunamıyor). */
+internal fun isViewerNotFound(photoId: Long?, loadFailed: Boolean): Boolean = !isValidPhotoId(photoId) || loadFailed
+
 /**
- * Tek fotoğraf tam ekran, koyu tuval üzerinde (T-022). Geri oku her durumda görünür. Kimlik geçersizse veya
- * görüntü yüklenemezse (dosya silinmiş/taşınmış) "Fotoğraf bulunamadı" açıklaması ve "Geri dön" gösterilir.
+ * Tek fotoğraf tam ekran, koyu tuval üzerinde (T-022). Geri oku her durumda görünür; [dateTaken] (epoch ms) biliniyorsa
+ * yerel (tr) biçimde yanında gösterilir, null ise tarih satırı yoktur. Kimlik geçersizse veya görüntü yüklenemezse
+ * (dosya silinmiş/taşınmış olabilir) "Fotoğraf bulunamadı" açıklaması ve "Geri dön" gösterilir.
  */
 @Composable
-fun PhotoViewerScreen(photoId: Long?, onBack: () -> Unit) {
+fun PhotoViewerScreen(photoId: Long?, onBack: () -> Unit, dateTaken: Long? = null) {
+    LightStatusBarIconsOnDarkCanvas()
     var loadFailed by remember(photoId) { mutableStateOf(false) }
-    val notFound = !isValidPhotoId(photoId) || loadFailed
+    val notFound = isViewerNotFound(photoId, loadFailed)
     Box(modifier = Modifier.fillMaxSize().background(AiGaleriExtras.ViewerCanvas)) {
         if (!notFound && photoId != null) {
             PhotoImage(
@@ -78,16 +90,53 @@ fun PhotoViewerScreen(photoId: Long?, onBack: () -> Unit) {
         } else {
             NotFound(onBack)
         }
-        IconButton(
-            onClick = onBack,
-            modifier = Modifier.align(Alignment.TopStart).statusBarsPadding().padding(AiGaleriDimens.SpaceSm)
-                .testTag(TAG_VIEWER_BACK),
-            colors = IconButtonDefaults.iconButtonColors(
-                containerColor = AiGaleriExtras.ViewerScrim,
-                contentColor = AiGaleriExtras.OnViewerCanvas,
-            ),
+        Row(
+            modifier = Modifier.align(Alignment.TopStart).statusBarsPadding().padding(AiGaleriDimens.SpaceSm),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(AiGaleriDimens.SpaceSm),
         ) {
-            Icon(AppIcons.ArrowBack, contentDescription = stringResource(R.string.back_button))
+            IconButton(
+                onClick = onBack,
+                modifier = Modifier.testTag(TAG_VIEWER_BACK),
+                colors = IconButtonDefaults.iconButtonColors(
+                    containerColor = AiGaleriExtras.ViewerScrim,
+                    contentColor = AiGaleriExtras.OnViewerCanvas,
+                ),
+            ) {
+                Icon(AppIcons.ArrowBack, contentDescription = stringResource(R.string.back_button))
+            }
+            if (dateTaken != null) {
+                Text(
+                    text = formatDateTime(dateTaken),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = AiGaleriExtras.OnViewerCanvas,
+                    modifier = Modifier.background(AiGaleriExtras.ViewerScrim, MaterialTheme.shapes.small)
+                        .padding(horizontal = AiGaleriDimens.SpaceSm, vertical = AiGaleriDimens.SpaceXs)
+                        .testTag(TAG_VIEWER_DATE),
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Koyu tuvalde durum/gezinti çubuğu simgeleri açık renkli olur; ekrandan çıkınca önceki görünüme dönülür
+ * (diğer ekranlar temanın açık/koyu durumuna göre kendi simge rengini kullanır).
+ */
+@Composable
+private fun LightStatusBarIconsOnDarkCanvas() {
+    val view = LocalView.current
+    if (view.isInEditMode) return
+    DisposableEffect(view) {
+        val window = (view.context as? Activity)?.window
+        val controller = window?.let { WindowCompat.getInsetsController(it, view) }
+        val previousStatus = controller?.isAppearanceLightStatusBars
+        val previousNav = controller?.isAppearanceLightNavigationBars
+        controller?.isAppearanceLightStatusBars = false
+        controller?.isAppearanceLightNavigationBars = false
+        onDispose {
+            if (previousStatus != null) controller.isAppearanceLightStatusBars = previousStatus
+            if (previousNav != null) controller.isAppearanceLightNavigationBars = previousNav
         }
     }
 }

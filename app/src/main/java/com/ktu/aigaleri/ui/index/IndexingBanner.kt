@@ -26,10 +26,9 @@ import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import com.ktu.aigaleri.R
 import com.ktu.aigaleri.ui.IndexRunState
+import com.ktu.aigaleri.ui.formatCount
 import com.ktu.aigaleri.ui.theme.AiGaleriDimens
 import com.ktu.aigaleri.ui.theme.AppIcons
 
@@ -95,13 +94,11 @@ fun IndexingBannerContent(banner: IndexingBanner, onOpen: () -> Unit, modifier: 
                 Text(
                     text = when {
                         banner.waiting -> stringResource(R.string.indexing_waiting)
-                        processed != null && total != null -> stringResource(R.string.indexing_progress, processed, total)
+                        processed != null && total != null -> stringResource(R.string.indexing_progress, formatCount(processed), formatCount(total))
                         else -> stringResource(R.string.indexing_running)
                     },
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 3,
-                    overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f),
                 )
                 Text(
@@ -123,7 +120,7 @@ fun IndexingBannerContent(banner: IndexingBanner, onOpen: () -> Unit, modifier: 
                     color = MaterialTheme.colorScheme.primary,
                     trackColor = MaterialTheme.colorScheme.surfaceContainerHighest,
                     strokeCap = StrokeCap.Round,
-                    gapSize = 0.dp,
+                    gapSize = AiGaleriDimens.ProgressGap,
                     drawStopIndicator = {},
                 )
             }

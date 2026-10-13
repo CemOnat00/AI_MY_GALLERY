@@ -324,7 +324,7 @@ class MainViewModelIndexingEdgeCaseTest {
         // T-016: çalışıyor / beklemede metinleri ayrıldı; "sürüyor veya sırada" belirsiz metni kalktı.
         assertTrue(strings.contains("İndeksleniyor; sonuçlar eksik olabilir"))
         assertTrue(strings.contains("İndeksleme sırada; birazdan ya da cihaz uygun olunca başlayacak. Sonuçlar eksik olabilir."))
-        assertTrue(strings.contains("(%1\$d / %2\$d)"))
+        assertTrue(strings.contains("(%1\$s / %2\$s)")) // T-022: sayılar formatCount ile biçimlenir (1.200)
     }
 
     @Test

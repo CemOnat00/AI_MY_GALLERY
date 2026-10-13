@@ -57,7 +57,7 @@
     <string name="index_headline_partial">Bazı fotoğraflar henüz indekslenmedi</string>
     <string name="index_never_run">İndeksleme henüz çalışmadı.</string>
     <string name="index_status_error">İndeks durumu okunamadı.</string>
-    <string name="index_processed_counts">%1$d / %2$d</string>
+    <string name="index_processed_counts">%1$s / %2$s</string>
     <string name="index_processed_unit">öğe işlendi</string>
     <string name="index_percent">%%%1$d</string>
     <string name="index_running_note">İndeksleme arka planda sürüyor; sonuçlar eksik olabilir.</string>
@@ -75,7 +75,7 @@
     <string name="reindex_failed">Yeniden indeksleme başlatılamadı. Lütfen tekrar dene.</string>
 
     <!-- İndeksleme bandı ve çalışma durumu (T-016 metinleri aynen korunur) -->
-    <string name="indexing_progress">İndeksleniyor (%1$d / %2$d); sonuçlar eksik olabilir. Ayrıntı için dokun.</string>
+    <string name="indexing_progress">İndeksleniyor (%1$s / %2$s); sonuçlar eksik olabilir. Ayrıntı için dokun.</string>
     <string name="indexing_running">İndeksleniyor; sonuçlar eksik olabilir. Ayrıntı için dokun.</string>
     <string name="indexing_waiting">İndeksleme sırada; birazdan ya da cihaz uygun olunca başlayacak. Sonuçlar eksik olabilir.</string>
     <string name="indexing_banner_open_label">İndeks durumunu aç</string>

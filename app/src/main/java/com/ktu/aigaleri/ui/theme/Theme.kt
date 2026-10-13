@@ -120,7 +120,7 @@ object AiGaleriExtras {
     val ViewerScrim = Color(0x99000000)
 }
 
-// ---- Tipografi: Roboto / sistem sans (Roboto Flex cihazda yoksa Roboto); SERİF DEĞİL ----
+// ---- Tipografi: sistem sans-serif (çoğu cihazda Roboto; Roboto Flex gömülmez); SERİF DEĞİL ----
 private val AppFontFamily: FontFamily = FontFamily.SansSerif
 
 private fun type(sizeSp: Int, lineSp: Int, weight: Int, letterSpacingSp: Float = 0f) = TextStyle(
@@ -170,12 +170,19 @@ object AiGaleriDimens {
 
     const val GridColumns: Int = 3
 
+    /** Devre dışı simge/içerik opaklığı (Material 3 devre dışı içerik: %38). */
+    const val DisabledContentAlpha: Float = 0.38f
+
+    /** Yükleniyor iskelet grid'inin soluk opaklığı. */
+    const val SkeletonAlpha: Float = 0.35f
+
     val TopBarHeight: Dp = 64.dp
     val SearchBarHeight: Dp = 56.dp
     val SearchBarCorner: Dp = 28.dp
     val ButtonCorner: Dp = 20.dp
     val ProgressLineThin: Dp = 2.dp
     val ProgressLine: Dp = 4.dp
+    val ProgressGap: Dp = 0.dp
     val StatusDot: Dp = 8.dp
     val IconSmall: Dp = 18.dp
     val IconChevron: Dp = 16.dp

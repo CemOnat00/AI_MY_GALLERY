@@ -1,7 +1,15 @@
 package com.ktu.aigaleri.ui
 
 import androidx.compose.ui.test.assertHeightIsAtLeast
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.unit.Density
+import com.ktu.aigaleri.ui.index.IndexingBanner
+import com.ktu.aigaleri.ui.index.IndexingBannerContent
+import com.ktu.aigaleri.ui.index.TAG_INDEXING_BANNER
+import com.ktu.aigaleri.ui.viewer.TAG_VIEWER_DATE
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.assertWidthIsAtLeast
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -198,5 +206,57 @@ class DesignScreensTest {
         rule.onNodeWithTag(TAG_BACK_BUTTON).assertHeightIsAtLeast(48.dp).performClick()
         assertTrue(retried)
         assertEquals(1, backs)
+    }
+
+    @Test
+    fun viewer_showsDate_onlyWhenKnown() {
+        rule.setContent { AiGaleriTheme { PhotoViewerScreen(photoId = 1L, onBack = {}, dateTaken = 1_790_000_000_000L) } }
+        rule.onNodeWithTag(TAG_VIEWER_DATE).assertExists()
+    }
+
+    @Test
+    fun viewer_withoutDate_hidesDateRow() {
+        rule.setContent { AiGaleriTheme { PhotoViewerScreen(photoId = 1L, onBack = {}) } }
+        rule.onNodeWithTag(TAG_VIEWER_DATE).assertDoesNotExist()
+    }
+
+    @Test
+    fun viewer_unreadablePhoto_eventuallyShowsNotFound() {
+        // Var olmayan MediaStore kimliği: Coil yükleyemez, onError "bulunamadı" durumunu açar.
+        rule.setContent { AiGaleriTheme { PhotoViewerScreen(photoId = 987_654_321L, onBack = {}) } }
+        rule.waitUntil(timeoutMillis = 10_000) {
+            rule.onAllNodesWithTag(TAG_VIEWER_NOT_FOUND).fetchSemanticsNodes().isNotEmpty()
+        }
+        rule.onNodeWithText("Fotoğraf bulunamadı").assertExists()
+    }
+
+    @Test
+    fun bigFont_bannerGrowsInsteadOfClipping_andKeepsFullText() {
+        rule.setContent {
+            val base = LocalDensity.current
+            CompositionLocalProvider(LocalDensity provides Density(base.density, fontScale = 2f)) {
+                AiGaleriTheme { IndexingBannerContent(IndexingBanner(null, null, waiting = true), onOpen = {}) }
+            }
+        }
+        rule.onNodeWithTag(TAG_INDEXING_BANNER).assertHeightIsAtLeast(48.dp)
+        rule.onNodeWithText("Sonuçlar eksik olabilir.", substring = true).assertExists()
+    }
+
+    @Test
+    fun bigFont_indexStatusButtonsStayReachable() {
+        rule.setContent {
+            val base = LocalDensity.current
+            CompositionLocalProvider(LocalDensity provides Density(base.density, fontScale = 2f)) {
+                AiGaleriTheme {
+                    IndexStatusContent(
+                        IndexStatusUiState.Data(total = 1200, processed = 340, lastRunAt = null),
+                        reindexAvailable = true, reindexInProgress = false,
+                        onReindex = {}, onRetry = {}, onBack = {},
+                    )
+                }
+            }
+        }
+        rule.onNodeWithTag(TAG_REINDEX_BUTTON).assertHeightIsAtLeast(48.dp)
+        rule.onNodeWithText("340 / 1.200").assertExists()
     }
 }

@@ -45,10 +45,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.ktu.aigaleri.R
 import com.ktu.aigaleri.ui.IndexRunState
+import com.ktu.aigaleri.ui.TURKISH
+import com.ktu.aigaleri.ui.formatCount
+import com.ktu.aigaleri.ui.formatDateTime
 import com.ktu.aigaleri.ui.theme.AiGaleriDimens
 import com.ktu.aigaleri.ui.theme.AppIcons
-import java.text.DateFormat
-import java.util.Date
 import java.util.Locale
 
 const val TAG_REINDEX_BUTTON = "reindex_button"
@@ -56,12 +57,8 @@ const val TAG_RETRY_BUTTON = "retry_button"
 const val TAG_RUN_STATE = "index_run_state"
 const val TAG_BACK_BUTTON = "index_back_button"
 
-/** Arayüz dili Türkçedir; tarih biçimi cihaz dilinden bağımsız Türkçe olur. */
-private val TURKISH: Locale = Locale.forLanguageTag("tr-TR")
-
 /** "6 Eki 2026 14:32" biçimi (tarih orta, saat kısa). */
-internal fun formatLastRun(epochMillis: Long, locale: Locale = TURKISH): String =
-    DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT, locale).format(Date(epochMillis))
+internal fun formatLastRun(epochMillis: Long, locale: Locale = TURKISH): String = formatDateTime(epochMillis, locale)
 
 /** Yüzde (0..100, aşağı yuvarlanır: yalnızca tamamlanınca %100). */
 internal fun percentOf(fraction: Float): Int = (fraction.coerceIn(0f, 1f) * 100).toInt()
@@ -236,7 +233,7 @@ private fun ProgressBlock(state: IndexStatusUiState.Data) {
             horizontalArrangement = Arrangement.spacedBy(AiGaleriDimens.SpaceSm),
         ) {
             Text(
-                stringResource(R.string.index_processed_counts, state.processed, state.total),
+                stringResource(R.string.index_processed_counts, formatCount(state.processed), formatCount(state.total)),
                 style = MaterialTheme.typography.headlineSmall,
                 color = colors.onSurface,
             )
@@ -258,7 +255,7 @@ private fun ProgressBlock(state: IndexStatusUiState.Data) {
             color = colors.primary,
             trackColor = colors.surfaceVariant,
             strokeCap = StrokeCap.Round,
-            gapSize = 0.dp,
+            gapSize = AiGaleriDimens.ProgressGap,
             drawStopIndicator = {},
         )
     }
