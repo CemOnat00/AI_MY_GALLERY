@@ -102,7 +102,7 @@ class AppDependencies private constructor(context: Context) {
     val indexLauncher: IndexLauncher by lazy { WorkManagerIndexLauncher(WorkManager.getInstance(appContext)) }
 
     init {
-        // Arka plana alınınca/bellek baskısında metin oturumunu bırak (süreç boyunca ~135 MB tutma).
+        // Arka plana alınınca/bellek baskısında metin oturumunu bırak (süreç boyunca ~97 MB tutma).
         appContext.registerComponentCallbacks(
             TextSessionTrimHandler(
                 scope = CoroutineScope(SupervisorJob() + Dispatchers.Default),

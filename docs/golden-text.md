@@ -65,7 +65,7 @@ Yorum:
 
 ## Budama (T-027) ve sonraki değişiklikler için kapılar
 
-T-027 (Katman A) bu kapıların HEPSİNİ geçti; ölçümler, sentetik küme ve yöntem: [vocab-pruning.md](vocab-pruning.md). Aşağıdaki liste sonraki değişiklikler (T-028 mmap, T-030 .ort) için de geçerlidir.
+T-027 (Katman A) bu kapıların HEPSİNİ geçti; ölçümler, sentetik küme ve yöntem: [vocab-pruning.md](vocab-pruning.md). Token METNİ kapıları (1-2) temiz klonda da, depodaki `original_vocab.txt.gz` ile `PrunedVocabEquivalenceTest`te çalışır; kosinüs ve top-K (3-4) ONNX gerektirdiğinden yalnızca geliştirici makinesinde (`verify_pruned_text.py`). Aşağıdaki liste sonraki değişiklikler (T-028 mmap, T-030 .ort) için de geçerlidir.
 
 Hepsi ORİJİNAL referansa karşı, aynı 76 sorgu (T-027 ayrıca büyük TR/EN korpus):
 0. KAPI ÇALIŞTI MI: `GoldenTextTest` asıl kapısı (`tokenTexts_equalGolden_forAllGoldenQueries`, 76 sorgu) ve `unkCountAndRate_doNotExceedGoldenBaseline` sözlük dosyası yoksa `assumeTrue` ile ATLANIR. T-027 kapısı çalıştırılırken test raporunda GoldenTextTest için `skipped` sayısının 0 olduğuna bakılmalıdır; atlanmış kapı geçmiş sayılmaz. (`originalVocab_goldenIdsMatchExactly...` budanmış sözlükte KASITLI atlanır: beklenen skipped = 1.)

@@ -20,10 +20,13 @@ asagidakilerden olan tokenlar (`##` oneki atilarak bakilir, bos kalan atilir):
   - Latin betigi harfi (unicodedata adinda "LATIN" sozcugu: Turkce c g i o s u, a-circumflex, i-circumflex, u-circumflex,
     buyuk/kucuk harfler, diger aksanli Latin harfleri, fullwidth Latin dahil),
   - rakamlar (unicodedata kategorisi Nd: ASCII 0-9 ve diger betiklerin/fullwidth rakamlari; rakam tokenlari betikten bagimsiz),
-  - ASCII yazdirilabilir noktalama/sembol, Latin-1 noktalama/sembol (U+00A1-U+00BF, x, /), bosluk-uyumlu modifier harfler
-    (U+02B0-U+02FF), birlestirici isaretler (U+0300-U+036F), fonetik ek (U+1D00-U+1DFF), genel noktalama/ust-alt
-    simge/para birimi/ok/matematik/sekil/dingbat (U+2000-U+2BFF).
-Kiril, Yunan, Arapca, Ibrani, Hint dilleri, CJK, Hangul, Kana, Tay, Ermeni, Gurcu vb. harfi iceren token atilir.
+  - TUM noktalama ve semboller (unicodedata kategorisi P* ve S*: tam genisliklu ! ( ) ? , : ; @, CJK ve Arapca/Ermenice/
+    Devanagari noktalamasi dahil; BERT bunlari tek basina sozcuk yapar, atilsalar orijinalde 1 token olan karakter [UNK] olurdu),
+  - ayrica ASCII yazdirilabilir (U+0021-007E), Latin-1 noktalama/sembol (U+00A1-00BF, x, /), modifier harfler
+    (U+02B0-02FF), birlestirici isaretler (U+0300-036F), fonetik ek (U+1D00-1DFF), genel noktalama/ust-alt simge/para
+    birimi/ok/matematik/sekil/dingbat (U+2000-2BFF).
+ATILAN: yalnizca Latin DISI HARFLI (Kiril, Yunan, Arapca, Ibrani, Hint dilleri, CJK, Hangul, Kana, Tay, Ermeni, Gurcu vb.
+harf veya o betiklerin isaretlerini iceren) tokenlar ve [unusedN].
 
 Neden Latin icin YAPISAL OLARAK kayipsiz: WordPiece her konumda sozcugun alt dizgesine uyan EN UZUN sozluk girdisini
 secer. Alt dizge yalnizca tutulan siniftan karakterler iceriyorsa uyabilecek her token da yalnizca o karakterlerden
@@ -31,7 +34,8 @@ olusur, yani tutulur; secim ve parcalama degismez. Karakter-bazli bir kural oldu
 (kapi testleri bunu ayrica olcer). Karisik betikli sozcuklerde (ornegin Latin+Kiril) sonuc degisir; bu K-14'te kabul edildi.
 
 Guvenlik: ag yok; yalnizca kendi gecici dosyalarini (`*.tmp-<pid>`) siler; ciktilar gecici dosya + os.replace ile
-atomik yazilir; orijinal dosyalara yazilmaz; sabit dosya adlari (yol gezintisi yok). Idempotent: ayni girdi, ayni bayt.
+atomik yazilir (once iki gecici dosya, sonra iki os.replace; ikincisi basarisiz olursa uyumsuz cift birakilmaz, hedefler
+silinir); cikti SHA-256'lari yazmadan once dogrulanir (uyusmazlikta cikis kodu 1, hicbir sey yazilmaz); orijinal dosyalara yazilmaz; sabit dosya adlari (yol gezintisi yok). Idempotent: ayni girdi, ayni bayt.
 
 Kullanim:
   python3 -I tools/prune_text_model.py --orig-dir DIR --out-dir DIR [--keep-list DOSYA]
@@ -53,8 +57,11 @@ ORIG_ONNX_SHA = "3bed77e83926519660b5c0833cb3321cfde952331edec4f7d501c7d384b8a8a
 ORIG_VOCAB_SHA = "fe0fda7c425b48c516fc8f160d594c8022a0808447475c1a7c6d6479763f310c"
 ORIG_VOCAB_LINES = 119547
 HIDDEN = 768
+# BUDANMIS cikti SHA-256'lari (ml/ModelManifest.kt ve fetch_models.sh ile ayni; ModelConfigTest esitligi denetler).
+PRUNED_ONNX_SHA = "0dc4e4acba0cbdc6102a305253101a1a9c0633c13496fa0686245b5dd938dbf7"
+PRUNED_VOCAB_SHA = "df01274b364c59156c453aa006ecf4fbf93b5fabe235375a1bb07f760e97e825"
 # Katman A sonucu (Python unicodedata surumune bagli sapmayi yakalar; bkz. docs/vocab-pruning.md).
-EXPECTED_KEPT = 69_642
+EXPECTED_KEPT = 69_830
 
 SPECIALS = ("[PAD]", "[UNK]", "[CLS]", "[SEP]", "[MASK]")
 _COMMON_RANGES = (
@@ -73,7 +80,8 @@ def keep_char(c):
     cp = ord(c)
     if "LATIN" in unicodedata.name(c, "").split(" "):
         return True
-    if unicodedata.category(c) == "Nd":
+    cat = unicodedata.category(c)
+    if cat == "Nd" or cat[0] in "PS":
         return True
     return any(lo <= cp <= hi for lo, hi in _COMMON_RANGES)
 
@@ -305,18 +313,26 @@ def sha256_file(path):
     return h.hexdigest()
 
 
-def _write_atomic(path, data, tmp_list):
+def _remove_quiet(path):
+    """Yalnizca bu aracin kendi urettigi dosyalari (gecici dosyalar ve cikti hedefleri) silmek icin kullanilir."""
+    try:
+        if os.path.isfile(path) or os.path.islink(path):
+            os.remove(path)
+    except OSError:
+        pass
+
+
+def _write_tmp(path, data):
     tmp = "%s.tmp-%d" % (path, os.getpid())
-    tmp_list.append(tmp)
     with open(tmp, "wb") as f:
         f.write(data)
         f.flush()
         os.fsync(f.fileno())
-    os.replace(tmp, path)
-    tmp_list.remove(tmp)
+    return tmp
 
 
-def run(orig_dir, out_dir, keep_list=None, check_orig_sha=True, expected_kept=EXPECTED_KEPT, vocab_lines=ORIG_VOCAB_LINES):
+def run(orig_dir, out_dir, keep_list=None, check_orig_sha=True, expected_kept=EXPECTED_KEPT, vocab_lines=ORIG_VOCAB_LINES,
+        expected_out_sha=(PRUNED_ONNX_SHA, PRUNED_VOCAB_SHA)):
     orig_dir = os.path.abspath(orig_dir)
     out_dir = os.path.abspath(out_dir)
     if os.path.realpath(orig_dir) == os.path.realpath(out_dir):
@@ -335,7 +351,10 @@ def run(orig_dir, out_dir, keep_list=None, check_orig_sha=True, expected_kept=EX
         raw_lines = read_vocab_lines(f.read())
     if len(raw_lines) != vocab_lines:
         raise PruneError("sozluk satir sayisi %d, beklenen %d" % (len(raw_lines), vocab_lines))
-    lines = [b.decode("utf-8") for b in raw_lines]
+    try:
+        lines = [b.decode("utf-8") for b in raw_lines]
+    except UnicodeDecodeError as e:
+        raise PruneError("sozluk gecerli UTF-8 degil (%s)" % e)
     keep = compute_keep(lines)
     if expected_kept and len(keep) != expected_kept:
         raise PruneError("tutulan satir sayisi %d, beklenen %d (Python unicodedata surumu farkli olabilir)" % (len(keep), expected_kept))
@@ -348,19 +367,41 @@ def run(orig_dir, out_dir, keep_list=None, check_orig_sha=True, expected_kept=EX
     del model
     new_vocab = prune_vocab(raw_lines, keep)
 
+    # Cikti SHA-256'lari YAZMADAN once dogrulanir: uyusmazlikta hicbir sey yazilmaz (cikis kodu 1).
+    if expected_out_sha:
+        for name, data, want in ((ONNX_NAME, new_model, expected_out_sha[0]), (VOCAB_NAME, new_vocab, expected_out_sha[1])):
+            got = hashlib.sha256(data).hexdigest()
+            if got != want:
+                raise PruneError("%s cikti SHA-256 uyusmuyor (got %s, beklenen %s; Python unicodedata surumu?)" % (name, got, want))
+
     os.makedirs(out_dir, exist_ok=True)
+    onnx_out = os.path.join(out_dir, ONNX_NAME)
+    vocab_out = os.path.join(out_dir, VOCAB_NAME)
     tmps = []
     try:
-        _write_atomic(os.path.join(out_dir, ONNX_NAME), new_model, tmps)
-        _write_atomic(os.path.join(out_dir, VOCAB_NAME), new_vocab, tmps)
+        # Once iki gecici dosya (disk dolu vb. burada patlar, hedeflere dokunulmaz), sonra iki os.replace.
+        t_onnx = _write_tmp(onnx_out, new_model)
+        tmps.append(t_onnx)
+        t_vocab = _write_tmp(vocab_out, new_vocab)
+        tmps.append(t_vocab)
         if keep_list:
-            _write_atomic(keep_list, ("\n".join(str(i) for i in keep) + "\n").encode("ascii"), tmps)
+            tmps.append(_write_tmp(keep_list, ("\n".join(str(i) for i in keep) + "\n").encode("ascii")))
+        try:
+            os.replace(t_onnx, onnx_out)
+            tmps.remove(t_onnx)
+            os.replace(t_vocab, vocab_out)
+            tmps.remove(t_vocab)
+        except OSError:
+            # Uyumsuz (yeni ONNX + eski sozluk) cift birakma: hedefleri sil, fetch_models.sh yeniden budar.
+            _remove_quiet(onnx_out)
+            _remove_quiet(vocab_out)
+            raise
+        if keep_list:
+            os.replace(tmps[-1], keep_list)
+            tmps.pop()
     finally:
         for t in tmps:  # yalniz bu surecin kendi gecici dosyalari
-            try:
-                os.remove(t)
-            except OSError:
-                pass
+            _remove_quiet(t)
     return len(keep), len(lines)
 
 
@@ -372,7 +413,7 @@ def main(argv=None):
     args = ap.parse_args(argv)
     try:
         kept, total = run(args.orig_dir, args.out_dir, args.keep_list)
-    except PruneError as e:
+    except (PruneError, OSError) as e:
         print("HATA: %s" % e, file=sys.stderr)
         return 1
     print("budandi: %d / %d satir tutuldu, %d atildi -> %s" % (kept, total, total - kept, args.out_dir))

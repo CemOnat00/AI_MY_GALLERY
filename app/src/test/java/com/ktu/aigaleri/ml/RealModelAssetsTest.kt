@@ -48,7 +48,7 @@ class RealModelAssetsTest {
     fun textOnnx_matchesManifestSizeAndSha256() {
         requireFile(ModelManifest.TEXT_ONNX)
         val f = ModelStore(tmp.root, fileOpener()).ensure(ModelManifest.TEXT_ONNX)
-        assertEquals(97_009_267L, f.length()) // T-027: budanmış metin ONNX (orijinal 135_336_307)
+        assertEquals(97_153_651L, f.length()) // T-027: budanmış metin ONNX (orijinal 135_336_307)
         assertFalse(File(tmp.root, "models/text_model_qint8_arm64.onnx.part").exists())
     }
 
@@ -64,8 +64,8 @@ class RealModelAssetsTest {
         val vocabFile = File(assetsDir, ModelManifest.TEXT_VOCAB.assetPath)
         assumeTrue("text_vocab.txt yok (tools/fetch_models.sh)", vocabFile.isFile)
         val lines = vocabFile.readLines()
-        // T-027 (Katman A): 119547 satırdan 69642'si, sıra korunarak.
-        assertEquals(69_642, lines.size)
+        // T-027 (Katman A): 119547 satırdan 69830'u, sıra korunarak.
+        assertEquals(69_830, lines.size)
         val tok = vocabFile.inputStream().use { WordPieceTokenizer.fromVocabStream(it) }
         val idOf = lines.withIndex().associate { it.value to it.index }
         val unk = idOf.getValue("[UNK]")

@@ -34,7 +34,7 @@ class AssetManagerOpener(private val assets: AssetManager) : AssetOpener {
  * açılır; bu iş [Dispatchers.IO]'da yürür (ana thread'de değil) ve kopya sırasında iptale duyarlıdır
  * (oturum oluşturma [OrtSession] içinde bölünemez). İlk sorgu gecikmesi ölçülmedi; arama ekranı açılırken
  * [warmUp] çağrılır (T-008). Sonraki çağrılar açık oturumu kullanır.
- * Oturum dosya yolundan açılır (135 MB Java yığınına girmez), CPU arena kapalı, 2 iş parçacığı. [release]
+ * Oturum dosya yolundan açılır (~97 MB Java yığınına girmez), CPU arena kapalı, 2 iş parçacığı. [release]
  * oturumu ve sözlük/ağırlık belleğini bırakır; oturum başka bir model yüzünden slot'tan çıkarılırsa
  * ([SingleSessionSlot]) bu referanslar geri çağrıyla bırakılır ve sonraki [encode] yeniden açar.
  *

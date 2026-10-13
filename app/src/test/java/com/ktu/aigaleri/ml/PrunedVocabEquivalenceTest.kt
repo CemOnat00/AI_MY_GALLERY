@@ -1,29 +1,72 @@
 package com.ktu.aigaleri.ml
 
 import java.io.File
+import java.security.MessageDigest
 import java.util.Locale
 import java.util.Random
+import java.util.zip.GZIPInputStream
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
-import org.junit.Assume.assumeTrue
 import org.junit.Test
 
 /**
  * T-027 kapısı (b): budanmış sözlük (Katman A, K-14) ile ORİJİNAL sözlük, GERÇEK [WordPieceTokenizer] ile büyük sentetik
- * TR+EN kümede karşılaştırılır: token METNİ eşit, id eşlemesi (eski -> yeni) tutarlı, [UNK] sayısı AYNI.
+ * TR+EN kümede ve altın sette karşılaştırılır: token METNİ eşit, id eşlemesi (eski -> yeni) tutarlı, [UNK] sayısı AYNI.
  *
- * Orijinal sözlük `mobile/.model-cache/text_vocab.txt` (git dışı; tools/fetch_models.sh doldurur), budanmış sözlük
- * `src/main/assets/models/text_vocab.txt`. İkisinden biri yoksa test Assume ile ATLANIR (raporda "skipped" görünür).
- * Katman A kuralı (Python, tools/prune_text_model.py) burada JVM'in KENDİ Unicode betik veritabanıyla (Character.UnicodeScript)
- * bağımsız olarak çapraz kontrol edilir: Latin betikli harf/ASCII rakam/ASCII noktalama olan her orijinal token tutulmuş olmalı.
+ * Model dosyası, `.model-cache` veya assets GEREKMEZ ve test ATLANMAZ: orijinal sözlük metni depoda gzip olarak durur
+ * (`src/test/resources/ml/original_vocab.txt.gz`, distilbert-base-multilingual-cased `vocab.txt`, Apache-2.0; model AĞIRLIĞI
+ * değildir) ve SHA-256'sı orijinalle doğrulanır. Budanmış sözlük, Katman A kuralının testteki (Kotlin, JVM Unicode veritabanı)
+ * uygulamasıyla yeniden hesaplanır ve ModelManifest'teki boyut/SHA-256 ile birebir eşit olmak zorundadır (kural Python
+ * aracı `tools/prune_text_model.py` ile aynı çıktıyı üretir). assets/models/text_vocab.txt varsa (git dışı) ayrıca satır satır
+ * eşitliği denetlenir. Kosinüs/top-K (ONNX) ölçümü yalnızca geliştirici makinesindedir: `tools/verify_pruned_text.py`.
  * Sabit seed; fotoğraf ve kullanıcı verisi yok.
  */
 class PrunedVocabEquivalenceTest {
-    private val origFile = File("../.model-cache/${ModelManifest.TEXT_VOCAB.fileName}")
-    private val prunedFile = TokenVocab.vocabFile()
+    companion object {
+        const val ORIGINAL_VOCAB_SHA256 = "fe0fda7c425b48c516fc8f160d594c8022a0808447475c1a7c6d6479763f310c"
+        private val SPECIALS = listOf("[PAD]", "[UNK]", "[CLS]", "[SEP]", "[MASK]")
+        private val COMMON_RANGES = listOf(
+            0x21..0x7E, 0xA1..0xBF, 0xD7..0xD7, 0xF7..0xF7, 0x2B0..0x2FF, 0x300..0x36F, 0x1D00..0x1DFF, 0x2000..0x2BFF,
+        )
 
-    private fun readLines(f: File): List<String> =
-        f.readBytes().toString(Charsets.UTF_8).split('\n').let { if (it.last().isEmpty()) it.dropLast(1) else it }
+        private fun sha256(b: ByteArray) = MessageDigest.getInstance("SHA-256").digest(b).joinToString("") { "%02x".format(it) }
+
+        private fun splitLines(bytes: ByteArray): List<String> =
+            bytes.toString(Charsets.UTF_8).split('\n').let { if (it.last().isEmpty()) it.dropLast(1) else it }
+
+        /** Orijinal sözlük (depodaki gzip); SHA-256 ve satır sayısı doğrulanır. */
+        val originalLines: List<String> by lazy {
+            val bytes = GZIPInputStream(PrunedVocabEquivalenceTest::class.java.getResourceAsStream("/ml/original_vocab.txt.gz")!!)
+                .use { it.readBytes() }
+            assertEquals("orijinal sözlük SHA-256", ORIGINAL_VOCAB_SHA256, sha256(bytes))
+            splitLines(bytes).also { assertEquals(GoldenText.ORIGINAL_VOCAB_SIZE, it.size) }
+        }
+
+        /** Katman A: Latin betiği harfi + rakam + TÜM noktalama/sembol (P*, S*) + birkaç ortak blok; atılan: Latin dışı harfli token. */
+        fun keepChar(cp: Int): Boolean {
+            if (Character.getName(cp)?.split(' ')?.contains("LATIN") == true) return true
+            when (Character.getType(cp).toByte()) {
+                Character.DECIMAL_DIGIT_NUMBER, Character.CONNECTOR_PUNCTUATION, Character.DASH_PUNCTUATION,
+                Character.START_PUNCTUATION, Character.END_PUNCTUATION, Character.INITIAL_QUOTE_PUNCTUATION,
+                Character.FINAL_QUOTE_PUNCTUATION, Character.OTHER_PUNCTUATION, Character.MATH_SYMBOL,
+                Character.CURRENCY_SYMBOL, Character.MODIFIER_SYMBOL, Character.OTHER_SYMBOL,
+                -> return true
+            }
+            return COMMON_RANGES.any { cp in it }
+        }
+
+        fun keepToken(t: String): Boolean {
+            if (t in SPECIALS) return true
+            if (t.startsWith("[") && t.endsWith("]")) return false // [unusedN]
+            val body = t.removePrefix("##")
+            return body.isNotEmpty() && body.codePoints().toArray().all(::keepChar)
+        }
+
+        /** Kuraldan yeniden hesaplanan budanmış sözlük (satır sırası korunur). */
+        val prunedLines: List<String> by lazy { originalLines.filter(::keepToken) }
+    }
+
+    private fun fixture() = Fixture(originalLines, prunedLines)
 
     private class Fixture(val orig: List<String>, val pruned: List<String>) {
         val origTok = WordPieceTokenizer(orig.withIndex().reversed().associate { it.value to it.index })
@@ -37,14 +80,76 @@ class PrunedVocabEquivalenceTest {
         }
     }
 
-    private fun fixtureOrSkip(): Fixture {
-        assumeTrue("orijinal sözlük yok (tools/fetch_models.sh -> mobile/.model-cache)", origFile.isFile)
-        assumeTrue("budanmış sözlük yok (tools/fetch_models.sh)", prunedFile.isFile)
-        val orig = readLines(origFile)
-        val pruned = readLines(prunedFile)
-        assumeTrue("assets sözlüğü budanmamış (ORİJİNAL)", pruned.size != orig.size)
-        assertEquals(GoldenText.ORIGINAL_VOCAB_SIZE, orig.size)
-        return Fixture(orig, pruned)
+    @Test
+    fun recomputedPrunedVocab_equalsManifest_andShippedAssetVocabLineByLine() {
+        val bytes = prunedLines.joinToString("") { it + "\n" }.toByteArray(Charsets.UTF_8)
+        assertEquals(ModelManifest.TEXT_VOCAB.sizeBytes, bytes.size.toLong())
+        assertEquals(ModelManifest.TEXT_VOCAB.sha256, sha256(bytes))
+        assertEquals(69_830, prunedLines.size)
+        // Yerelde assets sözlüğü varsa (git dışı) satır satır eşit olmak zorunda.
+        val assets = TokenVocab.vocabFile()
+        if (assets.isFile) assertEquals(prunedLines, splitLines(assets.readBytes()))
+        // Özel tokenlar ve id eşlemesi: id'ler dizeyle bulunur
+        assertEquals(SPECIALS, prunedLines.take(5))
+        assertTrue(prunedLines.none { it.startsWith("[unused") })
+    }
+
+    @Test
+    fun everyPunctuationAndSymbolToken_isKept_andAloneTokenizesIdentically() {
+        val f = fixture()
+        val ps = setOf(
+            Character.CONNECTOR_PUNCTUATION, Character.DASH_PUNCTUATION, Character.START_PUNCTUATION, Character.END_PUNCTUATION,
+            Character.INITIAL_QUOTE_PUNCTUATION, Character.FINAL_QUOTE_PUNCTUATION, Character.OTHER_PUNCTUATION,
+            Character.MATH_SYMBOL, Character.CURRENCY_SYMBOL, Character.MODIFIER_SYMBOL, Character.OTHER_SYMBOL,
+        )
+        var n = 0
+        for (t in f.orig) {
+            val cps = t.codePoints().toArray()
+            if (cps.isEmpty() || cps.any { Character.getType(it).toByte() !in ps }) continue
+            if (t.startsWith("[")) continue
+            n++
+            assertTrue("noktalama/sembol token'ı atıldı: $t", t in f.pruned)
+            if (cps.size == 1) {
+                val o = f.origTok.encode(t)
+                val p = f.prunedTok.encode(t)
+                assertEquals(listOf("[CLS]", t, "[SEP]"), o.map { f.orig[it] })
+                assertEquals("tek başına noktalama [UNK] oldu: $t", o.map { f.orig[it] }, p.map { f.pruned[it] })
+            }
+        }
+        assertTrue("noktalama/sembol token sayısı makul: $n", n > 500)
+        // Tam genişlikli ve CJK/Arapça noktalama açıkça
+        for (t in listOf("！", "（", "）", "？", "，", "：", "；", "＠", "、", "。", "「", "」", "《", "》", "،", "।", "՚", "։")) {
+            if (t in f.orig) assertTrue(t, t in f.pruned)
+        }
+    }
+
+    @Test
+    fun goldenSet_tokenTexts_equalForOriginalAndPrunedVocab() {
+        val f = fixture()
+        val golden = GoldenText.queries()
+        assertEquals(GoldenText.QUERY_COUNT, golden.size)
+        var unkO = 0
+        var unkP = 0
+        for (g in golden) {
+            val q = QueryPreprocessor.normalize(g.query)
+            val o = f.origTok.encode(q).map { f.orig[it] }
+            val p = f.prunedTok.encode(q).map { f.pruned[it] }
+            assertEquals("orijinal tokenizer altınla ayrıştı: ${g.query}", g.tokens, o)
+            assertEquals("budanmış tokenizer altınla ayrıştı: ${g.query} [${g.category}]", g.tokens, p)
+            unkO += o.count { it == "[UNK]" }
+            unkP += p.count { it == "[UNK]" }
+        }
+        assertEquals(GoldenText.BASELINE_UNK_COUNT, unkO)
+        assertEquals(unkO, unkP)
+    }
+
+    @Test
+    fun nonLatinInput_becomesUnk_acceptedBehaviour() {
+        val f = fixture()
+        for (w in listOf("привет", "猫", "한국어", "مرحبا", "שלום")) {
+            assertTrue("$w orijinalde [UNK] olmamalı (kontrol)", f.origTok.encode(w).map { f.orig[it] }.let { "[UNK]" !in it })
+            assertEquals(listOf("[CLS]", "[UNK]", "[SEP]"), f.prunedTok.encode(w).map { f.pruned[it] })
+        }
     }
 
     /** Eşit olmayan ilk örnekleri biriktirir. */
@@ -139,7 +244,7 @@ class PrunedVocabEquivalenceTest {
 
     @Test
     fun synthetic_tr_en_corpus_tokenTextsIdMappingAndUnkCountsEqual() {
-        val f = fixtureOrSkip()
+        val f = fixture()
         val texts = corpus(f)
         assertTrue("en az 20.000 sözcük/ek kombinasyonu", texts.size >= 20_000 + 40_000)
         val ham = Tally()
@@ -161,7 +266,7 @@ class PrunedVocabEquivalenceTest {
 
     @Test
     fun everyLatinScriptToken_ofOriginalVocab_isKept_acrossJvmUnicodeScripts() {
-        val f = fixtureOrSkip()
+        val f = fixture()
         val kept = f.pruned.toHashSet()
         fun latinish(cp: Int) = (Character.isLetter(cp) && Character.UnicodeScript.of(cp) == Character.UnicodeScript.LATIN) ||
             cp in '0'.code..'9'.code || cp in 0x21..0x7E
@@ -186,7 +291,7 @@ class PrunedVocabEquivalenceTest {
 
     @Test
     fun negativeControl_aggressivePruning_isDetectedByTheSameComparison() {
-        val f = fixtureOrSkip()
+        val f = fixture()
         // "ASCII + Türkçe" (B prototipi) gibi daha agresif bir budama; â î û ve diğer aksanlı Latin harfleri kaybeder.
         val trAscii = "çğıöşüÇĞİÖŞÜ"
         val b = f.pruned.filter { t -> t.startsWith("[") || t.removePrefix("##").all { it.code < 128 || it in trAscii } }
@@ -202,11 +307,8 @@ class PrunedVocabEquivalenceTest {
     }
 
     @Test
-    fun prunedModelSizes_matchRemovedRowsTimes768() {
-        val pruned = prunedFile.takeIf { it.isFile }?.let { readLines(it) }
-        assumeTrue("budanmış sözlük yok", pruned != null)
-        assumeTrue("assets sözlüğü budanmamış", pruned!!.size != GoldenText.ORIGINAL_VOCAB_SIZE)
+    fun prunedModelSize_matchesRemovedRowsTimes768() {
         // Orijinal ONNX 135_336_307 bayt; embedding satırı 768 bayt (uint8). Boyut farkı tam olarak atılan satır x 768.
-        assertEquals(135_336_307L - (GoldenText.ORIGINAL_VOCAB_SIZE - pruned.size) * 768L, ModelManifest.TEXT_ONNX.sizeBytes)
+        assertEquals(135_336_307L - (GoldenText.ORIGINAL_VOCAB_SIZE - prunedLines.size) * 768L, ModelManifest.TEXT_ONNX.sizeBytes)
     }
 }

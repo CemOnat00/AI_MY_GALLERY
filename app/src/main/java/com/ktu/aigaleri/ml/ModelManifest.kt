@@ -30,15 +30,15 @@ object ModelManifest {
 
     /**
      * sentence-transformers/clip-ViT-B-32-multilingual-v1 onnx/model_qint8_arm64.onnx (Apache-2.0), DEĞİŞTİRİLMİŞ
-     * (T-027, K-14 Katman A): `embeddings.word_embeddings.weight_quantized` [119547, 768] -> [69642, 768] satır dilimi
+     * (T-027, K-14 Katman A): `embeddings.word_embeddings.weight_quantized` [119547, 768] -> [69830, 768] satır dilimi
      * (tools/prune_text_model.py); graf ve diğer ağırlıklar aynı. Orijinal: 135336307 bayt, SHA-256 3bed77e8...a8a7.
      * MODEL_VERSION değişmez: metin vektörleri orijinalle bit özdeştir, görüntü indeksi geçerli kalır.
      */
     val TEXT_ONNX = ModelFile(
         assetPath = "models/text_model_qint8_arm64.onnx",
         fileName = "text_model_qint8_arm64.onnx",
-        sizeBytes = 97_009_267L,
-        sha256 = "4e73a91f8463faaece382c033a25b035fe7adc54260910acb5d8e4a77872301c",
+        sizeBytes = 97_153_651L,
+        sha256 = "0dc4e4acba0cbdc6102a305253101a1a9c0633c13496fa0686245b5dd938dbf7",
     )
 
     /** 2_Dense/model.safetensors içindeki linear.weight, ham float32 LE [512][768] (fetch_models.sh üretir). */
@@ -50,7 +50,7 @@ object ModelManifest {
     )
 
     /**
-     * distilbert-base-multilingual-cased WordPiece sözlüğü, BUDANMIŞ (T-027, Katman A): 119547 satırdan 69642'si, sıra
+     * distilbert-base-multilingual-cased WordPiece sözlüğü, BUDANMIŞ (T-027, Katman A): 119547 satırdan 69830'u, sıra
      * korunarak (id = satır numarası). Özel token id'leri artık 100/101/102 DEĞİL ([UNK]=1, [CLS]=2, [SEP]=3); id sabiti
      * varsayılmaz, tokenizer [UNK]/[CLS]/[SEP]'i dizeyle bulur.
      * Orijinal: 995526 bayt, SHA-256 fe0fda7c...310c.
@@ -58,8 +58,8 @@ object ModelManifest {
     val TEXT_VOCAB = ModelFile(
         assetPath = "models/text_vocab.txt",
         fileName = "text_vocab.txt",
-        sizeBytes = 520_398L,
-        sha256 = "e3375077b9b203e67d8ed9ca271e68dc2e463af61a0c976041de6ee3e7b19cc8",
+        sizeBytes = 521_296L,
+        sha256 = "df01274b364c59156c453aa006ecf4fbf93b5fabe235375a1bb07f760e97e825",
     )
 
     /** OpenAI CLIP ViT-B/32 görüntü kodlayıcı int8 (OpenAI CLIP MIT'den dönüşüm; Xenova lisans beyanı yok). T-006 kullanır; bu görevde yüklenmez. */

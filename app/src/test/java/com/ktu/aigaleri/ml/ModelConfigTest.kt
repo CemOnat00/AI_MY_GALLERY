@@ -77,9 +77,15 @@ class ModelConfigTest {
         val py = File(mobileDir, "tools/prune_text_model.py").readText()
         assertTrue(py.contains("3bed77e83926519660b5c0833cb3321cfde952331edec4f7d501c7d384b8a8a7"))
         assertTrue(py.contains("fe0fda7c425b48c516fc8f160d594c8022a0808447475c1a7c6d6479763f310c"))
-        // Python aracı yalnızca standart kütüphane kullanır.
-        val imports = py.lines().filter { it.startsWith("import ") || it.startsWith("from ") }.map { it.removePrefix("import ").removePrefix("from ").substringBefore(' ') }
-        assertEquals(setOf("argparse", "hashlib", "os", "sys", "unicodedata"), imports.toSet())
+        // Budanmış çıktı SHA-256'ları araçta da manifest ile aynıdır (araç yazmadan önce doğrular).
+        assertTrue(py.contains("PRUNED_ONNX_SHA = \"${ModelManifest.TEXT_ONNX.sha256}\""))
+        assertTrue(py.contains("PRUNED_VOCAB_SHA = \"${ModelManifest.TEXT_VOCAB.sha256}\""))
+        // Python aracı yalnızca standart kütüphane kullanır: içe aktarılan her modül izinli stdlib kümesinin içinde, yasaklı üçüncü taraf yok.
+        val imports = py.lines().filter { it.startsWith("import ") || it.startsWith("from ") }
+            .map { it.removePrefix("import ").removePrefix("from ").substringBefore(' ').substringBefore('.') }.toSet()
+        val allowedStdlib = setOf("argparse", "hashlib", "os", "sys", "unicodedata", "shutil", "tempfile", "re", "json", "struct", "collections", "itertools")
+        assertTrue("izinli stdlib dışında içe aktarma: ${imports - allowedStdlib}", allowedStdlib.containsAll(imports))
+        for (banned in listOf("numpy", "onnx", "onnxruntime", "requests", "urllib", "socket", "http")) assertFalse(banned, banned in imports)
     }
 
     @Test

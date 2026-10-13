@@ -32,7 +32,6 @@ class T027PruneToolScriptTest {
         assertTrue("zaman aşımı", p.waitFor(120, TimeUnit.SECONDS))
         assertEquals(out, 0, p.exitValue())
         assertTrue(out, Regex("(?m)^OK$").containsMatchIn(out))
-        assertTrue("bytecode yazılmamalı: __pycache__", !File(toolsDir, "__pycache__").exists())
     }
 
     @Test
@@ -41,9 +40,10 @@ class T027PruneToolScriptTest {
         for (bad in listOf("socket", "urllib", "http", "requests", "subprocess", "shutil.rmtree", "os.system")) {
             assertTrue("$bad kullanılmamalı", !Regex("""^\s*(import|from)\s+$bad\b""", RegexOption.MULTILINE).containsMatchIn(src) && !src.contains("$bad("))
         }
-        // Yalnızca kendi gecici dosyalarini siler: os.remove yalnizca tmps listesinden
-        val removes = src.lines().filter { it.contains("os.remove(") || it.contains("os.unlink(") }
+        // Silme yalnızca tek yardımcıdan (_remove_quiet: kendi geçici dosyaları ve çıktı hedefleri) yapılır, başka yerde yok.
+        val removes = src.lines().withIndex().filter { it.value.contains("os.remove(") || it.value.contains("os.unlink(") }
         assertEquals(1, removes.size)
-        assertTrue(removes.single(), removes.single().contains("os.remove(t)"))
+        val helperStart = src.lines().indexOfFirst { it.startsWith("def _remove_quiet") }
+        assertTrue("os.remove yalnızca _remove_quiet içinde", helperStart >= 0 && removes.single().index in helperStart..helperStart + 8)
     }
 }

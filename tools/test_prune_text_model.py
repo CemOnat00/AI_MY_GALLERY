@@ -7,6 +7,7 @@ yazimi ve Katman A kuralini sinar. Calistirma: python3 -I tools/test_prune_text_
 import hashlib
 import importlib.util
 import os
+import shutil
 import sys
 import tempfile
 import unittest
@@ -76,12 +77,14 @@ class KeepRule(unittest.TestCase):
     def test_turkish_and_latin_kept(self):
         for t in ["kedi", "çocuk", "ığdır", "İstanbul", "Ğ", "##ş", "##ü", "â", "##â", "î", "##î", "û", "##û", "Â", "é", "ñ", "ø",
                   "ł", "Ａ", "0", "##9", "2024", "1ª", "µm", ".", "!", "'", "-", "€", "→", "½", "②", "０", "٣", "d'", "[PAD]",
+                  # T-027 düzeltme: tüm noktalama/sembol (P*, S*), tam genişlikli ve diğer betiklerin noktalaması dahil
+                  "！", "（", "）", "？", "，", "：", "；", "＠", "、", "。", "「", "」", "《", "》", "،", "؟", "।", "՚", "։", "־", "‹", "™", "©",
                   "[UNK]", "[CLS]", "[SEP]", "[MASK]", "<S>"]:
             self.assertTrue(pr.keep_token(t), t)
 
     def test_non_latin_and_unused_dropped(self):
         for t in ["привет", "##ад", "猫", "한국", "مرحبا", "שלום", "हिन्दी", "ελληνικά", "Ωμέγα", "ภาษา", "ひらがな", "カタカナ",
-                  "[unused1]", "[unused99]", "[foo]", "", "##", "。", "、", "،", "।", "кedi", "kедi", "a۔"]:
+                  "[unused1]", "[unused99]", "[foo]", "", "##", "кedi", "kедi", "ְ", "ً", "##ं"]:
             self.assertFalse(pr.keep_token(t), t)
 
     def test_mixed_script_dropped(self):
@@ -200,6 +203,7 @@ class EndToEnd(unittest.TestCase):
         return h.hexdigest()
 
     def run_prune(self, **kw):
+        kw.setdefault("expected_out_sha", None)
         return pr.run(self.orig, self.out, check_orig_sha=False, expected_kept=0, vocab_lines=len(self.lines), **kw)
 
     def test_end_to_end_idempotent_atomic_and_originals_untouched(self):
@@ -244,6 +248,35 @@ class EndToEnd(unittest.TestCase):
         with self.assertRaises(OSError):
             self.run_prune()
         self.assertEqual([], [n for n in os.listdir(self.out) if ".tmp-" in n])
+        # Uyumsuz cift birakilmaz: ONNX hedefi yazilmis olsa bile silinir.
+        self.assertFalse(os.path.exists(os.path.join(self.out, pr.ONNX_NAME)))
+
+    def test_failed_second_replace_removes_previous_valid_output_too(self):
+        self.run_prune()  # gecerli bir onceki cift
+        os.remove(os.path.join(self.out, pr.VOCAB_NAME))
+        os.makedirs(os.path.join(self.out, pr.VOCAB_NAME))
+        with self.assertRaises(OSError):
+            self.run_prune()
+        self.assertFalse(os.path.exists(os.path.join(self.out, pr.ONNX_NAME)))
+
+    def test_output_sha_mismatch_writes_nothing(self):
+        with self.assertRaises(pr.PruneError):
+            self.run_prune(expected_out_sha=("0" * 64, "1" * 64))
+        self.assertFalse(os.path.exists(self.out) and os.listdir(self.out))
+
+    def test_output_sha_match_passes(self):
+        self.run_prune()
+        sha = (self.sha(self.out, pr.ONNX_NAME), self.sha(self.out, pr.VOCAB_NAME))
+        shutil.rmtree(self.out)
+        self.run_prune(expected_out_sha=sha)
+        self.assertEqual(sha, (self.sha(self.out, pr.ONNX_NAME), self.sha(self.out, pr.VOCAB_NAME)))
+
+    def test_invalid_utf8_vocab_is_clean_error_not_traceback(self):
+        with open(os.path.join(self.orig, pr.VOCAB_NAME), "wb") as f:
+            f.write(b"\xff\xfe\n" * len(self.lines))
+        with self.assertRaises(pr.PruneError):
+            self.run_prune()
+        self.assertEqual(1, pr.main(["--orig-dir", self.orig, "--out-dir", self.out]))
 
     def test_cli_exit_codes(self):
         self.assertEqual(1, pr.main(["--orig-dir", self.orig, "--out-dir", self.orig]))

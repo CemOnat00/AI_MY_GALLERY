@@ -7,7 +7,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
 /**
- * Arka plana alınınca veya bellek baskısında metin ONNX oturumunu (~135 MB + sözlük) bırakır; böylece süreç arka
+ * Arka plana alınınca veya bellek baskısında metin ONNX oturumunu (~97 MB + sözlük) bırakır; böylece süreç arka
  * planda büyük model belleği tutmaz. Sonraki arama modeli yeniden açar (gecikme ölçülmedi). Uygulama bağlamına
  * `registerComponentCallbacks` ile `AppDependencies` içinde kaydedilir (yeni bağımlılık yok).
  *
