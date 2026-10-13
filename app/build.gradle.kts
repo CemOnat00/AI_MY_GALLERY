@@ -20,7 +20,8 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -39,6 +40,8 @@ android {
         // ONNX modelleri zaten az sıkışır; açılışta gereksiz açma süresi olmasın, assets'ten akış kopyası hızlansın
         // (model-research.md 5.1). Model dosyaları repoda yoktur: docs/model-setup.md.
         noCompress += "onnx"
+        // T-024: yalnızca uygulamanın dilleri (tr, en); bağımlılıkların diğer yerel kaynakları paketten çıkar.
+        localeFilters += listOf("tr", "en")
     }
     sourceSets {
         // Room şema dosyaları androidTest'te migration testi için kullanılır.

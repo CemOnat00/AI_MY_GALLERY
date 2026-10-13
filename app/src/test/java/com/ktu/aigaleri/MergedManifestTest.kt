@@ -71,6 +71,20 @@ class MergedManifestTest {
             .flatMap { names(doc, it) }
         assertTrue("$variant: ORT bileşeni kaldı", allNames.none { it.startsWith("ai.onnxruntime") })
         assertEquals(setOf("androidx.startup.InitializationProvider"), names(doc, "provider"))
+        // T-024: androidx.startup altında yalnızca bilinçli bırakılan initializer'lar; EmojiCompatInitializer
+        // manifestte tools:node=remove ile çıkarılır. Yeni bir initializer sızarsa test bilerek güncellenmelidir.
+        assertEquals(
+            setOf(
+                "androidx.work.WorkManagerInitializer",
+                "androidx.lifecycle.ProcessLifecycleInitializer",
+                "androidx.profileinstaller.ProfileInstallerInitializer",
+            ),
+            names(doc, "meta-data"),
+        )
+        assertFalse(
+            "$variant: EmojiCompatInitializer birleşik manifestte",
+            names(doc, "meta-data").contains("androidx.emoji2.text.EmojiCompatInitializer"),
+        )
         assertEquals(
             setOf("androidx.room.MultiInstanceInvalidationService", "androidx.work.impl.background.systemjob.SystemJobService"),
             names(doc, "service"),
