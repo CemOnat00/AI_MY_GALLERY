@@ -159,11 +159,14 @@ class RoomPhotoIndexer(
                     try {
                         writeState(total, processed, plan.lastRunAt, plan.fullTarget)
                     } catch (_: Exception) {
+                    } catch (_: OutOfMemoryError) {
+                        // Temizlikteki OOM asıl hatayı (guarded -> Unexpected) örtmesin ve release() atlanmasın.
                     }
                 }
                 try {
                     encoder.release()
                 } catch (_: Exception) {
+                } catch (_: OutOfMemoryError) {
                 }
             }
         }

@@ -387,7 +387,6 @@ class RoomPhotoIndexerT015QaTest {
         assertEquals(0, e2.encoder.encoded.size)
     }
 
-    @Ignore("T-015 BULGU: RoomPhotoIndexer.kt:157-168 finally temizliği yalnızca Exception yakalar; IndexState yazımındaki OOM ham sızar ve encoder.release() atlanır. Üretim düzeltilince @Ignore kaldırılacak.")
     @Test
     fun oomInStateWrite_isUnexpected_notRawOutOfMemory() = runTest {
         // IndexState yazımı da DAO yazımıdır. Hem asıl yazım hem finally temizliği OOM verirse sızıntı olmamalı.
@@ -409,7 +408,6 @@ class RoomPhotoIndexerT015QaTest {
         }
     }
 
-    @Ignore("T-015 BULGU: RoomPhotoIndexer.kt:157-168 finally temizliği yalnızca Exception yakalar; IndexState yazımındaki OOM ham sızar ve encoder.release() atlanır. Üretim düzeltilince @Ignore kaldırılacak.")
     @Test
     fun oomInStateWrite_stillReleasesEncoderSession() = runTest {
         val e = env((1L..3L).toList())
