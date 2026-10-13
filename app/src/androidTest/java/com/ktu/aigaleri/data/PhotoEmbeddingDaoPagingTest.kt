@@ -13,8 +13,9 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * [PhotoEmbeddingDao.getPageForModel] (T-008) gerçek SQLite ile: keyset sayfalama, model süzme, sıra, LIMIT, parametre
- * güvenliği ve getAllForModel ile eşdeğerlik.
+ * [PhotoEmbeddingDao.getPageForModel] (T-008, T-025'te JOIN'siz: yalnızca photoId + vektör) ve
+ * [PhotoEmbeddingDao.getPhotoRefsByIds] gerçek SQLite ile: keyset sayfalama, model süzme, sıra, LIMIT, parametre
+ * güvenliği, getAllForModel ile eşdeğerlik (sayfa + toplu uri birleşimi), toplu sorgu parçalama.
  *
  * DURUM: YAZILDI, `compileDebugAndroidTestKotlin` ile DERLENİR; ÇALIŞTIRILMADI (cihaz/emülatör yok).
  */
@@ -43,7 +44,7 @@ class PhotoEmbeddingDaoPagingTest {
         // eklenme sırası karışık, bir kısmı eski model
         listOf(9L, 2L, 7L, 4L, 1L, 8L, 3L, 6L, 5L, 10L).forEach { insert(it, if (it % 4 == 0L) "old" else "m1") }
         val expected = embeddings.getAllForModel("m1")
-        val collected = mutableListOf<IndexedVector>()
+        val collected = mutableListOf<EmbeddingRow>()
         var after = Long.MIN_VALUE
         while (true) {
             val page = embeddings.getPageForModel("m1", after, 3)
@@ -52,8 +53,11 @@ class PhotoEmbeddingDaoPagingTest {
             collected += page
             after = page.last().photoId
         }
-        assertEquals(expected, collected)
         assertEquals(listOf(1L, 2L, 3L, 5L, 6L, 7L, 9L, 10L), collected.map { it.photoId })
+        // sayfa (photoId + vektör) + toplu uri/tarih, eski JOIN'li sonuçla aynı
+        val refs = embeddings.getPhotoRefsByIds(collected.map { it.photoId }).associateBy { it.mediaStoreId }
+        val joined = collected.map { IndexedVector(it.photoId, refs.getValue(it.photoId).uri, refs.getValue(it.photoId).dateTaken, it.vector) }
+        assertEquals(expected, joined)
     }
 
     @Test
@@ -66,20 +70,29 @@ class PhotoEmbeddingDaoPagingTest {
     }
 
     @Test
-    fun rowCarriesUriDateAndVector() = runBlocking {
+    fun pageCarriesIdAndVector_andRefsCarryUriAndDate() = runBlocking {
         insert(1, "m1"); insert(2, "m1")
         val rows = embeddings.getPageForModel("m1", 0, 10)
-        assertEquals("content://media/external/images/media/1", rows[0].uri)
-        assertEquals(10L, rows[0].dateTaken)
-        assertEquals(null, rows[1].dateTaken)
         assertTrue(floatArrayOf(2f, 1f).contentEquals(VectorCodec.decode(rows[1].vector)))
+        val refs = embeddings.getPhotoRefsByIds(listOf(2L, 1L, 99L)).associateBy { it.mediaStoreId }
+        assertEquals(setOf(1L, 2L), refs.keys) // olmayan kimlik sonuçta yok
+        assertEquals("content://media/external/images/media/1", refs.getValue(1).uri)
+        assertEquals(10L, refs.getValue(1).dateTaken)
+        assertEquals(null, refs.getValue(2).dateTaken)
+    }
+
+    @Test
+    fun photoRefs_handle500IdsAndEmptyList() = runBlocking {
+        for (id in 1L..520L) insert(id, "m1")
+        assertEquals(500, embeddings.getPhotoRefsByIds((1L..500L).toList()).size) // sınır: <= 500 kimlik/çağrı
+        assertEquals(emptyList<PhotoRef>(), embeddings.getPhotoRefsByIds(emptyList()))
     }
 
     @Test
     fun modelFilter_treatsInputAsData_notSql() = runBlocking {
         insert(1, "m1")
-        assertEquals(emptyList<IndexedVector>(), embeddings.getPageForModel("x' OR '1'='1", Long.MIN_VALUE, 10))
-        assertEquals(emptyList<IndexedVector>(), embeddings.getPageForModel("m2", Long.MIN_VALUE, 10))
+        assertEquals(emptyList<EmbeddingRow>(), embeddings.getPageForModel("x' OR '1'='1", Long.MIN_VALUE, 10))
+        assertEquals(emptyList<EmbeddingRow>(), embeddings.getPageForModel("m2", Long.MIN_VALUE, 10))
     }
 
     @Test

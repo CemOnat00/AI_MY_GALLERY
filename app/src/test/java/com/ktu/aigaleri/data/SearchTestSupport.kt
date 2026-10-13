@@ -27,19 +27,30 @@ internal class FixedTextEncoder(
 internal data class Row(val vec: IndexedVector, val modelVersion: String)
 
 /**
- * Bellek içi sahte DAO: [getPageForModel] gerçek SQL sözleşmesini (photoId artan, > afterId, model süzme, LIMIT) taklit
- * eder. [getAllForModel] çağrılırsa test düşer (arama tüm vektörleri tek seferde okumamalı).
+ * Bellek içi sahte DAO (T-025 sözleşmesi): [getPageForModel] yalnızca (photoId, vektör) döndürür, gerçek SQL'i
+ * (photoId artan, > afterId, model süzme, LIMIT) taklit eder; [getPhotoRefsByIds] `photo` tablosunu taklit eder ve
+ * [orphans] içindeki kimlikler için satır DÖNDÜRMEZ (photo satırı olmayan yetim embedding). [getAllForModel] çağrılırsa
+ * test düşer (arama tüm vektörleri tek seferde okumamalı).
  */
-internal open class FakeEmbeddingDao(rows: List<Row> = emptyList()) : PhotoEmbeddingDao {
+internal open class FakeEmbeddingDao(rows: List<Row> = emptyList(), private val orphans: Set<Long> = emptySet()) : PhotoEmbeddingDao {
     private val sorted = rows.sortedBy { it.vec.photoId }
+    private val refs = sorted.asSequence().filter { it.vec.photoId !in orphans }
+        .associate { it.vec.photoId to PhotoRef(it.vec.photoId, it.vec.uri, it.vec.dateTaken) }
     val pageCalls = mutableListOf<Triple<String, Long, Int>>()
+    val refCalls = mutableListOf<List<Long>>()
     var onPage: (suspend (callIndex: Int) -> Unit)? = null
 
-    override suspend fun getPageForModel(modelVersion: String, afterId: Long, limit: Int): List<IndexedVector> {
+    override suspend fun getPageForModel(modelVersion: String, afterId: Long, limit: Int): List<EmbeddingRow> {
         pageCalls += Triple(modelVersion, afterId, limit)
         onPage?.invoke(pageCalls.size)
         return sorted.asSequence().filter { it.modelVersion == modelVersion && it.vec.photoId > afterId }
-            .take(limit).map { it.vec }.toList()
+            .take(limit).map { EmbeddingRow(it.vec.photoId, it.vec.vector) }.toList()
+    }
+
+    override suspend fun getPhotoRefsByIds(ids: List<Long>): List<PhotoRef> {
+        refCalls += ids.toList()
+        require(ids.size <= RoomSearchRepository.REF_CHUNK) { "SQLite değişken sınırı: ${ids.size}" }
+        return ids.mapNotNull { refs[it] }
     }
 
     override suspend fun getAllForModel(modelVersion: String): List<IndexedVector> =

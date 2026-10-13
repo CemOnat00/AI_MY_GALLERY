@@ -20,15 +20,8 @@ object VectorCodec {
      */
     fun decodeInto(blob: ByteArray, out: FloatArray) {
         require(blob.size == out.size * Float.SIZE_BYTES) { "BLOB uzunluğu out.size*4 olmalı" }
-        var j = 0
-        for (i in out.indices) {
-            val bits = (blob[j].toInt() and 0xFF) or
-                ((blob[j + 1].toInt() and 0xFF) shl 8) or
-                ((blob[j + 2].toInt() and 0xFF) shl 16) or
-                ((blob[j + 3].toInt() and 0xFF) shl 24)
-            out[i] = Float.fromBits(bits)
-            j += Float.SIZE_BYTES
-        }
+        // Toplu çözme: bayt bayt birleştirmenin yerine LITTLE_ENDIAN FloatBuffer.get (bit desenleri, NaN dahil, aynı).
+        ByteBuffer.wrap(blob).order(ByteOrder.LITTLE_ENDIAN).asFloatBuffer().get(out)
     }
 
     fun decode(blob: ByteArray): FloatArray {

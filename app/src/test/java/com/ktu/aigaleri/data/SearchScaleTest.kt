@@ -20,16 +20,21 @@ class SearchScaleTest {
     private class GeneratingDao(private val total: Int, private val dim: Int) : PhotoEmbeddingDao {
         var pages = 0
         var maxRowsPerPage = 0
-        override suspend fun getPageForModel(modelVersion: String, afterId: Long, limit: Int): List<IndexedVector> {
+        var refCalls = 0
+        override suspend fun getPhotoRefsByIds(ids: List<Long>): List<PhotoRef> {
+            refCalls++
+            return ids.map { PhotoRef(it, "content://media/external/images/media/$it", it) }
+        }
+        override suspend fun getPageForModel(modelVersion: String, afterId: Long, limit: Int): List<EmbeddingRow> {
             pages++
             val start = if (afterId == Long.MIN_VALUE) 1L else afterId + 1
             val end = minOf(total.toLong(), start + limit - 1)
             if (start > end) return emptyList()
-            val out = ArrayList<IndexedVector>((end - start + 1).toInt())
+            val out = ArrayList<EmbeddingRow>((end - start + 1).toInt())
             for (id in start..end) {
                 val rnd = Random(id)
                 val v = randomUnit(rnd, dim)
-                out += IndexedVector(id, "content://media/external/images/media/$id", id, VectorCodec.encode(v))
+                out += EmbeddingRow(id, VectorCodec.encode(v))
             }
             maxRowsPerPage = maxOf(maxRowsPerPage, out.size)
             return out
@@ -59,6 +64,7 @@ class SearchScaleTest {
         val retainedMb = usedMb() - before
 
         assertEquals(50, result.size)
+        assertEquals(1, dao.refCalls) // uri yalnızca adaylar için, tek toplu sorgu
         val pageSize = RoomSearchRepository.DEFAULT_PAGE_SIZE
         assertEquals((total + pageSize - 1) / pageSize + if (total % pageSize == 0) 1 else 0, dao.pages)
         assertTrue("sayfa boyutu aşıldı: ${dao.maxRowsPerPage}", dao.maxRowsPerPage <= RoomSearchRepository.DEFAULT_PAGE_SIZE)

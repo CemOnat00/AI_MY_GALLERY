@@ -99,3 +99,24 @@ data class IndexedVector(
         31 * (31 * (31 * photoId.hashCode() + uri.hashCode()) + (dateTaken?.hashCode() ?: 0)) +
             vector.contentHashCode()
 }
+
+/**
+ * Arama taramasının satırı (T-025): yalnızca `photo_embedding`'den okunur (photoId + vektör BLOB); `uri` ve
+ * `dateTaken` taramada okunmaz, yalnızca top-K adayları için [PhotoRef] ile toplu getirilir.
+ */
+data class EmbeddingRow(
+    val photoId: Long,
+    val vector: ByteArray,
+) {
+    override fun equals(other: Any?): Boolean =
+        this === other || (other is EmbeddingRow && photoId == other.photoId && vector.contentEquals(other.vector))
+
+    override fun hashCode(): Int = 31 * photoId.hashCode() + vector.contentHashCode()
+}
+
+/** Fotoğrafın arama sonucuna gereken alanları ([PhotoEmbeddingDao.getPhotoRefsByIds]). */
+data class PhotoRef(
+    val mediaStoreId: Long,
+    val uri: String,
+    val dateTaken: Long?,
+)

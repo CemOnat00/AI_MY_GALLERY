@@ -325,7 +325,7 @@ class RoomSearchRepositoryTest {
     fun nonAdvancingDao_failsInsteadOfLoopingForever() = runBlocking {
         val stuck = object : FakeEmbeddingDao() {
             override suspend fun getPageForModel(modelVersion: String, afterId: Long, limit: Int) =
-                listOf(row(10, e0()).vec, row(11, e0()).vec) // afterId'yi yok sayar
+                listOf(EmbeddingRow(10, row(10, e0()).vec.vector), EmbeddingRow(11, row(11, e0()).vec.vector)) // afterId'yi yok sayar
         }
         try {
             repo(stuck, pageSize = 2).search("x")

@@ -88,19 +88,34 @@ interface PhotoEmbeddingDao {
     suspend fun getAllForModel(modelVersion: String): List<IndexedVector>
 
     /**
-     * Arama için sayfalı (keyset) okuma: verilen modelin vektörleri, `photoId > [afterId]` olan ilk [limit] satır,
-     * `photoId` artan. İlk sayfa için [afterId] = `Long.MIN_VALUE`; sonraki sayfa için önceki sayfanın son `photoId`'si.
-     * OFFSET kullanılmaz (sayfa maliyeti sabit: `photo_embedding` rowid aralık taraması + `photo` PK araması) ve
-     * tarama sürerken yazan indeksleyiciyle tutarlıdır (kimlik tekrarı olmaz; yeni satır görünür ya da görünmez).
-     * Sayfa belleği ~[limit] x (vektör BLOB + uri); SQLite CursorWindow (2 MB) için [limit] <= ~500 tutulmalıdır
-     * (512 boyutta satır ~2,1 KB).
+     * Arama için sayfalı (keyset) okuma (T-025: JOIN'siz): verilen modelin vektörleri, `photoId > [afterId]` olan ilk
+     * [limit] satır, `photoId` artan; yalnızca `photo_embedding` okunur (photoId + vektör BLOB). İlk sayfa için
+     * [afterId] = `Long.MIN_VALUE`; sonraki sayfa için önceki sayfanın son `photoId`'si. `uri`/`dateTaken` taramada
+     * okunmaz: arama yalnızca top-K adayları için [getPhotoRefsByIds] çağırır (satır başına uri `String` ayırımı ve
+     * `photo` PK araması taramadan çıkar).
+     *
+     * SÖZLEŞME FARKI (T-025): eski sorgu `INNER JOIN photo` idi, yani `photo` satırı olmayan (yetim) embedding
+     * görünmezdi. Bu sorgu yetim embedding'i DE döndürür; gerçek veritabanında yetim oluşamaz (FK CASCADE, Room
+     * `foreign_keys=ON`), ama arama yetim kaydı [getPhotoRefsByIds] sonucunda bulunamadığı için sonuçtan düşürür:
+     * görünür davranış aynıdır (INNER JOIN semantiği korunur). Başka bir kullanıcı (ör. "indeks boş mu" denetimi)
+     * yetim sayısını ayrıca düşünmelidir.
+     *
+     * OFFSET kullanılmaz (sayfa maliyeti sabit: `photo_embedding` rowid aralık taraması) ve tarama sürerken yazan
+     * indeksleyiciyle tutarlıdır (kimlik tekrarı olmaz; yeni satır görünür ya da görünmez). Sayfa belleği
+     * ~[limit] x vektör BLOB; SQLite CursorWindow (2 MB) için [limit] <= ~500 tutulmalıdır (512 boyutta satır ~2,1 KB).
      */
     @Query(
-        "SELECT p.mediaStoreId AS photoId, p.uri AS uri, p.dateTaken AS dateTaken, e.vector AS vector " +
-            "FROM photo_embedding e INNER JOIN photo p ON p.mediaStoreId = e.photoId " +
-            "WHERE e.modelVersion = :modelVersion AND e.photoId > :afterId ORDER BY e.photoId LIMIT :limit",
+        "SELECT photoId, vector FROM photo_embedding " +
+            "WHERE modelVersion = :modelVersion AND photoId > :afterId ORDER BY photoId LIMIT :limit",
     )
-    suspend fun getPageForModel(modelVersion: String, afterId: Long, limit: Int): List<IndexedVector>
+    suspend fun getPageForModel(modelVersion: String, afterId: Long, limit: Int): List<EmbeddingRow>
+
+    /**
+     * Verilen kimliklerin fotoğraf bilgisi (sırasız; olmayan kimlik sonuçta yer almaz). Arama top-K adayları için
+     * çağırır. Çağıran SQLite değişken sınırı için parçalar: <= 500 kimlik/çağrı ([PhotoDao.deleteByIds] gibi).
+     */
+    @Query("SELECT mediaStoreId, uri, dateTaken FROM photo WHERE mediaStoreId IN (:ids)")
+    suspend fun getPhotoRefsByIds(ids: List<Long>): List<PhotoRef>
 
     @Query("SELECT COUNT(*) FROM photo_embedding")
     suspend fun count(): Int
