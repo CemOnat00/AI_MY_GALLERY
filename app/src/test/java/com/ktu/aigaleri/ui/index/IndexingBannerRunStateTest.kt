@@ -83,9 +83,9 @@ class IndexingBannerRunStateTest {
     }
 
     @Test
-    fun booleanOverload_mapsToRunningOrIdle() {
-        assertNull(indexingBanner(IndexStatusUiState.Data(10, 3, null), running = false))
-        assertEquals(IndexingBanner(3, 10), indexingBanner(IndexStatusUiState.Data(10, 3, null), running = true))
+    fun toUiState_clampsNegativeProcessedToZero() {
+        assertEquals(IndexStatusUiState.Data(10, 0, null), IndexState(total = 10, processed = -1, lastRunAt = null).toUiState())
+        assertEquals(IndexStatusUiState.Data(10, 4, null), IndexState(total = 10, processed = 4, lastRunAt = null).toUiState())
     }
 
     private fun TestScope.collect(vm: IndexStatusViewModel) {
@@ -138,11 +138,17 @@ class IndexingBannerRunStateTest {
     }
 
     @Test
-    fun viewModel_runStateFlowError_isIdle() = runTest {
-        val vm = IndexStatusViewModel(MutableStateFlow(null), Launcher(flow { throw IllegalStateException("work db") }))
+    fun viewModel_runStateFlowError_afterRunning_fallsToIdle_andStaysIdle() = runTest {
+        val failAfterRunning = flow {
+            emit(IndexRunState.RUNNING)
+            throw IllegalStateException("work db")
+        }
+        val vm = IndexStatusViewModel(MutableStateFlow(null), Launcher(failAfterRunning))
         collect(vm)
         advanceTimeBy(10)
         runCurrent()
+        // RUNNING yayıldı, ardından hata: kalıcı IDLE (yeniden deneme yok).
         assertEquals(IndexRunState.IDLE, vm.runState.value)
+        assertFalse(vm.reindexInProgress.value)
     }
 }

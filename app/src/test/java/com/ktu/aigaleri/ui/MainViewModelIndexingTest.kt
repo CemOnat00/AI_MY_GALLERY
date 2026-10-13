@@ -132,26 +132,26 @@ class MainViewModelIndexingTest {
 
     @Test
     fun banner_hiddenWhenNotRunning() {
-        assertNull(indexingBanner(IndexStatusUiState.Data(10, 3, null), running = false))
+        assertNull(indexingBanner(IndexStatusUiState.Data(10, 3, null), IndexRunState.IDLE))
     }
 
     @Test
     fun banner_showsProgressWhenRunning() {
-        assertEquals(IndexingBanner(3, 10), indexingBanner(IndexStatusUiState.Data(10, 3, null), running = true))
+        assertEquals(IndexingBanner(3, 10), indexingBanner(IndexStatusUiState.Data(10, 3, null), IndexRunState.RUNNING))
     }
 
     @Test
     fun banner_staleCompletedCounts_showNeutralText() {
         val none = IndexingBanner(null, null)
-        assertEquals(none, indexingBanner(IndexStatusUiState.Data(10, 10, 5L), running = true))
-        assertEquals(none, indexingBanner(IndexStatusUiState.Data(10, 12, 5L), running = true))
+        assertEquals(none, indexingBanner(IndexStatusUiState.Data(10, 10, 5L), IndexRunState.RUNNING))
+        assertEquals(none, indexingBanner(IndexStatusUiState.Data(10, 12, 5L), IndexRunState.RUNNING))
     }
 
     @Test
     fun banner_withoutCounts_whenRunningButNoTotalYet() {
         val none = IndexingBanner(null, null)
-        assertEquals(none, indexingBanner(IndexStatusUiState.NeverRun, running = true))
-        assertEquals(none, indexingBanner(IndexStatusUiState.Loading, running = true))
-        assertEquals(none, indexingBanner(IndexStatusUiState.Data(0, 0, 5L), running = true))
+        assertEquals(none, indexingBanner(IndexStatusUiState.NeverRun, IndexRunState.RUNNING))
+        assertEquals(none, indexingBanner(IndexStatusUiState.Loading, IndexRunState.RUNNING))
+        assertEquals(none, indexingBanner(IndexStatusUiState.Data(0, 0, 5L), IndexRunState.RUNNING))
     }
 }

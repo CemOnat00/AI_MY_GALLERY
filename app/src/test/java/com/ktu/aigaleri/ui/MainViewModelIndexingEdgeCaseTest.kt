@@ -279,43 +279,43 @@ class MainViewModelIndexingEdgeCaseTest {
             IndexStatusUiState.Loading, IndexStatusUiState.NeverRun, IndexStatusUiState.Error,
             IndexStatusUiState.Data(0, 0, null), IndexStatusUiState.Data(10, 3, null),
             IndexStatusUiState.Data(10, 10, 1L), IndexStatusUiState.Data(10, 12, 1L),
-        ).forEach { assertNull("$it", indexingBanner(it, running = false)) }
+        ).forEach { assertNull("$it", indexingBanner(it, IndexRunState.IDLE)) }
     }
 
     @Test
     fun banner_running_boundaryValues() {
-        assertEquals(IndexingBanner(0, 1), indexingBanner(IndexStatusUiState.Data(1, 0, null), true))
-        assertEquals(IndexingBanner(9, 10), indexingBanner(IndexStatusUiState.Data(10, 9, null), true))
-        assertEquals(IndexingBanner(0, 150_000), indexingBanner(IndexStatusUiState.Data(150_000, 0, null), true))
+        assertEquals(IndexingBanner(0, 1), indexingBanner(IndexStatusUiState.Data(1, 0, null), IndexRunState.RUNNING))
+        assertEquals(IndexingBanner(9, 10), indexingBanner(IndexStatusUiState.Data(10, 9, null), IndexRunState.RUNNING))
+        assertEquals(IndexingBanner(0, 150_000), indexingBanner(IndexStatusUiState.Data(150_000, 0, null), IndexRunState.RUNNING))
         assertEquals(
             IndexingBanner(Int.MAX_VALUE - 1, Int.MAX_VALUE),
-            indexingBanner(IndexStatusUiState.Data(Int.MAX_VALUE, Int.MAX_VALUE - 1, null), true),
+            indexingBanner(IndexStatusUiState.Data(Int.MAX_VALUE, Int.MAX_VALUE - 1, null), IndexRunState.RUNNING),
         )
-        assertEquals(neutral, indexingBanner(IndexStatusUiState.Data(1, 1, null), true))
-        assertEquals(neutral, indexingBanner(IndexStatusUiState.Data(Int.MAX_VALUE, Int.MAX_VALUE, null), true))
-        assertEquals(neutral, indexingBanner(IndexStatusUiState.Data(5, 6, null), true))
+        assertEquals(neutral, indexingBanner(IndexStatusUiState.Data(1, 1, null), IndexRunState.RUNNING))
+        assertEquals(neutral, indexingBanner(IndexStatusUiState.Data(Int.MAX_VALUE, Int.MAX_VALUE, null), IndexRunState.RUNNING))
+        assertEquals(neutral, indexingBanner(IndexStatusUiState.Data(5, 6, null), IndexRunState.RUNNING))
     }
 
     @Test
     fun banner_running_negativeTotalOrZeroTotal_isNeutral() {
-        assertEquals(neutral, indexingBanner(IndexStatusUiState.Data(0, 0, null), true))
-        assertEquals(neutral, indexingBanner(IndexStatusUiState.Data(0, 3, null), true))
-        assertEquals(neutral, indexingBanner(IndexStatusUiState.Data(-1, -5, null), true))
-        assertEquals(neutral, indexingBanner(IndexStatusUiState.Data(-1, 0, 1L), true))
-        assertEquals(neutral, indexingBanner(IndexStatusUiState.Data(Int.MIN_VALUE, Int.MIN_VALUE, null), true))
+        assertEquals(neutral, indexingBanner(IndexStatusUiState.Data(0, 0, null), IndexRunState.RUNNING))
+        assertEquals(neutral, indexingBanner(IndexStatusUiState.Data(0, 3, null), IndexRunState.RUNNING))
+        assertEquals(neutral, indexingBanner(IndexStatusUiState.Data(-1, -5, null), IndexRunState.RUNNING))
+        assertEquals(neutral, indexingBanner(IndexStatusUiState.Data(-1, 0, 1L), IndexRunState.RUNNING))
+        assertEquals(neutral, indexingBanner(IndexStatusUiState.Data(Int.MIN_VALUE, Int.MIN_VALUE, null), IndexRunState.RUNNING))
     }
 
     @Test
     fun banner_running_noDataStates_areNeutral() {
-        assertEquals(neutral, indexingBanner(IndexStatusUiState.Loading, true))
-        assertEquals(neutral, indexingBanner(IndexStatusUiState.NeverRun, true))
-        assertEquals(neutral, indexingBanner(IndexStatusUiState.Error, true))
+        assertEquals(neutral, indexingBanner(IndexStatusUiState.Loading, IndexRunState.RUNNING))
+        assertEquals(neutral, indexingBanner(IndexStatusUiState.NeverRun, IndexRunState.RUNNING))
+        assertEquals(neutral, indexingBanner(IndexStatusUiState.Error, IndexRunState.RUNNING))
     }
 
     @Test
     fun banner_dataFromRoomRow_nullRowIsNeverRun_andShowsNeutralWhenRunning() {
         val none: IndexState? = null
-        assertEquals(neutral, indexingBanner(none.toUiState(), true))
+        assertEquals(neutral, indexingBanner(none.toUiState(), IndexRunState.RUNNING))
     }
 
     @Test
@@ -323,7 +323,7 @@ class MainViewModelIndexingEdgeCaseTest {
         val strings = File(System.getProperty("user.dir")!!, "src/main/res/values/strings.xml").readText()
         // T-016: çalışıyor / beklemede metinleri ayrıldı; "sürüyor veya sırada" belirsiz metni kalktı.
         assertTrue(strings.contains("İndeksleniyor; sonuçlar eksik olabilir"))
-        assertTrue(strings.contains("İndeksleme sırada; cihaz uygun olunca başlayacak. Sonuçlar eksik olabilir."))
+        assertTrue(strings.contains("İndeksleme sırada; birazdan ya da cihaz uygun olunca başlayacak. Sonuçlar eksik olabilir."))
         assertTrue(strings.contains("(%1\$d / %2\$d)"))
     }
 
@@ -333,11 +333,11 @@ class MainViewModelIndexingEdgeCaseTest {
         val running = MutableStateFlow(true)
         val status = IndexStatusViewModel(failing, Launcher(isRunning = running))
         backgroundScope.launch { status.state.collect {} }
-        backgroundScope.launch { status.reindexInProgress.collect {} }
+        backgroundScope.launch { status.runState.collect {} }
         assertEquals(IndexStatusUiState.Error, status.state.value)
-        assertEquals(neutral, indexingBanner(status.state.value, status.reindexInProgress.value))
+        assertEquals(neutral, indexingBanner(status.state.value, status.runState.value))
         running.value = false
-        assertNull(indexingBanner(status.state.value, status.reindexInProgress.value))
+        assertNull(indexingBanner(status.state.value, status.runState.value))
     }
 
     @Test
@@ -349,7 +349,7 @@ class MainViewModelIndexingEdgeCaseTest {
         val status = IndexStatusViewModel(src, Launcher(isRunning = MutableStateFlow(true)))
         backgroundScope.launch { status.state.collect {} }
         assertEquals(IndexStatusUiState.Error, status.state.value)
-        assertEquals(neutral, indexingBanner(status.state.value, true))
+        assertEquals(neutral, indexingBanner(status.state.value, IndexRunState.RUNNING))
     }
 
     @Test
@@ -357,10 +357,10 @@ class MainViewModelIndexingEdgeCaseTest {
         val broken: Flow<Boolean> = flow { throw IllegalStateException() }
         val status = IndexStatusViewModel(MutableStateFlow(IndexState(total = 10, processed = 3, lastRunAt = null)), Launcher(isRunning = broken))
         backgroundScope.launch { status.state.collect {} }
-        backgroundScope.launch { status.reindexInProgress.collect {} }
+        backgroundScope.launch { status.runState.collect {} }
         advanceTimeBy(IndexStatusViewModel.SAMPLE_PERIOD_MS * 2); runCurrent()
         assertEquals(IndexStatusUiState.Data(10, 3, null), status.state.value)
-        assertNull(indexingBanner(status.state.value, status.reindexInProgress.value))
+        assertNull(indexingBanner(status.state.value, status.runState.value))
     }
 
     @Test
@@ -368,8 +368,8 @@ class MainViewModelIndexingEdgeCaseTest {
         val row = MutableStateFlow<IndexState?>(IndexState(total = 10, processed = 3, lastRunAt = null))
         val status = IndexStatusViewModel(row, Launcher(isRunning = MutableStateFlow(true)))
         backgroundScope.launch { status.state.collect {} }
-        backgroundScope.launch { status.reindexInProgress.collect {} }
+        backgroundScope.launch { status.runState.collect {} }
         advanceTimeBy(IndexStatusViewModel.SAMPLE_PERIOD_MS * 2); runCurrent()
-        assertEquals(IndexingBanner(3, 10), indexingBanner(status.state.value, status.reindexInProgress.value))
+        assertEquals(IndexingBanner(3, 10), indexingBanner(status.state.value, status.runState.value))
     }
 }

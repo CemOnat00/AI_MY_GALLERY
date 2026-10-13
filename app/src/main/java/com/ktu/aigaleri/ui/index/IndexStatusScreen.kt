@@ -16,6 +16,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.ktu.aigaleri.R
 import com.ktu.aigaleri.ui.IndexRunState
@@ -25,6 +28,9 @@ import java.util.Date
 const val TAG_REINDEX_BUTTON = "reindex_button"
 const val TAG_RETRY_BUTTON = "retry_button"
 const val TAG_RUN_STATE = "index_run_state"
+
+private fun Modifier.runStateSemantics(): Modifier =
+    semantics { liveRegion = LiveRegionMode.Polite }.testTag(TAG_RUN_STATE)
 
 /** Durumsuz indeks durumu ekranı: işlenen/toplam, ilerleme çubuğu, son çalışma ve yeniden indeksleme butonu. */
 @Composable
@@ -44,8 +50,8 @@ fun IndexStatusContent(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         when (runState) {
-            IndexRunState.RUNNING -> Text(stringResource(R.string.index_run_state_running), modifier = Modifier.testTag(TAG_RUN_STATE))
-            IndexRunState.WAITING -> Text(stringResource(R.string.index_run_state_waiting), modifier = Modifier.testTag(TAG_RUN_STATE))
+            IndexRunState.RUNNING -> Text(stringResource(R.string.index_run_state_running), modifier = Modifier.runStateSemantics())
+            IndexRunState.WAITING -> Text(stringResource(R.string.index_run_state_waiting), modifier = Modifier.runStateSemantics())
             IndexRunState.IDLE -> Unit
         }
         when (state) {

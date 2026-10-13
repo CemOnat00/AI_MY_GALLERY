@@ -44,17 +44,17 @@ sealed interface IndexStatusUiState {
     }
 }
 
-/** Room `IndexState` satırını ekran durumuna eşler. */
+/** Room `IndexState` satırını ekran durumuna eşler; negatif `processed` 0'a çekilir (ekranda "-1 / 10" görünmesin). */
 fun IndexState?.toUiState(): IndexStatusUiState =
-    if (this == null) IndexStatusUiState.NeverRun else IndexStatusUiState.Data(total, processed, lastRunAt)
+    if (this == null) IndexStatusUiState.NeverRun else IndexStatusUiState.Data(total, processed.coerceAtLeast(0), lastRunAt)
 
 /**
  * İndeks durumunu Room Flow'undan okur (sample ile; her fotoğrafta güncelleme yağmurunu UI'a
  * yansıtmaz) ve "yeniden indeksle" isteğini [launcher]'a iletir.
  *
- * Çift dokunma koruması: [reindexInProgress], iş hattının gerçek durumundan ([IndexLauncher.isRunning], WorkManager
+ * Çift dokunma koruması: [reindexInProgress], iş hattının gerçek durumundan ([runState], WorkManager
  * `WorkInfo`) türetilir; iş kuyrukta/çalışırken yeni istekler yok sayılır. İstek ile iş durumunun görünmesi arasındaki
- * kısa aralık için yerel bir "başlatılıyor" bayrağı vardır: iş durumu görünür görünmez ([IndexLauncher.isRunning] true)
+ * kısa aralık için yerel bir "başlatılıyor" bayrağı vardır: iş durumu görünür görünmez ([runState] != IDLE)
  * ya da en geç [LAUNCH_GRACE_MS] sonra düşer (iş çok kısa sürüp hiç gözlenmediyse takılı kalmasın).
  */
 @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
@@ -80,18 +80,19 @@ class IndexStatusViewModel(
     /** İstek verildi ama iş durumu henüz gözlenmedi. */
     private val launching = MutableStateFlow(false)
 
-    private val launcherRunning: Flow<Boolean> = launcher.isRunning.catch { emit(false) }
-
-    val reindexInProgress: StateFlow<Boolean> = combine(launching, launcherRunning) { l, r -> l || r }
-        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
-
     /**
-     * İş hattının ince durumu (T-016): IDLE/WAITING/RUNNING. Banner ve durum ekranı "beklemede" ile "çalışıyor"u buradan
-     * ayırır; kilit ([reindexInProgress]) bundan bağımsız olarak kuyruktaki işi de kapsar. Akış hatası IDLE sayılır.
+     * İş hattının ince durumu (T-016): IDLE/WAITING/RUNNING. Tek paylaşılan akış (Eagerly): banner, durum ekranı ve
+     * [reindexInProgress] aynı değeri okur, launcher akışı tek kez gözlenir. Akış hatası IDLE'a düşer ve kalıcıdır
+     * (yeniden deneme yok; ViewModel yeniden oluşturulana kadar IDLE kalır).
      */
     val runState: StateFlow<IndexRunState> = launcher.runState
         .catch { emit(IndexRunState.IDLE) }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), IndexRunState.IDLE)
+        .stateIn(viewModelScope, SharingStarted.Eagerly, IndexRunState.IDLE)
+
+    /** Kuyrukta bekleyen veya çalışan iş ya da yeni istek ([launching]) varsa true; WAITING de kilitler. */
+    val reindexInProgress: StateFlow<Boolean> =
+        combine(launching, runState.map { it != IndexRunState.IDLE }) { l, r -> l || r }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
     private val _reindexError = MutableStateFlow(false)
 
@@ -120,7 +121,7 @@ class IndexStatusViewModel(
         }
         viewModelScope.launch {
             // İş durumu gözlenince (veya zaman aşımında) yerel bayrak düşer; kalıcı kilidi iş durumu belirler.
-            withTimeoutOrNull(LAUNCH_GRACE_MS) { launcherRunning.firstOrNull { it } }
+            withTimeoutOrNull(LAUNCH_GRACE_MS) { runState.firstOrNull { it != IndexRunState.IDLE } }
             launching.value = false
         }
     }

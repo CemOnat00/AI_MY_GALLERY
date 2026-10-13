@@ -8,7 +8,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import com.ktu.aigaleri.R
 import com.ktu.aigaleri.ui.IndexRunState
@@ -38,10 +41,6 @@ fun indexingBanner(state: IndexStatusUiState, runState: IndexRunState): Indexing
         }
 }
 
-/** Boolean sürümü: true çalışıyor sayılır (geriye uyumluluk); beklemeyi ayırt etmek için [IndexRunState] sürümünü kullan. */
-fun indexingBanner(state: IndexStatusUiState, running: Boolean): IndexingBanner? =
-    indexingBanner(state, if (running) IndexRunState.RUNNING else IndexRunState.IDLE)
-
 /** Dokununca indeks durumu ekranını açan tek satırlık ipucu. */
 @Composable
 fun IndexingBannerContent(banner: IndexingBanner, onOpen: () -> Unit) {
@@ -57,7 +56,8 @@ fun IndexingBannerContent(banner: IndexingBanner, onOpen: () -> Unit) {
         maxLines = 3,
         overflow = TextOverflow.Ellipsis,
         modifier = Modifier.fillMaxWidth()
-            .clickable(role = Role.Button, onClick = onOpen)
+            .clickable(role = Role.Button, onClickLabel = stringResource(R.string.indexing_banner_open_label), onClick = onOpen)
+            .semantics { liveRegion = LiveRegionMode.Polite }
             .testTag(TAG_INDEXING_BANNER),
     )
 }

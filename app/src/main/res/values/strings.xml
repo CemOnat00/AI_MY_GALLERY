@@ -33,7 +33,8 @@
     <string name="reindex_failed">Yeniden indeksleme başlatılamadı. Lütfen tekrar dene.</string>
     <string name="indexing_progress">İndeksleniyor (%1$d / %2$d); sonuçlar eksik olabilir. Ayrıntı için dokun.</string>
     <string name="indexing_running">İndeksleniyor; sonuçlar eksik olabilir. Ayrıntı için dokun.</string>
-    <string name="indexing_waiting">İndeksleme sırada; cihaz uygun olunca başlayacak. Sonuçlar eksik olabilir. Ayrıntı için dokun.</string>
+    <string name="indexing_waiting">İndeksleme sırada; birazdan ya da cihaz uygun olunca başlayacak. Sonuçlar eksik olabilir.</string>
+    <string name="indexing_banner_open_label">İndeks durumunu aç</string>
     <string name="index_run_state_running">Durum: Çalışıyor</string>
-    <string name="index_run_state_waiting">Durum: Beklemede; cihaz uygun olunca başlayacak</string>
+    <string name="index_run_state_waiting">Durum: Beklemede; birazdan ya da cihaz uygun olunca başlayacak</string>
 </resources>
