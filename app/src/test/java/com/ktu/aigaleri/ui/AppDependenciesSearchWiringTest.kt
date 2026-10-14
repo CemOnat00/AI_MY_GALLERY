@@ -44,7 +44,9 @@ class AppDependenciesSearchWiringTest {
 
     @Test
     fun searchRepositoryIsRealAndUsesSharedTextEncoder() {
-        assertTrue(Regex("""RoomSearchRepository\(\s*encoder = textEncoder""").containsMatchIn(deps))
+        // T-033: arama, paylaşılan çıplak kodlayıcının üstündeki şablon topluluğunu kullanır; ısınma çıplak kodlayıcıda kalır.
+        assertTrue(Regex("""RoomSearchRepository\(\s*encoder = searchTextEncoder""").containsMatchIn(deps))
+        assertTrue(deps.contains("val searchTextEncoder: TextEncoder by lazy { PromptEnsembleTextEncoder(textEncoder) }"))
         assertTrue(deps.contains("suspend fun warmUpSearch(): Boolean = searchWarmUp.run()"))
         assertTrue(deps.contains("warm = { textEncoder.warmUp() }"))
         assertTrue(deps.contains("indexLauncher.isIndexingNow()")) // eşleme tek yerde (IndexLauncher.isIndexingNow); davranış IndexLauncherRunStateTest'te

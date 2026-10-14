@@ -12,11 +12,13 @@ import com.ktu.aigaleri.data.RoomSearchRepository
 import com.ktu.aigaleri.data.RoomTransactionRunner
 import com.ktu.aigaleri.domain.PhotoIndexer
 import com.ktu.aigaleri.domain.SearchRepository
+import com.ktu.aigaleri.domain.TextEncoder
 import com.ktu.aigaleri.ml.AssetManagerOpener
 import com.ktu.aigaleri.ml.ModelManifest
 import com.ktu.aigaleri.ml.ModelStore
 import com.ktu.aigaleri.ml.OnnxImageEncoder
 import com.ktu.aigaleri.ml.OnnxTextEncoder
+import com.ktu.aigaleri.ml.PromptEnsembleTextEncoder
 import com.ktu.aigaleri.ml.SingleSessionSlot
 import com.ktu.aigaleri.work.WorkManagerIndexLauncher
 import kotlinx.coroutines.CoroutineScope
@@ -62,6 +64,12 @@ class AppDependencies private constructor(context: Context) {
     /** Arama metin kodlayıcısı (tek örnek; [modelStore] ve [sessionSlot] paylaşılır). */
     val textEncoder: OnnxTextEncoder by textEncoderDelegate
 
+    /**
+     * Aramanın kullandığı kodlayıcı (T-033): [textEncoder]'ın ÜSTÜNDE sorgu şablon topluluğu (kısa Türkçe sorgularda
+     * kalite yaması, docs/query-ensemble.md). Isınma ([warmUpSearch]) ve altın testler çıplak [textEncoder]'ı kullanır.
+     */
+    val searchTextEncoder: TextEncoder by lazy { PromptEnsembleTextEncoder(textEncoder) }
+
     /** İndeksleme hattı (görüntü kodlayıcı + MediaStore + Room); yalnızca WorkManager işinde toplanır. */
     val photoIndexer: PhotoIndexer by lazy {
         RoomPhotoIndexer(
@@ -75,7 +83,7 @@ class AppDependencies private constructor(context: Context) {
     }
 
     val searchRepository: SearchRepository by lazy {
-        RoomSearchRepository(encoder = textEncoder, dao = database.photoEmbeddingDao())
+        RoomSearchRepository(encoder = searchTextEncoder, dao = database.photoEmbeddingDao())
     }
 
     /**
