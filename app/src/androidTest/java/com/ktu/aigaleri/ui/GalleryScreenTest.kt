@@ -9,6 +9,8 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToIndex
+import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
@@ -90,7 +92,11 @@ class GalleryScreenTest {
     fun idle_showsChipsAndGalleryGrid() {
         search()
         rule.onNodeWithTag(TAG_SUGGESTION_CHIPS).assertExists()
-        for (s in SearchSuggestions.ALL) rule.onNodeWithText(s).assertExists().assertTouchHeightIsEqualTo(48.dp)
+        // Çip satırı LazyRow'dur: dar ekranda son çipler henüz oluşturulmaz; önce kaydırılır.
+        for (s in SearchSuggestions.ALL) {
+            rule.onNodeWithTag(TAG_SUGGESTION_CHIPS).performScrollToNode(hasText(s))
+            rule.onNodeWithText(s).assertExists().assertTouchHeightIsEqualTo(48.dp)
+        }
         rule.onNodeWithTag(TAG_GALLERY_GRID).assertExists()
         rule.onNodeWithTag(TAG_RESULT_GRID).assertDoesNotExist()
     }

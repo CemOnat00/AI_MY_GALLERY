@@ -17,7 +17,9 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.unit.dp
 import com.ktu.aigaleri.domain.InvalidQueryException
 import com.ktu.aigaleri.domain.SearchResult
@@ -33,6 +35,7 @@ import com.ktu.aigaleri.ui.search.SearchUiState
 import com.ktu.aigaleri.ui.search.TAG_EMPTY_INDEX_LINK
 import com.ktu.aigaleri.ui.search.TAG_ERROR_RETRY
 import com.ktu.aigaleri.ui.search.TAG_SEARCH_BUTTON
+import com.ktu.aigaleri.ui.search.TAG_SUGGESTION_CHIPS
 import com.ktu.aigaleri.ui.theme.AiGaleriTheme
 import com.ktu.aigaleri.ui.viewer.PhotoViewerScreen
 import com.ktu.aigaleri.ui.viewer.TAG_VIEWER_NOT_FOUND
@@ -63,7 +66,12 @@ class DesignScreensTest {
         var query: String? = null
         var searched = false
         search(SearchUiState(), onQueryChange = { query = it }, onSearch = { searched = true })
-        for (s in SearchSuggestions.ALL) rule.onNodeWithText(s).assertExists()
+        // Çip satırı LazyRow'dur (T-036): dar ekranda son çipler henüz oluşturulmaz; önce kaydırılır.
+        for (s in SearchSuggestions.ALL) {
+            rule.onNodeWithTag(TAG_SUGGESTION_CHIPS).performScrollToNode(hasText(s))
+            rule.onNodeWithText(s).assertExists()
+        }
+        rule.onNodeWithTag(TAG_SUGGESTION_CHIPS).performScrollToNode(hasText(SearchSuggestions.ALL.first()))
         rule.onNodeWithText("kırmızı araba").performClick()
         assertEquals("kırmızı araba", query)
         assertTrue(searched)
