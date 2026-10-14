@@ -26,7 +26,7 @@ WordPiece her konumda, sözcüğün o konumdan başlayan alt dizgesine uyan EN U
 ## Yeniden üretme
 
 ```
-cd mobile
+# proje kökünde (Gradle kökü)
 tools/fetch_models.sh                        # orijinal -> .model-cache (SHA), budama -> assets/models (yeni SHA), idempotent
 python3 -I tools/test_prune_text_model.py    # budama aracı birim testleri (sentetik ONNX, ağsız, gerçek model gerekmez)
 tools/test_fetch_models.sh                   # kabuk testi (sahte curl/python3/sha256sum)

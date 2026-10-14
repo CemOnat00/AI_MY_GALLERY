@@ -34,7 +34,7 @@ import org.junit.Test
 import java.io.File
 
 /**
- * T-016 QA (mobile): banner / durum ekranı runState kenar durumları ve IndexStatusViewModel paylaşılan runState akışı.
+ * T-016 QA: banner / durum ekranı runState kenar durumları ve IndexStatusViewModel paylaşılan runState akışı.
  * Kapsam: launching true iken IDLE, hızlı geçişler, çoklu gözlemci, kapanış, ilk kare tutarlılığı, bayat değer, hata.
  */
 @OptIn(ExperimentalCoroutinesApi::class)

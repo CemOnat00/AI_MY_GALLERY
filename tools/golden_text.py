@@ -11,7 +11,7 @@ varsa `tokenizers` yalnizca ek capraz kontrol icin kullanilir.
 
 Guvenlik kapilari (hicbiri atlanamaz):
   1. Metin ONNX ve sozluk ORIJINAL dosyalar olmali (budanmis/degismis model ile altin uretilmez). T-027 sonrasi
-     assets/models/ icindeki bu iki dosya BUDANMISTIR; bu yuzden mobile/.model-cache/ (tools/fetch_models.sh doldurur)
+     assets/models/ icindeki bu iki dosya BUDANMISTIR; bu yuzden .model-cache/ (tools/fetch_models.sh doldurur)
      VARSA orijinaller oradan okunur ve tools/fetch_models.sh'taki ORIJINAL SHA-256 ile dogrulanir; .model-cache yoksa
      eski davranis: assets/models/ icindeki text_model_qint8_arm64.onnx ve text_vocab.txt boyutu ve SHA-256'si
      ml/ModelManifest.kt ile ESIT olmali. Dense (degismez) her durumda assets/models/'ten, manifest ile dogrulanir.
@@ -19,7 +19,7 @@ Guvenlik kapilari (hicbiri atlanamaz):
      app/src/test/resources/ml/tokenizer_reference.tsv'nin TUM satirlarini birebir uretmedikce cikis hatalidir.
 Kotlin davranisi referanstir; ayrisma gorulurse betik raporlar ve cikis kodu 1 verir.
 
-Kullanim (mobile/ icinden):
+Kullanim (proje kokunden, Gradle koku):
   python3 -I tools/golden_text.py           # altin dosyalari uret
   python3 -I tools/golden_text.py --noise   # kosinus gurultu tabani olc (dosya yazmaz)
 
@@ -39,13 +39,13 @@ import unicodedata
 import numpy as np
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-MOBILE = os.path.dirname(HERE)
-MODELS = os.path.join(MOBILE, "app", "src", "main", "assets", "models")
-ORIG_CACHE = os.environ.get("MODEL_CACHE") or os.path.join(MOBILE, ".model-cache")
+ROOT = os.path.dirname(HERE)
+MODELS = os.path.join(ROOT, "app", "src", "main", "assets", "models")
+ORIG_CACHE = os.environ.get("MODEL_CACHE") or os.path.join(ROOT, ".model-cache")
 FETCH_SCRIPT = os.path.join(HERE, "fetch_models.sh")
 VOCAB_DIR = MODELS  # verify_models() ORIJINAL sozlugun bulundugu klasoru buraya yazar
-MANIFEST = os.path.join(MOBILE, "app", "src", "main", "java", "com", "ktu", "aigaleri", "ml", "ModelManifest.kt")
-RES = os.path.join(MOBILE, "app", "src", "test", "resources", "ml")
+MANIFEST = os.path.join(ROOT, "app", "src", "main", "java", "com", "ktu", "aigaleri", "ml", "ModelManifest.kt")
+RES = os.path.join(ROOT, "app", "src", "test", "resources", "ml")
 QUERIES_IN = os.path.join(HERE, "golden_text_queries.tsv")
 TOKENIZER_REF = os.path.join(RES, "tokenizer_reference.tsv")
 OUT_QUERIES = os.path.join(RES, "golden_queries.tsv")
@@ -272,7 +272,7 @@ def load_vocab():
         die("text_vocab.txt satir sonu CR iceriyor (Kotlin readLine ile ayrisabilir)")
     if len(lines) != EXPECTED_VOCAB_LINES:
         die("sozluk satir sayisi %d, beklenen %d (T-027 budanmis sozluk olabilir: tools/fetch_models.sh ile "
-            "orijinalleri mobile/.model-cache/ altina indirin)" % (len(lines), EXPECTED_VOCAB_LINES))
+            "orijinalleri .model-cache/ altina indirin)" % (len(lines), EXPECTED_VOCAB_LINES))
     for i, t in enumerate(lines):
         if any(c in t for c in "\t \n"):  # TSV ve bosluk-ayracli token listesini bozar
             die("sozluk satiri %d bosluk/sekme iceriyor: %r" % (i, t))

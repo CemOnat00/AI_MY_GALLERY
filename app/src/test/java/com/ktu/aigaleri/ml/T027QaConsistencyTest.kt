@@ -1,7 +1,7 @@
 package com.ktu.aigaleri.ml
 
+import com.ktu.aigaleri.ProjectLayout
 import java.io.File
-import java.util.concurrent.TimeUnit
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -11,13 +11,12 @@ import org.junit.Test
 /**
  * T-027 QA: (5) ModelManifest sabitleri, fetch_models.sh, prune_text_model.py ve docs'taki SHA/boyut/satır sayıları tutarlı
  * (otomatik grep); (6) git: model ağırlığı, .model-cache, __pycache__ izlenmiyor; MODEL_VERSION ve tokenizer/ModelStore kodu
- * T-027 ile DEĞİŞMEDİ. Çalışma dizini mobile/app. git yoksa/depo değilse git testleri atlanır (assumeTrue).
+ * T-027 ile DEĞİŞMEDİ. Yerleşimden bağımsız (ProjectLayout: eski `mobile/` altı ve yeni kök). git yoksa/depo değilse git testleri atlanır (assumeTrue).
  */
 class T027QaConsistencyTest {
-    private val mobileDir = File(System.getProperty("user.dir")!!).parentFile!!
-    private val repoRoot = mobileDir.parentFile!!
+    private val projectDir = ProjectLayout.projectRoot
 
-    private fun text(rel: String) = File(mobileDir, rel).readText(Charsets.UTF_8)
+    private fun text(rel: String) = File(projectDir, rel).readText(Charsets.UTF_8)
 
     private val onnx = ModelManifest.TEXT_ONNX
     private val vocab = ModelManifest.TEXT_VOCAB
@@ -110,34 +109,40 @@ class T027QaConsistencyTest {
         // Lisans notu: "değiştirilmiş model"
         assertTrue(setup.contains("Değiştirilmiş model (T-027)") && setup.contains("DEĞİŞTİRİLMİŞ"))
         // ModelManifest kaynak yorumundaki sayılar kodla uyumlu
-        val manifestSrc = File(mobileDir, "app/src/main/java/com/ktu/aigaleri/ml/ModelManifest.kt").readText()
+        val manifestSrc = File(projectDir, "app/src/main/java/com/ktu/aigaleri/ml/ModelManifest.kt").readText()
         assertTrue(manifestSrc.contains("69830") && manifestSrc.contains("135336307") && manifestSrc.contains("3bed77e8...a8a7") && manifestSrc.contains("fe0fda7c...310c"))
         assertTrue(manifestSrc.contains("sizeBytes = 97_153_651L") && manifestSrc.contains("sizeBytes = 521_296L"))
     }
 
     // ------------------------------------------------------------------------------------------------------------
-    // (6) git
+    // (6) git. Yollar iki yerleşimde de çalışır: git köküne göreli yol = gitPrefix + proje köküne göreli yol
+    // (eski yerleşim: "mobile/", yeni yerleşim: "").
 
     private fun git(vararg args: String): Pair<Int, String>? {
-        return try {
-            val p = ProcessBuilder(listOf("git", "-C", repoRoot.path) + args).redirectErrorStream(true).start()
-            val out = p.inputStream.readBytes().toString(Charsets.UTF_8)
-            if (!p.waitFor(30, TimeUnit.SECONDS)) { p.destroyForcibly(); null } else p.exitValue() to out
-        } catch (_: Exception) {
-            null
-        }
+        val root = ProjectLayout.gitRoot ?: return null
+        return ProjectLayout.git(root, *args)
     }
 
+    /** Git kökünden göreli yol için proje köküne göreli karşılık (proje dışındaysa null). */
+    private fun inProject(gitPath: String): String? = gitPath.removePrefix(ProjectLayout.gitPrefix!!).takeIf { gitPath.startsWith(ProjectLayout.gitPrefix!!) }
+
+    /** Proje köküne göreli yol -> git köküne göreli yol (git show/diff için). */
+    private fun gp(projectRel: String) = ProjectLayout.gitPrefix!! + projectRel
+
+    /** Git kökündeki tüm izlenen dosyalar (git köküne göreli). */
     private fun trackedFiles(): List<String> {
         val r = git("ls-files", "-z")
-        assumeTrue("git yok veya depo değil", r != null && r.first == 0 && File(repoRoot, ".git").exists())
+        assumeTrue("git yok veya depo değil", r != null && r.first == 0 && ProjectLayout.gitRoot != null)
         return r!!.second.split('\u0000').filter { it.isNotEmpty() }
     }
 
     @Test
     fun git_doesNotTrackModelWeightsCacheOrPycache() {
-        val files = trackedFiles()
-        assumeTrue("izlenen dosya yok", files.isNotEmpty())
+        val all = trackedFiles()
+        assumeTrue("izlenen dosya yok", all.isNotEmpty())
+        val gitRoot = ProjectLayout.gitRoot!!
+        // Proje köküne göre normalize edilmiş yollar (yalnızca proje altındakiler)
+        val files = all.mapNotNull { inProject(it) }
         val bad = files.filter {
             Regex("""\.(onnx|ort|safetensors|pt|pth|bin|gguf|tflite)$""", RegexOption.IGNORE_CASE).containsMatchIn(it) ||
                 it.contains(".model-cache") || it.contains("__pycache__") || it.endsWith(".pyc") ||
@@ -145,47 +150,73 @@ class T027QaConsistencyTest {
         }
         assertEquals("izlenen yasak dosyalar: $bad", emptyList<String>(), bad)
         // Ağırlık gibi büyük dosya yok (en büyüğü orijinal sözlük gzip'i, ~0,5 MB)
-        val big = files.map { File(repoRoot, it) }.filter { it.isFile && it.length() > 5_000_000 }
+        val big = all.map { File(gitRoot, it) }.filter { it.isFile && it.length() > 5_000_000 }
         assertEquals("5 MB üstü izlenen dosya: $big", emptyList<File>(), big)
-        // CLAUDE.md kuralı: GitHub'a yalnızca mobile/ ve reports/ (ve kök .gitignore) gider
-        val outside = files.filter { !it.startsWith("mobile/") && !it.startsWith("reports/") && it != ".gitignore" }
-        assertEquals("mobile/ ve reports/ dışında izlenen: $outside", emptyList<String>(), outside)
+        // CLAUDE.md kuralı: GitHub'a yalnızca proje (Gradle kökü) ve reports/ gider. Eski yerleşimde proje git kökünün
+        // alt dizinidir (dışında yalnızca reports/ ve kök .gitignore olabilir); yeni yerleşimde dışarıda hiçbir şey yoktur.
+        val outside = all.filter { inProject(it) == null && !it.startsWith("reports/") && it != ".gitignore" }
+        assertEquals("proje kökü ve reports/ dışında izlenen: $outside", emptyList<String>(), outside)
+        // Yerel yönetim dosyaları (CLAUDE.md, architecture.md, todo.md, claude_subagent.md, .claude/, Proje_Mobil_26.*)
+        // her iki yerleşimde de git dışıdır. Dosyanın diskte olması gerekmez; yalnızca git ls-files denetlenir.
+        val local = all.filter { path ->
+            listOf(path, inProject(path)).filterNotNull().any {
+                val top = it.substringBefore('/')
+                top in setOf("CLAUDE.md", "architecture.md", "todo.md", "claude_subagent.md", ".claude") || top.startsWith("Proje_Mobil_26.")
+            }
+        }
+        assertEquals("yerel yönetim dosyaları izleniyor: $local", emptyList<String>(), local)
         // T-027 testi için gereken orijinal sözlük (model ağırlığı DEĞİL) izleniyor
-        assertTrue(files.contains("mobile/app/src/test/resources/ml/original_vocab.txt.gz"))
+        assertTrue(files.contains("app/src/test/resources/ml/original_vocab.txt.gz"))
     }
 
     @Test
     fun git_ignoreRules_coverModelFilesCacheAndPycache() {
         trackedFiles()
+        val root = ProjectLayout.projectRoot
         for (p in listOf(
-            "mobile/.model-cache/text_model_qint8_arm64.onnx", "mobile/.model-cache/text_vocab.txt",
-            "mobile/app/src/main/assets/models/text_model_qint8_arm64.onnx", "mobile/app/src/main/assets/models/text_vocab.txt",
-            "mobile/tools/__pycache__/prune_text_model.cpython-313.pyc", "mobile/tools/__pycache__/x.pyc", "mobile/app/src/main/assets/models/yeni.onnx",
+            ".model-cache/text_model_qint8_arm64.onnx", ".model-cache/text_vocab.txt",
+            "app/src/main/assets/models/text_model_qint8_arm64.onnx", "app/src/main/assets/models/text_vocab.txt",
+            "tools/__pycache__/prune_text_model.cpython-313.pyc", "tools/__pycache__/x.pyc", "app/src/main/assets/models/yeni.onnx",
         )) {
-            val r = git("check-ignore", "-q", p)
+            val r = ProjectLayout.git(root, "check-ignore", "-q", p)
             assertEquals("git check-ignore $p (0 = yoksayılıyor)", 0, r?.first)
         }
     }
 
+    /** İlk commit'i (en eski) verilen başlık önekiyle eşleşen / başlığı tam eşleşen commit'in karması; yoksa null. */
+    private fun commitBySubject(match: (String) -> Boolean, oldest: Boolean): String? {
+        val r = git("log", "--format=%H%x09%s")?.takeIf { it.first == 0 } ?: return null
+        val hits = r.second.lines().filter { it.contains('\t') }.map { it.substringBefore('\t') to it.substringAfter('\t') }
+            .filter { match(it.second) }
+        return (if (oldest) hits.lastOrNull() else hits.firstOrNull())?.first
+    }
+
     @Test
     fun git_tokenizerModelStoreAndModelVersion_unchangedByT027() {
-        // Sabit commit aralığı: T-027'nin ilk commit'inin ebeveyni .. reviewer düzeltmesi. Yoksa (sığ klon) atlanır.
-        val base = "6ece844~1"
-        val head = "60e9e6e"
+        // Sabit commit aralığı: T-027'nin ilk commit'inin ebeveyni .. reviewer düzeltmesi. Karmalar geçmiş yeniden
+        // yazıldığında (örn. filter-repo ile köke yükseltme) değiştiğinden commit'ler başlığa göre bulunur.
+        // Yoksa (sığ klon) atlanır.
+        assumeTrue("git yok veya depo değil", ProjectLayout.gitRoot != null)
+        val first = commitBySubject({ it.startsWith("T-027: metin modeli sözlük budama") }, oldest = true)
+        val reviewer = commitBySubject({ it == "T-027: reviewer düzeltmeleri" }, oldest = true)
+        assumeTrue("T-027 commit'leri yok", first != null && reviewer != null)
+        val base = "$first~1"
+        val head = reviewer!!
         assumeTrue("T-027 commit'leri yok", git("rev-parse", "--verify", "-q", "$head^{commit}")?.first == 0 && git("rev-parse", "--verify", "-q", "$base^{commit}")?.first == 0)
         for (f in listOf("WordPieceTokenizer.kt", "ModelStore.kt", "QueryPreprocessor.kt", "EmbeddingMath.kt", "TextEncoder.kt")) {
-            val path = "mobile/app/src/main/java/com/ktu/aigaleri/ml/$f"
+            val path = gp("app/src/main/java/com/ktu/aigaleri/ml/$f")
             if (git("cat-file", "-e", "$base:$path")?.first != 0) continue
             val d = git("diff", "--stat", base, head, "--", path)
             assertEquals("$f değişti: ${d?.second}", "", d?.second?.trim())
         }
         // Üretim kodundaki diğer değişiklikler yalnızca yorum satırları (OnnxTextEncoder, AppDependencies, TextSessionTrimHandler)
-        val d = git("diff", "-U0", base, head, "--", "mobile/app/src/main/java/com/ktu/aigaleri/ml/OnnxTextEncoder.kt", "mobile/app/src/main/java/com/ktu/aigaleri/ui")!!.second
+        val d = git("diff", "-U0", base, head, "--", gp("app/src/main/java/com/ktu/aigaleri/ml/OnnxTextEncoder.kt"), gp("app/src/main/java/com/ktu/aigaleri/ui"))!!.second
         val changed = d.lines().filter { (it.startsWith("+") || it.startsWith("-")) && !it.startsWith("+++") && !it.startsWith("---") }
         assertTrue("yorum dışı değişiklik: $changed", changed.all { it.drop(1).trim().let { l -> l.startsWith("*") || l.startsWith("//") || l.startsWith("/*") } })
         // MODEL_VERSION sabiti aynı
-        val before = git("show", "$base:mobile/app/src/main/java/com/ktu/aigaleri/ml/ModelManifest.kt")!!.second
-        val after = git("show", "$head:mobile/app/src/main/java/com/ktu/aigaleri/ml/ModelManifest.kt")!!.second
+        val manifestPath = gp("app/src/main/java/com/ktu/aigaleri/ml/ModelManifest.kt")
+        val before = git("show", "$base:$manifestPath")!!.second
+        val after = git("show", "$head:$manifestPath")!!.second
         fun mv(s: String) = Regex("""const val MODEL_VERSION = "([^"]+)"""").find(s)!!.groupValues[1]
         assertEquals(mv(before), mv(after))
         assertEquals(mv(after), ModelManifest.MODEL_VERSION)

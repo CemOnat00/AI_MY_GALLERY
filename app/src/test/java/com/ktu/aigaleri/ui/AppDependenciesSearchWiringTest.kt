@@ -8,7 +8,7 @@ import org.junit.Test
 /**
  * T-008 (3a): görüntü (indeksleme) ve metin (arama) kodlayıcıları AYNI ModelStore ve AYNI SingleSessionSlot
  * örneğini paylaşmalı; WorkManager işi bağımlılığı AppDependencies singleton'ından almalı. AppDependencies Context
- * gerektirdiğinden kaynak üzerinden doğrulanır (çalışma dizini mobile/app).
+ * gerektirdiğinden kaynak üzerinden doğrulanır (çalışma dizini app/).
  */
 class AppDependenciesSearchWiringTest {
     private val mainSrc = File(System.getProperty("user.dir")!!, "src/main/java/com/ktu/aigaleri")

@@ -14,7 +14,7 @@ import org.w3c.dom.Element
  * izin, provider, receiver, service ve activity'ler. Debug VE release ayrı doğrulanır.
  * Dosya yoksa test BAŞARISIZ olur (sessiz atlama yok): build.gradle.kts unit test görevlerini
  * processDebugMainManifest ve processReleaseMainManifest'e bağlar, dosyalar her çalıştırmada tazedir.
- * Çalışma dizini mobile/app.
+ * Çalışma dizini app/ (Gradle proje kökünün altında).
  */
 class MergedManifestTest {
     private val appDir = File(System.getProperty("user.dir")!!)

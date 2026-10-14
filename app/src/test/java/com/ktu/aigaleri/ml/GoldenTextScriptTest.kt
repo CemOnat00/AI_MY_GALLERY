@@ -15,15 +15,15 @@ import org.junit.rules.TemporaryFolder
  * T-026 (QA): `tools/golden_text.py` kapı davranışı (`--help`, model SHA-256/boyut doğrulaması, hata çıkışları).
  * Betik python3 -I ile çalıştırılır; python3 yoksa atlanır. numpy ve onnxruntime bu makinede/CI'da olmayabilir: betik
  * `-c` sarmalayıcısıyla çalıştırılır, sarmalayıcı numpy/onnxruntime için SAHTE modül koyar (betik kodu değişmez, gerçek
- * çıkarım yapılmaz). Betik, model dosyalarını kendi konumuna göre bulduğundan (HERE/..), geçici bir mobile/ ağacı kurulur.
+ * çıkarım yapılmaz). Betik, model dosyalarını kendi konumuna göre bulduğundan (HERE/..), geçici bir proje ağacı kurulur.
  * Gerçek ağaçta (varsa model dosyalarıyla) betik ONNX sürüm kapısında durur: altın dosyalar ASLA yazılmaz.
  */
 class GoldenTextScriptTest {
     @get:Rule
     val tmp = TemporaryFolder()
 
-    private val realMobile = File(System.getProperty("user.dir")!!).parentFile!!
-    private val realScript = File(realMobile, "tools/golden_text.py")
+    private val realRoot = File(System.getProperty("user.dir")!!).parentFile!!
+    private val realScript = File(realRoot, "tools/golden_text.py")
 
     private val python: File? = run {
         val dirs = (System.getenv("PATH") ?: "").split(File.pathSeparator) + listOf("/opt/homebrew/bin", "/usr/local/bin", "/usr/bin")
@@ -59,7 +59,7 @@ class GoldenTextScriptTest {
 
     private fun sha(bytes: ByteArray) = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
 
-    /** Küçük sahte mobile/ ağacı: betik kopyası + verilen ModelManifest.kt + modeller. */
+    /** Küçük sahte proje ağacı: betik kopyası + verilen ModelManifest.kt + modeller. */
     private class Tree(val root: File) {
         val script = File(root, "tools/golden_text.py")
         val models = File(root, "app/src/main/assets/models")
@@ -114,13 +114,13 @@ class GoldenTextScriptTest {
 
     @Test
     fun help_exitsZero_documentsNoiseFlag_andTouchesNothing() {
-        val before = File(realMobile, "app/src/test/resources/ml").listFiles()!!.associate { it.name to it.lastModified() }
+        val before = File(realRoot, "app/src/test/resources/ml").listFiles()!!.associate { it.name to it.lastModified() }
         val r = run(realScript, "--help")
         assertEquals(r.err, 0, r.exit)
         assertTrue(r.out, r.out.contains("--noise"))
         assertTrue(r.out, r.out.contains("python3 -I tools/golden_text.py"))
         assertFalse("model doğrulama --help'te çalışmamalı", r.out.contains("SHA-256 tamam"))
-        assertEquals(before, File(realMobile, "app/src/test/resources/ml").listFiles()!!.associate { it.name to it.lastModified() })
+        assertEquals(before, File(realRoot, "app/src/test/resources/ml").listFiles()!!.associate { it.name to it.lastModified() })
     }
 
     @Test
@@ -198,10 +198,10 @@ class GoldenTextScriptTest {
 
     @Test
     fun realTree_withOriginalModels_passesShaTokenizerAndQueryGates_butStopsBeforeAnyWrite() {
-        val modelsDir = File(realMobile, "app/src/main/assets/models")
+        val modelsDir = File(realRoot, "app/src/main/assets/models")
         assumeTrue("model dosyaları yok", File(modelsDir, "text_model_qint8_arm64.onnx").isFile && File(modelsDir, "text_vocab.txt").isFile && File(modelsDir, "text_dense_768x512_f32.bin").isFile)
         // Budanmış (T-027 sonrası) sözlük/model ile bu kapı düşer: altın yenileme yalnızca ORİJİNAL dosyalarla mümkündür.
-        val resDir = File(realMobile, "app/src/test/resources/ml")
+        val resDir = File(realRoot, "app/src/test/resources/ml")
         val snapshot = listOf("golden_queries.tsv", "golden_text_vectors.tsv").associateWith { File(resDir, it).readBytes() }
         val r = run(realScript)
         assertEquals(r.out + r.err, 1, r.exit)

@@ -21,7 +21,7 @@ Bağlama: `AppDependencies.searchTextEncoder` (`SearchRepository` bunu kullanır
 
 ## Ölçüm
 
-Düzenek (masaüstü, ORT 1.30.0, ORİJİNAL metin modeli; tablolar betiğin çıktısıdır, `### N.` başlıkları betiğin `## N.` bölümleriyle aynı numaralıdır). Çalıştırma (mobile/ içinden; venv `docs/golden-text.md` kurulumundaki gibi repo dışında):
+Düzenek (masaüstü, ORT 1.30.0, ORİJİNAL metin modeli; tablolar betiğin çıktısıdır, `### N.` başlıkları betiğin `## N.` bölümleriyle aynı numaralıdır). Çalıştırma (proje kökünde; venv `docs/golden-text.md` kurulumundaki gibi repo dışında):
 
 ```
 ~/venvs/aigaleri-ort/bin/python -I tools/query_ensemble.py --eval --image-vecs /yol/imgvecs.npy   # ölçüm tabloları (stdout)

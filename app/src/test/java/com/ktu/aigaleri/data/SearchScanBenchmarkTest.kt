@@ -24,7 +24,7 @@ import org.junit.Test
  *
  * UYARI: ölçüm makinesi TELEFON DEĞİLDİR; yalnızca A/B ORANI anlamlıdır. Sahte DAO satır başına `String`/`ByteArray`
  * kopyalamaz (Room/CursorWindow yapar), bu yüzden gerçek cihazda kazanç buradan farklı olur (cihaz ölçümü T-020).
- * Sonuç ve yorum: mobile/docs/search-scan-benchmark.md.
+ * Sonuç ve yorum: docs/search-scan-benchmark.md.
  */
 class SearchScanBenchmarkTest {
     private val dim = 512

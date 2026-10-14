@@ -11,7 +11,7 @@ import org.junit.Test
 /**
  * T-029 (K-13): release yalnızca arm64-v8a; debug tüm ABI'lerde kalır.
  * APK testleri `assembleRelease`/`assembleDebug` sonrası anlamlıdır; APK yoksa atlanır.
- * Çalışma dizini mobile/app.
+ * Çalışma dizini app/ (Gradle proje kökünün altında).
  */
 class ReleaseAbiConfigTest {
     private val appDir = File(System.getProperty("user.dir")!!)

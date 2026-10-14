@@ -17,7 +17,7 @@ import org.w3c.dom.Element
  * ORT sınıflarının adı/sayısı, strings.xml'deki her dizenin kaynak küçültmeden sağ çıkması, release APK dex bütçesi.
  *
  * R8/APK çıktısına bağlı testler `./gradlew assembleRelease` sonrası anlamlıdır; dosya yoksa assumeTrue ile atlanır.
- * Birleşik manifest testleri atlanmaz (MergedManifestTest ile aynı build bağımlılığı). Çalışma dizini mobile/app.
+ * Birleşik manifest testleri atlanmaz (MergedManifestTest ile aynı build bağımlılığı). Çalışma dizini app/ (Gradle proje kökünün altında).
  */
 class ReleaseOutputQaTest {
     private val appDir = File(System.getProperty("user.dir")!!)

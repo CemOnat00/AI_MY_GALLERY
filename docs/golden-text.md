@@ -17,14 +17,14 @@ Model değişikliklerinden (T-027 sözlük budama, T-028 mmap, T-030 .ort) ÖNCE
 ```
 python3 -m venv ~/venvs/aigaleri-ort        # repo DIŞINDA bir yer
 ~/venvs/aigaleri-ort/bin/pip install numpy onnxruntime==1.30.0   # ağ yalnızca bu kurulum için; isteğe bağlı: tokenizers (çapraz kontrol)
-cd mobile && tools/fetch_models.sh --text-only                    # orijinaller mobile/.model-cache/'e (SHA doğrulamalı) + budanmış sürüm assets'e (T-027)
+tools/fetch_models.sh --text-only                           # orijinaller .model-cache/'e (SHA doğrulamalı) + budanmış sürüm assets'e (T-027)
 ~/venvs/aigaleri-ort/bin/python -I tools/golden_text.py           # altın dosyaları üretir (geçici dosya + os.replace ile atomik)
 ~/venvs/aigaleri-ort/bin/python -I tools/golden_text.py --noise   # gürültü tabanı; dosya yazmaz
 ```
 
 Altın yenileme yalnızca AYNI platform + onnxruntime 1.30.0 ile bit bit tekrarlanır beklenir; başka platformda (ör. farklı CPU/ORT derlemesi) farkın gürültü tabanı olup olmadığına `--noise` ile ve kosinüsle bakın, bit eşitliği aramayın.
 
-Betik şunları DOĞRULAR ve biri tutmazsa dosya yazmadan çıkar (kod 1; eksik/bozuk girdi ve referans dosyaları da `die()` ile temiz çıkış): (1) metin ONNX ve sözlük ORİJİNAL dosyalardır (budanmış/değiştirilmiş model ile altın üretilmez). T-027 sonrası `assets/models/` budanmıştır; bu yüzden `mobile/.model-cache/` (veya `MODEL_CACHE`) VARSA orijinaller oradan okunur ve `fetch_models.sh`'taki ORİJİNAL SHA-256 ile doğrulanır; yoksa eski davranış: `assets/models/` dosyalarının boyutu ve SHA-256'sı `ml/ModelManifest.kt` ile eşit olmalı (budanmış manifest + budanmış dosya ile sözlük satır sayısı kapısında durur). `text_dense_768x512_f32.bin` (değişmedi) her durumda `assets/models/`'ten ve manifest ile doğrulanır. Altın yenileme budama sonrası da bayt bayt aynı dosyaları üretti (T-027'de doğrulandı); (2) Python tokenizer, `tokenizer_reference.tsv`'nin tüm satırlarını birebir üretir.
+Betik şunları DOĞRULAR ve biri tutmazsa dosya yazmadan çıkar (kod 1; eksik/bozuk girdi ve referans dosyaları da `die()` ile temiz çıkış): (1) metin ONNX ve sözlük ORİJİNAL dosyalardır (budanmış/değiştirilmiş model ile altın üretilmez). T-027 sonrası `assets/models/` budanmıştır; bu yüzden `.model-cache/` (veya `MODEL_CACHE`) VARSA orijinaller oradan okunur ve `fetch_models.sh`'taki ORİJİNAL SHA-256 ile doğrulanır; yoksa eski davranış: `assets/models/` dosyalarının boyutu ve SHA-256'sı `ml/ModelManifest.kt` ile eşit olmalı (budanmış manifest + budanmış dosya ile sözlük satır sayısı kapısında durur). `text_dense_768x512_f32.bin` (değişmedi) her durumda `assets/models/`'ten ve manifest ile doğrulanır. Altın yenileme budama sonrası da bayt bayt aynı dosyaları üretti (T-027'de doğrulandı); (2) Python tokenizer, `tokenizer_reference.tsv`'nin tüm satırlarını birebir üretir.
 
 ## Tokenizasyon referansı ve ayrışma
 
@@ -76,7 +76,7 @@ Hepsi ORİJİNAL referansa karşı, aynı 76 sorgu (T-027 ayrıca büyük TR/EN 
 
 ## Eski model dosyalarını yedekleme (repo dışı)
 
-T-027 ile orijinaller `mobile/.model-cache/` önbelleğinde KALIR (`tools/fetch_models.sh` doldurur, git'e eklenmez; eski kurulumdaki orijinaller ağsız önbelleğe taşınır), ayrı yedek gerekmez. Başka dönüşümler (T-028, T-030) `assets/models/` dosyalarını değiştirirse orijinaller yine önbellekten alınır; `tools/fetch_models.sh` sabit revizyondan yeniden indirir. Geri yükleme/denetim için SHA-256 değerleri:
+T-027 ile orijinaller `.model-cache/` önbelleğinde KALIR (`tools/fetch_models.sh` doldurur, git'e eklenmez; eski kurulumdaki orijinaller ağsız önbelleğe taşınır), ayrı yedek gerekmez. Başka dönüşümler (T-028, T-030) `assets/models/` dosyalarını değiştirirse orijinaller yine önbellekten alınır; `tools/fetch_models.sh` sabit revizyondan yeniden indirir. Geri yükleme/denetim için SHA-256 değerleri:
 
 | Dosya | Boyut (bayt) | SHA-256 |
 |---|---|---|

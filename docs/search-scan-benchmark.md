@@ -15,7 +15,7 @@ HotSpot); mutlak süreler telefon için bir şey söylemez, yalnızca A/B ORANI 
 Ağır boyutlar (50 bin / 100 bin; ~230 MB sahte indeks, ~10 sn) varsayılan `testDebugUnitTest` içinde KOŞMAZ
 (Gradle test JVM varsayılan 512 MB sınırı). Yalnızca ortam değişkeniyle:
 
-    cd mobile && RUN_SEARCH_BENCH=1 ./gradlew testDebugUnitTest --tests '*SearchScanBenchmarkTest'
+    RUN_SEARCH_BENCH=1 ./gradlew testDebugUnitTest --tests '*SearchScanBenchmarkTest'
 
 Sonuç satırları stdout'a yazılır (`app/build/test-results/testDebugUnitTest/` altındaki `...SearchScanBenchmarkTest.xml`).
 Varsayılan koşuda yalnızca 10 bin kayıtla doğruluk (A == B) denetlenir. Paralel Gradle koşusu sonuç dosyasını

@@ -6,10 +6,10 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** T-001 kabul kriterleri: manifest, minSdk, bağımlılıklar, wrapper. Çalışma dizini mobile/app. */
+/** T-001 kabul kriterleri: manifest, minSdk, bağımlılıklar, wrapper. Çalışma dizini app/ (Gradle proje kökünün altında). */
 class ProjectConfigTest {
     private val appDir = File(System.getProperty("user.dir")!!)
-    private val mobileDir = appDir.parentFile!!
+    private val projectDir = appDir.parentFile!!
 
     private fun manifest(file: File) = file.readText()
 
@@ -53,10 +53,10 @@ class ProjectConfigTest {
 
     @Test
     fun gradleWrapper_isPresent() {
-        assertTrue(File(mobileDir, "gradlew").exists())
-        assertTrue(File(mobileDir, "gradlew.bat").exists())
-        assertTrue(File(mobileDir, "gradle/wrapper/gradle-wrapper.jar").exists())
-        assertTrue(File(mobileDir, "gradle/wrapper/gradle-wrapper.properties").exists())
+        assertTrue(File(projectDir, "gradlew").exists())
+        assertTrue(File(projectDir, "gradlew.bat").exists())
+        assertTrue(File(projectDir, "gradle/wrapper/gradle-wrapper.jar").exists())
+        assertTrue(File(projectDir, "gradle/wrapper/gradle-wrapper.properties").exists())
     }
 
     @Test

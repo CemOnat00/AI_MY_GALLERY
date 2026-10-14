@@ -7,7 +7,7 @@ import org.junit.Test
 
 /**
  * T-002 QA: export edilen şema JSON'u ve kaynak dosyalar architecture.md Bölüm 5 ve 8 ile uyumlu mu.
- * Çalışma dizini mobile/app.
+ * Çalışma dizini app/ (Gradle proje kökünün altında).
  */
 class SchemaContractTest {
     private val appDir = File(System.getProperty("user.dir")!!)

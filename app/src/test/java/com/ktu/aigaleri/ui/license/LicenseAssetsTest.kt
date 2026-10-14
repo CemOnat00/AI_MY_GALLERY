@@ -11,21 +11,21 @@ import org.junit.Assert.fail
 import org.junit.Test
 
 /**
- * T-037 (K-12): Lisanslar içeriği (assets/licenses/) bütünlüğü. Çalışma dizini mobile/app (diğer testler gibi).
+ * T-037 (K-12): Lisanslar içeriği (assets/licenses/) bütünlüğü. Çalışma dizini app/ (diğer testler gibi).
  * Apache-2.0 metninin kaynağı: Gradle önbelleğindeki aapt2 NOTICE dosyası (satır 7-208), gövdesi ayrıca
  * androidx.compose.ui LICENSE.txt ile eşleşir (docs/licenses-screen.md).
  */
 class LicenseAssetsTest {
     private val appDir = File(System.getProperty("user.dir")!!).let { if (File(it, "src/main").isDirectory) it else File(it, "app") }
     private val dir = File(appDir, "src/main/assets/licenses")
-    private val mobileDir = appDir.parentFile
+    private val projectDir = appDir.parentFile
 
     private fun text(name: String) = File(dir, name).readText(Charsets.UTF_8)
 
     private fun load() = LicenseCatalog.load { File(dir, it).inputStream() }
 
     private fun versions(): Map<String, String> {
-        val lines = File(mobileDir, "gradle/libs.versions.toml").readLines()
+        val lines = File(projectDir, "gradle/libs.versions.toml").readLines()
         val section = lines.dropWhile { it.trim() != "[versions]" }.drop(1).takeWhile { !it.trim().startsWith("[") }
         return section.mapNotNull { Regex("^([A-Za-z0-9_]+)\\s*=\\s*\"([^\"]+)\"").find(it.trim()) }
             .associate { it.groupValues[1] to it.groupValues[2] }
@@ -217,7 +217,7 @@ class LicenseAssetsTest {
             "kotlinx-coroutines-test", "androidx-test-ext-junit", "androidx-test-runner",
         )
         val v = versions()
-        val libs = File(mobileDir, "gradle/libs.versions.toml").readLines()
+        val libs = File(projectDir, "gradle/libs.versions.toml").readLines()
             .dropWhile { it.trim() != "[libraries]" }.drop(1).takeWhile { !it.trim().startsWith("[") }
         val entries = libs.mapNotNull { Regex("^([A-Za-z0-9_-]+)\\s*=.*version\\.ref\\s*=\\s*\"([^\"]+)\"").find(it.trim()) }
             .map { it.groupValues[1] to it.groupValues[2] }
@@ -291,7 +291,7 @@ class LicenseAssetsTest {
 
     @Test
     fun licensesAssets_areNotGitIgnored_butModelsAre() {
-        val ignore = File(mobileDir, ".gitignore").readText()
+        val ignore = File(projectDir, ".gitignore").readText()
         assertTrue(ignore.contains("app/src/main/assets/models/"))
         assertFalse(ignore.contains("licenses"))
     }

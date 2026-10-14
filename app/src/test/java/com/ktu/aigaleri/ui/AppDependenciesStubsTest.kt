@@ -12,7 +12,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
 
-/** T-009 (5): stub'lar tek yerde ve beklenen sözleşmede. Çalışma dizini mobile/app. */
+/** T-009 (5): stub'lar tek yerde ve beklenen sözleşmede. Çalışma dizini app/ (Gradle proje kökünün altında). */
 class AppDependenciesStubsTest {
     private val mainSrc = File(System.getProperty("user.dir")!!, "src/main/java/com/ktu/aigaleri")
 

@@ -10,11 +10,11 @@ import org.junit.Test
 /**
  * T-027 QA: `tools/test_t027_qa.py` (bağımsız protobuf okuyucu, bozuk/kesik ONNX, tek bayt, yanlış SHA, yazma izni yok,
  * idempotans, fetch_models.sh ağsız) `python3 -I` ile çalıştırılır. python3 yoksa atlanır. Gerçek orijinal model
- * (`mobile/.model-cache/`) yoksa betik içindeki gerçek-dosya testleri atlanır ("OK (skipped=N)"); varsa ATLANMAMALI.
- * Çalışma dizini mobile/app.
+ * (`.model-cache/`) yoksa betik içindeki gerçek-dosya testleri atlanır ("OK (skipped=N)"); varsa ATLANMAMALI.
+ * Çalışma dizini app/ (Gradle proje kökünün altında).
  */
 class T027QaPruneToolScriptTest {
-    private val mobileDir = File(System.getProperty("user.dir")!!).parentFile!!
+    private val projectDir = File(System.getProperty("user.dir")!!).parentFile!!
 
     private val python: File? = run {
         val dirs = (System.getenv("PATH") ?: "").split(File.pathSeparator) + listOf("/opt/homebrew/bin", "/usr/local/bin", "/usr/bin")
@@ -24,7 +24,7 @@ class T027QaPruneToolScriptTest {
     @Test
     fun pythonQaTests_pass_andRealModelTestsAreNotSkippedWhenCacheExists() {
         assumeTrue("python3 yok", python != null)
-        val script = File(mobileDir, "tools/test_t027_qa.py")
+        val script = File(projectDir, "tools/test_t027_qa.py")
         assertTrue(script.isFile)
         val pb = ProcessBuilder(python!!.path, "-I", script.path).redirectErrorStream(true)
         pb.environment().keys.removeAll { it.startsWith("PYTHON") }
@@ -33,7 +33,7 @@ class T027QaPruneToolScriptTest {
         assertTrue("zaman aşımı", p.waitFor(280, TimeUnit.SECONDS))
         assertEquals(out, 0, p.exitValue())
         assertTrue(out, Regex("(?m)^OK").containsMatchIn(out))
-        val cache = File(mobileDir, ".model-cache")
+        val cache = File(projectDir, ".model-cache")
         if (File(cache, "text_model_qint8_arm64.onnx").isFile && File(cache, "text_vocab.txt").isFile) {
             // Gerçek orijinal model varsa gerçek-dosya testleri çalışmış olmalı (yalnızca assets dense .bin / izin / shipped-vocab atlamaları olabilir).
             val skipped = Regex("skipped=([0-9]+)").find(out)?.groupValues?.get(1)?.toInt() ?: 0

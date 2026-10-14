@@ -16,7 +16,7 @@ Orijinal dosyalar: --orig-dir (varsayilan .model-cache, tools/fetch_models.sh do
 (varsayilan app/src/main/assets/models). Hicbir repo dosyasi yazilmaz (yalniz --write-ref-tokens istenirse).
 Cikis kodu 0 = tum kapilar gecti. Gizlilik: yalnizca sentetik/sabit metin; fotograf ve kullanici istemi yoktur.
 
-Kullanim (mobile/ icinden):
+Kullanim (proje kokunden, Gradle koku):
   ~/venvs/aigaleri-ort/bin/python -I tools/verify_pruned_text.py [--orig-dir D] [--pruned-dir D] [--write-ref-tokens]
 """
 import argparse
@@ -30,7 +30,7 @@ import numpy as np
 
 sys.dont_write_bytecode = True  # tools/ altina __pycache__ yazma
 HERE = os.path.dirname(os.path.abspath(__file__))
-MOBILE = os.path.dirname(HERE)
+ROOT = os.path.dirname(HERE)
 SEED = 20261013
 COS_MIN = 0.9999
 TOPK_MIN = {10: 0.99, 50: 0.98}
@@ -175,8 +175,8 @@ def encode_variants(tok, text):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--orig-dir", default=os.environ.get("MODEL_CACHE", os.path.join(MOBILE, ".model-cache")))
-    ap.add_argument("--pruned-dir", default=os.path.join(MOBILE, "app", "src", "main", "assets", "models"))
+    ap.add_argument("--orig-dir", default=os.environ.get("MODEL_CACHE", os.path.join(ROOT, ".model-cache")))
+    ap.add_argument("--pruned-dir", default=os.path.join(ROOT, "app", "src", "main", "assets", "models"))
     ap.add_argument("--write-ref-tokens", action="store_true",
                     help="tokenizer_reference_tokens.tsv'yi (orijinal sozlukle) uret ve yaz")
     args = ap.parse_args()

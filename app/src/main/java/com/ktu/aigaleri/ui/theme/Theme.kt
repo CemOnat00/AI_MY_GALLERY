@@ -18,7 +18,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 /*
- * T-022: Stitch tasarımının (mobile/docs/design/.../authentic_system_utility/DESIGN.md) TEK tema dosyası.
+ * T-022: Stitch tasarımının (docs/design/.../authentic_system_utility/DESIGN.md) TEK tema dosyası.
  * Renk, tipografi, şekil ve boşluk değerleri yalnızca burada tanımlanır; ekranlar MaterialTheme.colorScheme /
  * typography / shapes ile [AiGaleriDimens] üzerinden okur (dağınık renk veya sihirli sayı yok).
  *

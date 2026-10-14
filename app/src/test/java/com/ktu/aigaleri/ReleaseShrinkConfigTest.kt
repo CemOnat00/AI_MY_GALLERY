@@ -8,7 +8,7 @@ import org.junit.Test
 /**
  * T-024: release küçültme (R8 + kaynak küçültme) yapılandırması ve R8 çıktıları (seeds.txt, mapping.txt).
  * R8 çıktı testleri `./gradlew assembleRelease` sonrası anlamlıdır; dosya yoksa atlanır (normal testDebugUnitTest
- * kırılmaz). Çalışma dizini mobile/app.
+ * kırılmaz). Çalışma dizini app/ (Gradle proje kökünün altında).
  */
 class ReleaseShrinkConfigTest {
     private val appDir = File(System.getProperty("user.dir")!!)

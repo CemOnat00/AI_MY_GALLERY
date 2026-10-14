@@ -4,11 +4,11 @@
 # model indirmez (INTERNET izni yok). Dosyalar sabitlenmiş Hugging Face revizyonlarından indirilir,
 # SHA-256 ile doğrulanır ve app/src/main/assets/models/ altına yazılır (bu klasör git'e eklenmez).
 # T-027 (K-14 Katman A): metin modelinin ONNX'i ve sözlüğü ORİJİNAL olarak önce MODEL_CACHE'e (varsayılan
-# mobile/.model-cache/, git'e eklenmez) indirilip SHA-256 doğrulanır, sonra tools/prune_text_model.py (yalnızca Python
+# .model-cache/, git'e eklenmez) indirilip SHA-256 doğrulanır, sonra tools/prune_text_model.py (yalnızca Python
 # standart kütüphanesi, python3 -I) ile BUDANMIŞ sürüm HEDEF_KLASÖR'e yazılır ve yeni SHA-256 doğrulanır. Orijinaller
 # önbellekte kalır (altın üretimi/kalite kapıları için); HEDEF'te zaten doğrulanmış budanmış dosya varsa ağa çıkılmaz.
 # Gereken: bash, curl, python3 (yalnızca standart kütüphane, >= 3.8), shasum veya sha256sum.
-# Kaynak ve lisanslar: mobile/docs/model-setup.md. Değerler: mobile/docs/model-research.md bölüm 6.
+# Kaynak ve lisanslar: docs/model-setup.md. Değerler: docs/model-research.md bölüm 6.
 #
 # Kullanım: [MODEL_CACHE=DIZIN] tools/fetch_models.sh [--text-only] [HEDEF_KLASÖR]
 set -euo pipefail

@@ -22,13 +22,13 @@ kurcalanan artefakt derlemeyi durdurur.
 
 ## Önerilen uygulama (ayrı görev)
 
-1. Bağımlılıklar durulduğunda, mobile/ içinden:
+1. Bağımlılıklar durulduğunda, proje kökünde (Gradle kökü):
    `./gradlew --write-verification-metadata sha256 testDebugUnitTest testReleaseUnitTest assembleDebug assembleRelease lintDebug connectedDebugAndroidTest`
    (emülatör açık olmalı). Eksik kalan görev olursa aynı komut ek görevle yeniden çalıştırılır; mevcut girdiler korunur.
 2. `gradle/verification-metadata.xml` dosyasını gözden geçir: `<verify-metadata>true</verify-metadata>`,
    `<verify-signatures>false</verify-signatures>` (yalnızca sha256; PGP anahtar yönetimi bu proje için fazla).
 3. `./gradlew testDebugUnitTest assembleDebug lintDebug` yeşil olmalı. Bir görev patlarsa o görevle metadata'yı yeniden üret.
-4. Dosyayı commit'le (mobile/ altında, GitHub'a gider).
+4. Dosyayı commit'le (proje kökünde, GitHub'a gider).
 
 ## Bağımlılık güncellemesinde zahmet
 

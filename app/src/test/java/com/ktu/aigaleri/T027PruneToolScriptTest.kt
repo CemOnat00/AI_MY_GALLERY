@@ -8,9 +8,9 @@ import org.junit.Assume.assumeTrue
 import org.junit.Test
 
 /**
- * T-027: `mobile/tools/prune_text_model.py` (stdlib-only sözlük/gömme budama aracı) birim testleri
+ * T-027: `tools/prune_text_model.py` (stdlib-only sözlük/gömme budama aracı) birim testleri
  * (`tools/test_prune_text_model.py`, sentetik ONNX, ağ ve gerçek model yok) `python3 -I` ile çalıştırılır.
- * python3 yoksa atlanır. Çalışma dizini mobile/app.
+ * python3 yoksa atlanır. Çalışma dizini app/ (Gradle proje kökünün altında).
  */
 class T027PruneToolScriptTest {
     private val toolsDir = File(File(System.getProperty("user.dir")!!).parentFile!!, "tools")

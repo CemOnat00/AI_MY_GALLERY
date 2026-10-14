@@ -10,7 +10,7 @@ import org.junit.Test
 /**
  * T-006: Room v1 -> v2 geçişinin JVM'de doğrulanabilen kısmı (SQLite çalıştırılmaz; gerçek geçiş
  * `AiGaleriMigrationTest` androidTest'indedir, çalıştırılmadı). Migration SQL'i, v1 ve v2 şema JSON'ları ve kaynak
- * bağlantısı birbiriyle tutarlı mı. Çalışma dizini mobile/app.
+ * bağlantısı birbiriyle tutarlı mı. Çalışma dizini app/ (Gradle proje kökünün altında).
  */
 class MigrationContractTest {
     private val appDir = File(System.getProperty("user.dir")!!)

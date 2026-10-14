@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """T-027 QA: tools/prune_text_model.py ve fetch_models.sh icin BAGIMSIZ ek dogrulama (yalnizca standart kutuphane, ag yok).
 
-Gercek ORIJINAL model/sozluk (mobile/.model-cache/) yoksa gercek-dosya testleri ATLANIR (skipped); sentetik testler her
+Gercek ORIJINAL model/sozluk (.model-cache/) yoksa gercek-dosya testleri ATLANIR (skipped); sentetik testler her
 zaman calisir. Calistirma: python3 -I tools/test_t027_qa.py   (cikis kodu 0 = gecti)
 
 Kapsam: (4) ONNX yapisi (bagimsiz protobuf okuyucu; bu dosyada, uretim aracindan AYRI yazildi): Gather tablosu = tutulan x 768,
@@ -22,7 +22,7 @@ import warnings
 warnings.simplefilter("ignore", ResourceWarning)
 sys.dont_write_bytecode = True
 HERE = os.path.dirname(os.path.abspath(__file__))
-MOBILE = os.path.dirname(HERE)
+ROOT = os.path.dirname(HERE)
 _spec = importlib.util.spec_from_file_location("prune_text_model", os.path.join(HERE, "prune_text_model.py"))
 pr = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(pr)
@@ -30,8 +30,8 @@ _tspec = importlib.util.spec_from_file_location("test_prune_text_model", os.path
 tp = importlib.util.module_from_spec(_tspec)
 _tspec.loader.exec_module(tp)
 
-CACHE = os.environ.get("MODEL_CACHE", os.path.join(MOBILE, ".model-cache"))
-ASSETS = os.path.join(MOBILE, "app", "src", "main", "assets", "models")
+CACHE = os.environ.get("MODEL_CACHE", os.path.join(ROOT, ".model-cache"))
+ASSETS = os.path.join(ROOT, "app", "src", "main", "assets", "models")
 REAL = os.path.isfile(os.path.join(CACHE, pr.ONNX_NAME)) and os.path.isfile(os.path.join(CACHE, pr.VOCAB_NAME))
 needs_real = unittest.skipUnless(REAL, "gercek orijinal model yok (.model-cache; tools/fetch_models.sh)")
 IS_ROOT = hasattr(os, "geteuid") and os.geteuid() == 0

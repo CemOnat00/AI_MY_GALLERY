@@ -14,9 +14,9 @@ Sorgu sablon topluluğu (prompt ensemble, bkz. docs/query-ensemble.md) icin iki 
              turetilen vekil kume) goruntu siralama olcumleri de yapilir. Cikti stdout'a; dosya yazmaz.
 
 Model: ORIJINAL metin modeli (sentence-transformers/clip-ViT-B-32-multilingual-v1, Apache-2.0; golden_text.py ile ayni
-dogrulama kapilari: mobile/.model-cache + SHA-256). Gereken: python3 + numpy + onnxruntime==1.30.0 (docs/golden-text.md).
+dogrulama kapilari: .model-cache + SHA-256). Gereken: python3 + numpy + onnxruntime==1.30.0 (docs/golden-text.md).
 
-Kullanim (mobile/ icinden; python = onnxruntime+numpy kurulu venv, docs/golden-text.md kurulumu, repo DISINDA):
+Kullanim (proje kokunden, Gradle koku; python = onnxruntime+numpy kurulu venv, docs/golden-text.md kurulumu, repo DISINDA):
   ~/venvs/aigaleri-ort/bin/python -I tools/query_ensemble.py --golden
   ~/venvs/aigaleri-ort/bin/python -I tools/query_ensemble.py --eval [--image-vecs /yol/imgvecs.npy]
 (T-033 kosularinda oturum scratchpad'indeki ort_venv/bin/python kullanildi; ayni onnxruntime 1.30.0 + numpy.)

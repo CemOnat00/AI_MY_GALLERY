@@ -6,9 +6,9 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** T-003: manifest'te galeri izinleri doğru ve INTERNET yok. Çalışma dizini mobile/app. */
+/** T-003: manifest'te galeri izinleri doğru ve INTERNET yok. Çalışma dizini app/ (Gradle proje kökünün altında). */
 class ManifestPermissionTest {
-    // Gradle çalışma dizini mobile/app'tir (diğer testler gibi user.dir); IDE'den mobile/ kökünden
+    // Gradle çalışma dizini app/'tir (diğer testler gibi user.dir); IDE'den proje kökünden
     // çalıştırılırsa da bulunsun diye app/ alt dizinine geri düşülür.
     private val xml = run {
         val root = File(System.getProperty("user.dir")!!)

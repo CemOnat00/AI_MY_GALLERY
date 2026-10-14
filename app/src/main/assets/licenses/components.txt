@@ -1,6 +1,6 @@
 # Üçüncü taraf bileşen listesi (Lisanslar ekranı okur). Kayıtlar boş satırla ayrılır; satır biçimi "anahtar: değer".
 # Anahtarlar: ad, surum, lisans, metin (lisans metni dosyası, aynı klasörde), kaynak (URL, yalnızca gösterilir), not.
-# Sürümler mobile/gradle/libs.versions.toml ile aynı olmalıdır (birim test denetler).
+# Sürümler gradle/libs.versions.toml ile aynı olmalıdır (birim test denetler).
 
 ad: OpenAI CLIP ViT-B/32 (görüntü modeli)
 surum: ViT-B/32; Xenova/clip-vit-base-patch32 ONNX int8 dönüşümü, revizyon d15189d7028b43f1d3e65039190477f6af591c2a

@@ -7,7 +7,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.w3c.dom.Element
 
-/** T-002: yedekleme/aktarım kurallarının indeks verisini hariç tuttuğunu doğrular. Çalışma dizini mobile/app. */
+/** T-002: yedekleme/aktarım kurallarının indeks verisini hariç tuttuğunu doğrular. Çalışma dizini app/ (Gradle proje kökünün altında). */
 class DataExtractionRulesTest {
     private val appDir = File(System.getProperty("user.dir")!!)
     private val domains = setOf("database", "sharedpref", "file")

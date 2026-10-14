@@ -9,9 +9,9 @@ import org.junit.Assume.assumeTrue
 import org.junit.Test
 
 /**
- * T-017 (QA): mobile/tools/fetch_models.sh sertleştirmesi. Gerçek denetim sahte curl/python3/sha256sum kullanan
- * mobile/tools/test_fetch_models.sh betiğindedir (ağ yok); burada o betik çalıştırılır. bash yoksa (Windows) atlanır.
- * Ayrıca betik kaynağında ağ sertleştirme bayrakları statik olarak doğrulanır. Çalışma dizini mobile/app.
+ * T-017 (QA): tools/fetch_models.sh sertleştirmesi. Gerçek denetim sahte curl/python3/sha256sum kullanan
+ * tools/test_fetch_models.sh betiğindedir (ağ yok); burada o betik çalıştırılır. bash yoksa (Windows) atlanır.
+ * Ayrıca betik kaynağında ağ sertleştirme bayrakları statik olarak doğrulanır. Çalışma dizini app/ (Gradle proje kökünün altında).
  */
 class T017FetchModelsScriptTest {
     private val toolsDir = File(File(System.getProperty("user.dir")!!).parentFile!!, "tools")

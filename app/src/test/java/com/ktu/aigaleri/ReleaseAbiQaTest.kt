@@ -9,7 +9,7 @@ import org.junit.Assume.assumeTrue
 import org.junit.Test
 
 /**
- * T-029 (QA): ReleaseAbiConfigTest'in kapsamadığı kenar durumlar. Çalışma dizini mobile/app.
+ * T-029 (QA): ReleaseAbiConfigTest'in kapsamadığı kenar durumlar. Çalışma dizini app/ (Gradle proje kökünün altında).
  * Gradle dosyası yorumlardan arındırılır (// satır sonu ve blok yorumu); ABI'yi başka yoldan (productFlavors, splits,
  * ndk'yı defaultConfig'e taşıma, kaldırma/sıfırlama, packaging dışlaması) değiştiren her şey yakalanır.
  * APK testleri APK yoksa atlanır (assembleRelease/assembleDebug sonrası anlamlı).

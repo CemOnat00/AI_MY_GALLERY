@@ -8,11 +8,11 @@ import org.junit.Test
 
 /**
  * T-017 (QA): kullanılmayan `image_load_failed` string'i kaldırıldı ve geri gelmemeli; kodda/XML'de
- * başvurusu olmamalı. libs.versions.toml Coil notu: sürüm 3.4.0, ağ artefaktı yok. Çalışma dizini mobile/app.
+ * başvurusu olmamalı. libs.versions.toml Coil notu: sürüm 3.4.0, ağ artefaktı yok. Çalışma dizini app/ (Gradle proje kökünün altında).
  */
 class T017ResourceRegressionTest {
     private val appDir = File(System.getProperty("user.dir")!!)
-    private val mobileDir = appDir.parentFile!!
+    private val projectDir = appDir.parentFile!!
     private val id = "image_load_failed"
 
     private fun textFiles(root: File, exts: Set<String>): List<File> =
@@ -58,7 +58,7 @@ class T017ResourceRegressionTest {
 
     @Test
     fun versionCatalog_coilNote_matchesSelectedVersion_andHasNoNetworkArtifacts() {
-        val toml = File(mobileDir, "gradle/libs.versions.toml").readText()
+        val toml = File(projectDir, "gradle/libs.versions.toml").readText()
         assertTrue(Regex("(?m)^coil\\s*=\\s*\"3\\.4\\.0\"\\s*$").containsMatchIn(toml))
         val comment = toml.lines().filter { it.startsWith("#") && it.contains("Coil") || it.contains("3.4.0 (AAR") }.joinToString("\n")
         assertTrue("Coil notu 3.4.0'ı belirtmiyor", toml.contains("Seçili sürüm 3.4.0"))
