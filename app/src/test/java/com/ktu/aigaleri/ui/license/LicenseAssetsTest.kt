@@ -1,5 +1,6 @@
 package com.ktu.aigaleri.ui.license
 
+import com.ktu.aigaleri.ProjectLayout
 import com.ktu.aigaleri.ui.Routes
 import java.io.File
 import java.security.MessageDigest
@@ -178,8 +179,10 @@ class LicenseAssetsTest {
 
     @Test
     fun appLicense_mitBodyMatchesRepositoryLicenseWhenPresent() {
-        val repoLicense = File("/Users/cem/Projects/AI_MY_GALLERY/LICENSE")
-        org.junit.Assume.assumeTrue("depo LICENSE dosyası bu makinede yok", repoLicense.isFile)
+        // Yeni yerleşimde repo kökü = proje kökü; eski yerleşimde repo kökü proje kökünün üstündedir (iki konuma da bakılır).
+        val repoLicense = listOfNotNull(ProjectLayout.projectRoot, ProjectLayout.gitRoot).map { File(it, "LICENSE") }.firstOrNull { it.isFile }
+        org.junit.Assume.assumeTrue("depo LICENSE dosyası bulunamadı", repoLicense != null)
+        repoLicense!!
         assertTrue(text("app-license.txt").contains(repoLicense.readText(Charsets.UTF_8).trimEnd()))
     }
 
