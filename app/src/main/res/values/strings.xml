@@ -16,8 +16,8 @@
     <string name="permission_granted_loading">Fotoğraflar sayılıyor…</string>
     <string name="photo_count_error">Fotoğraflar okunamadı. Uygulamaya dönüldüğünde yeniden denenecek.</string>
     <plurals name="photo_count">
-        <item quantity="one">%d fotoğraf bulundu</item>
-        <item quantity="other">%d fotoğraf bulundu</item>
+        <item quantity="one">%s fotoğraf bulundu</item>
+        <item quantity="other">%s fotoğraf bulundu</item>
     </plurals>
 
     <!-- Arama ekranı -->
@@ -29,7 +29,7 @@
     <string name="search_suggestion_action">Bu istemle ara</string>
     <string name="search_loading">Aranıyor...</string>
     <string name="search_results_title">En yakın eşleşmeler</string>
-    <string name="search_result_count">%d fotoğraf</string>
+    <string name="search_result_count">%s fotoğraf</string>
     <string name="search_empty">Eşleşen fotoğraf bulunamadı.</string>
     <string name="search_empty_detail">Farklı bir istem dene veya indeksin hazır olduğunu kontrol et.</string>
     <string name="search_empty_index_link">İndeksleme durumunu gör</string>

@@ -40,6 +40,27 @@ class DesignContentTest {
 
     private fun uiSources(): List<File> = uiDir.walkTopDown().filter { it.isFile && it.extension == "kt" }.toList()
 
+    // ---- sonuç sayısı Türkçe biçim (T-034) ----
+
+    @Test
+    fun searchResultCount_usesFormatCount_regardlessOfDeviceLocale() {
+        val template = text("search_result_count")
+        assertTrue("sayı %s olmalı (cihaz yerelinde %d biçimlemesin)", template.contains("%s") && !template.contains("%d"))
+        // Cihaz yerelinde (en-US dahil) biçimleme yapılsa bile metin Türkçe gruplamalı kalır.
+        for (device in listOf(Locale.US, Locale.GERMANY, Locale.forLanguageTag("tr-TR"))) {
+            fun render(n: Int) = String.format(device, template, formatCount(n))
+            assertEquals("1.200 fotoğraf", render(1200))
+            assertEquals("0 fotoğraf", render(0))
+            assertEquals("1 fotoğraf", render(1))
+            assertEquals("999 fotoğraf", render(999)) // gruplama sınırının altı
+            assertEquals("1.000 fotoğraf", render(1000)) // gruplama sınırı
+            assertEquals("123.456 fotoğraf", render(123_456))
+        }
+        // Kaynağı kullanan ekran sayıyı formatCount ile verir; ham Int vermez.
+        val screen = File(uiDir, "search/SearchScreen.kt").readText()
+        assertTrue(screen.contains("R.string.search_result_count, formatCount("))
+    }
+
     // ---- uygulanacak içerik ----
 
     @Test
@@ -61,7 +82,7 @@ class DesignContentTest {
         assertEquals("Tekrar dene", text("search_error_retry"))
         assertEquals("Lütfen bir şey yaz.", text("search_invalid_empty"))
         assertEquals("En yakın eşleşmeler", text("search_results_title"))
-        assertEquals("%d fotoğraf", text("search_result_count"))
+        assertEquals("%s fotoğraf", text("search_result_count"))
         assertEquals("Ne arıyorsun? Örn. plajda gülen çocuk", text("search_hint"))
         assertEquals("Arama önerileri", text("search_suggestions_title"))
         assertEquals("Detay", text("indexing_banner_detail"))

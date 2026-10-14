@@ -66,6 +66,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import com.ktu.aigaleri.R
 import com.ktu.aigaleri.domain.InvalidQueryException
+import com.ktu.aigaleri.ui.formatCount
 import com.ktu.aigaleri.ui.image.PhotoImage
 import com.ktu.aigaleri.ui.index.IndexingBanner
 import com.ktu.aigaleri.ui.index.IndexingBannerContent
@@ -341,7 +342,7 @@ private fun ResultGrid(status: SearchStatus.Success, onOpenPhoto: (Long) -> Unit
                 modifier = Modifier.weight(1f).semantics { heading() },
             )
             Text(
-                stringResource(R.string.search_result_count, status.results.size),
+                stringResource(R.string.search_result_count, formatCount(status.results.size)),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

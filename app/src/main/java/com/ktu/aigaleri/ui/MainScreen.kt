@@ -272,7 +272,7 @@ private fun GrantedContent(state: MainUiState) {
             text = when {
                 state.loadError -> stringResource(R.string.photo_count_error)
                 count == null -> stringResource(R.string.permission_granted_loading)
-                else -> pluralStringResource(R.plurals.photo_count, count, count)
+                else -> pluralStringResource(R.plurals.photo_count, count, formatCount(count))
             },
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onSurface,
