@@ -64,7 +64,11 @@ class ImageEncoderDeviceTest {
         return PixelImage(px, w, h)
     }
 
-    private fun encoder(loader: PixelLoader) = OnnxImageEncoder(store, loader)
+    private fun encoder(loader: PixelLoader): OnnxImageEncoder {
+        // Emülatör SME/KleidiAI SIGILL geçici çözümü (gerçek telefonda etkisiz; bkz. OrtEmulatorWorkaround).
+        OrtEmulatorWorkaround.seedVision(store)
+        return OnnxImageEncoder(store, loader)
+    }
 
     private fun encodeOrExplain(e: OnnxImageEncoder, uri: String): FloatArray = runBlocking {
         try {
@@ -108,6 +112,7 @@ class ImageEncoderDeviceTest {
 
     @Test
     fun encode_isDeterministic_andReleaseThenEncodeReopensSession() {
+        org.junit.Assume.assumeFalse("yeniden açma varsayılan seçenekle SIGILL (emülatör SME)", OrtEmulatorWorkaround.needed)
         val e = encoder { synthetic(300, 300) }
         val a = encodeOrExplain(e, "x")
         runBlocking { e.release() }
@@ -118,6 +123,7 @@ class ImageEncoderDeviceTest {
 
     @Test
     fun textAndImageSessions_swapThroughSingleSlot() {
+        org.junit.Assume.assumeFalse("yeniden açma varsayılan seçenekle SIGILL (emülatör SME)", OrtEmulatorWorkaround.needed)
         val image = encoder { synthetic(300, 300) }
         val text = OnnxTextEncoder.create(context)
         val v1 = encodeOrExplain(image, "x")

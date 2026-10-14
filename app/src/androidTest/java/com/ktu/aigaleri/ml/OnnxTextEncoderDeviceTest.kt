@@ -31,7 +31,10 @@ class OnnxTextEncoderDeviceTest {
 
     @Before
     fun setUp() {
-        encoder = OnnxTextEncoder.create(ApplicationProvider.getApplicationContext())
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        encoder = OnnxTextEncoder.create(context)
+        // Emülatör SME/KleidiAI SIGILL geçici çözümü (gerçek telefonda etkisiz; bkz. OrtEmulatorWorkaround).
+        OrtEmulatorWorkaround.seedText(ModelStore(context.filesDir, AssetManagerOpener(context.assets)))
     }
 
     @After
@@ -96,6 +99,7 @@ class OnnxTextEncoderDeviceTest {
 
     @Test
     fun release_thenEncode_reopensSession() {
+        org.junit.Assume.assumeFalse("yeniden açma varsayılan seçenekle SIGILL (emülatör SME)", OrtEmulatorWorkaround.needed)
         val first = encodeOrExplain("dağda kar")
         runBlocking { encoder.release() }
         val second = encodeOrExplain("dağda kar")
@@ -104,6 +108,7 @@ class OnnxTextEncoderDeviceTest {
 
     @Test
     fun slotEviction_byAnotherModel_thenEncodeStillWorks() {
+        org.junit.Assume.assumeFalse("yeniden açma varsayılan seçenekle SIGILL (emülatör SME)", OrtEmulatorWorkaround.needed)
         encodeOrExplain("kedi")
         runBlocking {
             // T-006 görüntü oturumunun yerini tutan sahte oturum, metin oturumunu slot'tan çıkarır.

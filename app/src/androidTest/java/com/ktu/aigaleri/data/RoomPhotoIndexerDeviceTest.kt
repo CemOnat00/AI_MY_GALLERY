@@ -81,7 +81,7 @@ class RoomPhotoIndexerDeviceTest {
         idx.index(IndexMode.FULL).toList()
         assertEquals(RoomPhotoIndexer.PIPELINE_VERSION + 1, db.photoDao().maxIndexVersion())
         assertEquals(4, db.photoEmbeddingDao().count())
-        assertEquals(8, encoded.size)
+        assertEquals(4, encoded.size) // encoded yukarıda temizlendi; FULL 4 fotoğrafın hepsini yeniden kodlar
 
         // Galeriden silinen: kayıt ve (CASCADE) embedding temizlenir; yeni eklenen indekslenir.
         source.ids = listOf(2, 3, 4, 7)

@@ -21,8 +21,8 @@ import org.junit.runner.RunWith
  * Altın dosya `src/test/resources/ml/golden_text_vectors.tsv`, androidTest assets olarak paketlenir (build.gradle.kts).
  * Sorgu anahtarlarındaki görünmez/ayrışık karakterler `\uXXXX` kaçışlıdır; [unescape] ile çözülür.
  *
- * DURUM: YAZILDI ve `compileDebugAndroidTestKotlin` ile DERLENDİ; ÇALIŞTIRILMADI (cihaz/emülatör yok). Model
- * dosyaları APK'da yoksa test başarısız olur (sessiz atlama yok).
+ * DURUM: T-012'de Pixel_8 API 35 arm64 emülatöründe çalıştırıldı (emülatörde KleidiAI kapalı oturumla, bkz.
+ * [OrtEmulatorWorkaround]). Model dosyaları APK'da yoksa test başarısız olur (sessiz atlama yok).
  *
  * PLATFORM UYARISI: altın, Apple Silicon masaüstünde pip `onnxruntime` 1.30.0 ile üretildi; bu test Android AAR
  * ORT'siyle (farklı derleme ve ARM çekirdekleri) çalışır. x86_64 emülatör, arm64 için nicemlenmiş modeli farklı bir
@@ -37,7 +37,10 @@ class GoldenTextVectorsDeviceTest {
 
     @Before
     fun setUp() {
-        encoder = OnnxTextEncoder.create(ApplicationProvider.getApplicationContext())
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        encoder = OnnxTextEncoder.create(context)
+        // Emülatör SME/KleidiAI SIGILL geçici çözümü (gerçek telefonda etkisiz; bkz. OrtEmulatorWorkaround).
+        OrtEmulatorWorkaround.seedText(ModelStore(context.filesDir, AssetManagerOpener(context.assets)))
     }
 
     @After
@@ -72,6 +75,8 @@ class GoldenTextVectorsDeviceTest {
         val golden = goldenVectors()
         assertEquals(76, golden.size)
         var worst = 1.0
+        var sum = 0.0
+        val all = ArrayList<Double>()
         val failures = ArrayList<String>()
         for ((index, entry) in golden.withIndex()) {
             val (query, expected) = entry
@@ -84,8 +89,17 @@ class GoldenTextVectorsDeviceTest {
             assertEquals(512, got.size)
             val c = cosine(got, expected)
             if (c < worst) worst = c
+            sum += c
+            all.add(c)
             if (c < MIN_COSINE) failures.add("#$index kosinüs=$c")
         }
+        // Ölçüm çıktısı (T-012; docs/golden-text.md 'Cihaz ölçümü'): yalnızca sayılar, sorgu metni yok.
+        android.util.Log.i(
+            "GoldenText",
+            "n=${golden.size} minCosine=$worst meanCosine=${sum / golden.size} " +
+                "below0.9999=${all.count { it < 0.9999 }} below0.999=${all.count { it < 0.999 }} below0.99=${all.count { it < 0.99 }} " +
+                "kleidiaiDisabledWorkaround=${OrtEmulatorWorkaround.needed}",
+        )
         assertTrue("kosinüs < $MIN_COSINE (en kötü $worst): $failures", failures.isEmpty())
     }
 

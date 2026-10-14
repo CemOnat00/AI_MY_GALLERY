@@ -26,7 +26,7 @@ import org.junit.runner.RunWith
  * kodla -> Room'a yaz -> Türkçe istemle [RoomSearchRepository] ile ara. Aynı ModelStore ve SingleSessionSlot paylaşılır
  * (arama metin, indeksleme görüntü oturumunu dönüşümlü açar). Piksel yükleyici sentetiktir (MediaStore gerekmez).
  *
- * DURUM: YAZILDI, DERLENİR; ÇALIŞTIRILMADI (cihaz/emülatör yok; model APK'da yoksa başarısız olur). Anlamsal kalite
+ * DURUM: T-012'de Pixel_8 API 35 emülatöründe çalıştırıldı (emülatörde KleidiAI kapalı oturum, bkz. OrtEmulatorWorkaround; model APK'da yoksa başarısız olur). Anlamsal kalite
  * (örn. "kırmızı" -> kırmızı fotoğraf) iddia EDİLMEZ; yalnızca boyut, normalizasyon, skor = nokta çarpımı ve sıralama.
  */
 @RunWith(AndroidJUnit4::class)
@@ -57,6 +57,7 @@ class SearchEndToEndDeviceTest {
 
     private fun indexPhoto(id: Long): FloatArray = runBlocking {
         val uri = "content://media/external/images/media/$id"
+        OrtEmulatorWorkaround.seedVision(store, slot) // emülatör SME/KleidiAI SIGILL geçici çözümü (gerçek telefonda etkisiz)
         val v = try {
             imageEncoder.encode(uri)
         } catch (e: ModelException.Missing) {
@@ -74,6 +75,7 @@ class SearchEndToEndDeviceTest {
         assertEquals(512, image.size)
         assertEquals(1.0, norm(image), 1e-3)
 
+        OrtEmulatorWorkaround.seedText(store, slot)
         val repo = RoomSearchRepository(textEncoder, db.photoEmbeddingDao())
         val results = repo.search("kırmızı bir fotoğraf")
         assertEquals(1, results.size)
@@ -89,6 +91,7 @@ class SearchEndToEndDeviceTest {
     @Test
     fun threePhotos_sortedByDescendingScore_matchingManualDotProducts() = runBlocking {
         val vectors = (1L..3L).associateWith { indexPhoto(it) } // görüntü oturumu açık
+        OrtEmulatorWorkaround.seedText(store, slot)
         val repo = RoomSearchRepository(textEncoder, db.photoEmbeddingDao()) // arama metin oturumunu açar (eviction)
         val results = repo.search("mavi gökyüzü")
         assertEquals(3, results.size)
@@ -108,6 +111,7 @@ class SearchEndToEndDeviceTest {
         indexPhoto(1)
         db.photoDao().upsert(Photo(2, "content://media/external/images/media/2", null, 1L, 1))
         db.photoEmbeddingDao().upsert(PhotoEmbedding(2, VectorCodec.encode(FloatArray(512) { 1f / sqrt(512f) }), "old-model"))
+        OrtEmulatorWorkaround.seedText(store, slot)
         val repo = RoomSearchRepository(textEncoder, db.photoEmbeddingDao())
         assertEquals(listOf(1L), repo.search("kedi").map { it.photoId })
         try {
@@ -120,6 +124,7 @@ class SearchEndToEndDeviceTest {
     @Test
     fun warmUp_opensTextSession_thenSearchWorks() = runBlocking {
         indexPhoto(1)
+        OrtEmulatorWorkaround.seedText(store, slot)
         textEncoder.warmUp()
         val repo = RoomSearchRepository(textEncoder, db.photoEmbeddingDao())
         val t0 = System.nanoTime()

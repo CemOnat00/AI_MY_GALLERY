@@ -23,7 +23,7 @@ import org.junit.runner.RunWith
  * benzersiz iş politikasını ve [WorkManagerIndexLauncher.isRunning]'i sınar. İşin gövdesi ([IndexWork.execute])
  * JVM'de test edilir.
  *
- * DURUM: YAZILDI, DERLENDİ, ÇALIŞTIRILMADI (cihaz/emülatör yok).
+ * DURUM: Pixel_8 API 35 emülatöründe çalıştırıldı (T-012).
  */
 @RunWith(AndroidJUnit4::class)
 class WorkManagerIndexLauncherTest {
@@ -63,7 +63,8 @@ class WorkManagerIndexLauncherTest {
         val firstId = infos().single().id
         launcher.launch(IndexMode.FULL)
         val states = infos().associate { it.id to it.state }
-        assertEquals(WorkInfo.State.CANCELLED, states[firstId])
+        // REPLACE: WorkManager eski işi iptal eder ve siler; kayıtta ya CANCELLED görünür ya da hiç görünmez (null).
+        assertTrue(states[firstId] == null || states[firstId] == WorkInfo.State.CANCELLED)
         assertEquals(1, states.values.count { it == WorkInfo.State.ENQUEUED })
     }
 

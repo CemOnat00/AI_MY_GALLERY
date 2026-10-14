@@ -10,6 +10,8 @@ import com.ktu.aigaleri.ui.index.IndexingBannerContent
 import com.ktu.aigaleri.ui.index.TAG_INDEXING_BANNER
 import com.ktu.aigaleri.ui.viewer.TAG_VIEWER_DATE
 import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.assertTouchHeightIsEqualTo
+import androidx.compose.ui.test.assertTouchWidthIsEqualTo
 import androidx.compose.ui.test.assertWidthIsAtLeast
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -108,8 +110,9 @@ class DesignScreensTest {
     @Test
     fun searchAndIndexStatusButtons_haveMinimumTouchTarget() {
         search(SearchUiState(query = "kedi"))
-        rule.onNodeWithTag(TAG_SEARCH_BUTTON).assertHeightIsAtLeast(48.dp).assertWidthIsAtLeast(48.dp)
-        rule.onNodeWithContentDescription("İndeks durumu").assertHeightIsAtLeast(48.dp).assertWidthIsAtLeast(48.dp)
+        // IconButton: yerleşim 40dp, Material3 dokunma hedefini 48dp'ye genişletir (touch bounds).
+        rule.onNodeWithTag(TAG_SEARCH_BUTTON).assertTouchHeightIsEqualTo(48.dp).assertTouchWidthIsEqualTo(48.dp)
+        rule.onNodeWithContentDescription("İndeks durumu").assertTouchHeightIsEqualTo(48.dp).assertTouchWidthIsEqualTo(48.dp)
     }
 
     private fun permission(state: PermissionState, onGrant: () -> Unit = {}, onSettings: () -> Unit = {}) = rule.setContent {
@@ -146,7 +149,7 @@ class DesignScreensTest {
         rule.onNodeWithText("Fotoğraf bulunamadı").assertExists()
         rule.onNodeWithText("Dosya cihazdan silinmiş veya yeri değiştirilmiş olabilir.").assertExists()
         rule.onNodeWithText("Geri dön").performClick()
-        rule.onNodeWithContentDescription("Geri").assertHeightIsAtLeast(48.dp).performClick()
+        rule.onNodeWithContentDescription("Geri").assertTouchHeightIsEqualTo(48.dp).performClick()
         assertEquals(2, backs)
     }
 
@@ -171,7 +174,7 @@ class DesignScreensTest {
     @Test
     fun indexStatus_running_showsProgressBlock_percent_andCorrectModelRow() {
         status(IndexStatusUiState.Data(total = 1200, processed = 340, lastRunAt = null), IndexRunState.RUNNING)
-        rule.onNodeWithText("340 / 1200").assertExists()
+        rule.onNodeWithText("340 / 1.200").assertExists() // T-022: sayılar cihaz dilinden bağımsız Türkçe binlik ayraçla
         rule.onNodeWithText("%28").assertExists()
         rule.onNodeWithText("öğe işlendi").assertExists()
         rule.onNodeWithText("Fotoğraf kitaplığı taranıyor").assertExists()
@@ -203,7 +206,7 @@ class DesignScreensTest {
         }
         rule.onNodeWithText("İndeks durumu okunamadı.").assertExists()
         rule.onNodeWithTag(TAG_RETRY_BUTTON).assertHeightIsAtLeast(48.dp).performClick()
-        rule.onNodeWithTag(TAG_BACK_BUTTON).assertHeightIsAtLeast(48.dp).performClick()
+        rule.onNodeWithTag(TAG_BACK_BUTTON).assertTouchHeightIsEqualTo(48.dp).performClick()
         assertTrue(retried)
         assertEquals(1, backs)
     }

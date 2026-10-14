@@ -31,7 +31,10 @@ class PromptEnsembleDeviceTest {
 
     @Before
     fun setUp() {
-        bare = OnnxTextEncoder.create(ApplicationProvider.getApplicationContext())
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        bare = OnnxTextEncoder.create(context)
+        // Emülatör SME/KleidiAI SIGILL geçici çözümü (gerçek telefonda etkisiz; bkz. OrtEmulatorWorkaround).
+        OrtEmulatorWorkaround.seedText(ModelStore(context.filesDir, AssetManagerOpener(context.assets)))
     }
 
     @After
@@ -68,20 +71,24 @@ class PromptEnsembleDeviceTest {
         assertTrue("altın dosyada yeterli sorgu yok: ${rows.size}", rows.size >= 20)
         val ensemble = PromptEnsembleTextEncoder(bare)
         var worst = 1.0
+        var sum = 0.0
         val failures = ArrayList<String>()
         for ((index, row) in rows.withIndex()) {
             val got = ensemble.encode(row.first)
             assertEquals(512, got.size)
             val c = cosine(got, row.second)
             if (c < worst) worst = c
+            sum += c
             if (c < MIN_COSINE) failures.add("#$index kosinüs=$c")
         }
+        android.util.Log.i("PromptEnsemble", "n=${rows.size} minCosine=$worst meanCosine=${sum / rows.size} kleidiaiDisabledWorkaround=${OrtEmulatorWorkaround.needed}")
         assertTrue("kosinüs < $MIN_COSINE (en kötü $worst): $failures", failures.isEmpty())
     }
 
     @Test
     fun appSearchEncoder_isEnsemble_andDiffersFromBareEncoder() = runBlocking {
         val deps = AppDependencies.get(ApplicationProvider.getApplicationContext())
+        OrtEmulatorWorkaround.seedText(deps.modelStore, deps.sessionSlot)
         try {
             assertTrue("arama kodlayıcısı şablon topluluğu olmalı", deps.searchTextEncoder is PromptEnsembleTextEncoder)
             val searched = deps.searchTextEncoder.encode("bardak")
