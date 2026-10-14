@@ -28,6 +28,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -165,7 +166,7 @@ fun AppNavHost(
                     onGalleryRetry = galleryViewModel::retry,
                 )
             } else {
-                MainContent(state, onRequestPermission, onOpenSettings)
+                MainContent(state, onRequestPermission, onOpenSettings, onOpenLicenses = { navController.open(Routes.LICENSES) })
             }
         }
         composable(
@@ -202,7 +203,7 @@ fun AppNavHost(
                     onOpenLicenses = { navController.open(Routes.LICENSES) },
                 )
             } else {
-                MainContent(state, onRequestPermission, onOpenSettings)
+                MainContent(state, onRequestPermission, onOpenSettings, onOpenLicenses = { navController.open(Routes.LICENSES) })
             }
         }
         // T-037 (K-12): izin gerektirmez, tamamen yerel düz metin.
@@ -214,6 +215,7 @@ fun AppNavHost(
 const val TAG_PERMISSION_GRANT = "permission_grant"
 const val TAG_PERMISSION_SETTINGS = "permission_settings"
 const val TAG_PERMISSION_HOWTO = "permission_howto"
+const val TAG_PERMISSION_LICENSES = "permission_licenses"
 
 /**
  * İzin ekranı (T-022 tasarımı): ilk açılış / reddedildi (açıklama + "İzin ver") ve kalıcı red ("Ayarları aç" +
@@ -221,7 +223,12 @@ const val TAG_PERMISSION_HOWTO = "permission_howto"
  * fotoğraf sayısını gösterir. İkincil "ertele" düğmeleri bilerek yoktur (izin akışında karşılığı yok, Cem kararı olmadan eklenmez).
  */
 @Composable
-fun MainContent(state: MainUiState, onRequestPermission: () -> Unit, onOpenSettings: () -> Unit) {
+fun MainContent(
+    state: MainUiState,
+    onRequestPermission: () -> Unit,
+    onOpenSettings: () -> Unit,
+    onOpenLicenses: (() -> Unit)? = null,
+) {
     when (state.permission) {
         PermissionState.Granted -> GrantedContent(state)
         PermissionState.NotRequested, PermissionState.Denied -> PermissionLayout(
@@ -236,6 +243,7 @@ fun MainContent(state: MainUiState, onRequestPermission: () -> Unit, onOpenSetti
                 if (state.permission == PermissionState.Denied) R.string.permission_denied_message
                 else R.string.permission_needed_message,
             ),
+            onOpenLicenses = onOpenLicenses,
             extra = { OfflineBadge() },
             actions = {
                 Button(
@@ -258,6 +266,7 @@ fun MainContent(state: MainUiState, onRequestPermission: () -> Unit, onOpenSetti
             iconTint = MaterialTheme.colorScheme.secondary,
             title = stringResource(R.string.permission_title_permanently_denied),
             body = stringResource(R.string.permission_permanently_denied_message),
+            onOpenLicenses = onOpenLicenses,
             extra = { HowToPanel() },
             actions = {
                 Button(
@@ -304,6 +313,7 @@ private fun PermissionLayout(
     iconTint: Color,
     title: String,
     body: String,
+    onOpenLicenses: (() -> Unit)?,
     extra: @Composable () -> Unit,
     actions: @Composable ColumnScope.() -> Unit,
 ) {
@@ -342,7 +352,16 @@ private fun PermissionLayout(
             modifier = Modifier.fillMaxWidth().padding(horizontal = AiGaleriDimens.Margin).padding(bottom = AiGaleriDimens.SpaceLg)
                 .widthIn(max = AiGaleriDimens.ContentMaxWidth).align(Alignment.CenterHorizontally),
             verticalArrangement = Arrangement.spacedBy(AiGaleriDimens.SpaceXs),
-        ) { actions() }
+        ) {
+            actions()
+            // T-037 (K-12): izin verilmeden de erişilebilen ikinci giriş (lisanslar izin gerektirmez).
+            if (onOpenLicenses != null) {
+                TextButton(
+                    onClick = onOpenLicenses,
+                    modifier = Modifier.fillMaxWidth().heightIn(min = AiGaleriDimens.MinTouchTarget).testTag(TAG_PERMISSION_LICENSES),
+                ) { Text(stringResource(R.string.licenses_title), style = MaterialTheme.typography.labelLarge) }
+            }
+        }
     }
 }
 

@@ -1,6 +1,6 @@
 Bu uygulamadaki metin modeli, Apache License 2.0 altında dağıtılan sentence-transformers/clip-ViT-B-32-multilingual-v1 modelinin (revizyon 58edf8cada9e398793dca955574a48cbb7f18be2) DEĞİŞTİRİLMİŞ bir sürümüdür. Orijinal model değildir.
 
-Değişiklik tarihi: 13 Ekim 2026. Değiştiren: Ai-galeri projesi (Cem Onat Satır).
+Değişiklik tarihi: 13 Ekim 2026. Değiştiren: Ai-galeri projesi (Cem Onat SATIR).
 
 Yapılan değişiklikler (başka hiçbir ağırlık, düğüm veya ölçek değiştirilmemiştir):
 

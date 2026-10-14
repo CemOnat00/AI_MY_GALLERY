@@ -29,8 +29,9 @@ data class LicenseDocument(
 
 /**
  * Lisanslar içeriğinin okunması ve biçimlenmesi (Android'den bağımsız, JVM'de test edilir). Uzun metinler kodda DEĞİL,
- * `app/src/main/assets/licenses/` altındaki dosyalardadır; uygulamanın kendi lisansı yalnızca [APP_LICENSE_FILE]
- * değiştirilerek güncellenir.
+ * `app/src/main/assets/licenses/` altındaki dosyalardadır; uygulamanın kendi lisans metni yalnızca [APP_LICENSE_FILE]
+ * dosyasından okunur (kodda kopyası yoktur); proje lisansı değişirse bu dosya, bileşen ya da sürüm değişirse
+ * `components.txt` güncellenir.
  */
 object LicenseCatalog {
     const val ASSET_DIR = "licenses"

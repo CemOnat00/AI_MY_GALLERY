@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -158,12 +159,14 @@ private fun ErrorCard(onRetry: () -> Unit) {
 /** Kaydırılan liste: uzun lisans metinleri paragraf paragraf tembel çizilir (tek dev metin bloğu yok). */
 @Composable
 private fun LicenseList(document: LicenseDocument) {
+    // Edge-to-edge: son paragraf gezinme çubuğunun altında kalmasın (IndexStatusScreen ile aynı alt inset).
+    val bottomInset = WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom).asPaddingValues().calculateBottomPadding()
     LazyColumn(
         modifier = Modifier.fillMaxSize().testTag(TAG_LICENSES_LIST),
         contentPadding = PaddingValues(
             start = AiGaleriDimens.Margin,
             end = AiGaleriDimens.Margin,
-            bottom = AiGaleriDimens.SpaceLg,
+            bottom = AiGaleriDimens.SpaceLg + bottomInset,
         ),
         verticalArrangement = Arrangement.spacedBy(AiGaleriDimens.SpaceSm),
     ) {

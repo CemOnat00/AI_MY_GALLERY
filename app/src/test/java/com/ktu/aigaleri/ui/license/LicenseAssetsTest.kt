@@ -162,12 +162,74 @@ class LicenseAssetsTest {
     }
 
     @Test
-    fun appLicense_isHonestPlaceholder() {
+    fun appLicense_isMitOfOwnSourceOnly_andDoesNotClaimThirdPartyLicenses() {
         val t = text("app-license.txt")
         assertTrue(t.contains("KTÜ Mobil Programlama dersi dönem projesidir"))
-        assertTrue(t.contains("Telif © 2026 Cem Onat Satır"))
-        assertTrue(t.contains("belirlenmedi"))
-        assertFalse("sahte lisans iddiası olmamalı", Regex("Licensed under|MIT License|Apache License").containsMatchIn(t))
+        assertTrue(t.contains("MIT License"))
+        assertTrue(t.contains("Copyright (c) 2026 Cem Onat SATIR"))
+        assertTrue(t.contains("Permission is hereby granted, free of charge"))
+        assertTrue(t.contains("yalnızca Ai-galeri'nin kendi kaynak kodunu kapsar"))
+        // Üçüncü taraf lisansı karışmaz: Apache metni ya da başka telif sahibi yok.
+        assertFalse(Regex("Apache License|Licensed under|OpenAI|Microsoft").containsMatchIn(t))
+        assertEquals(1, Regex("Copyright \\(c\\)").findAll(t).count())
+        // Yazım tüm asset'lerde tutarlı ("SATIR", büyük harf).
+        for (f in dir.listFiles()!!) assertFalse("${f.name}: eski yazım", f.readText(Charsets.UTF_8).contains("Cem Onat Satır"))
+    }
+
+    @Test
+    fun appLicense_mitBodyMatchesRepositoryLicenseWhenPresent() {
+        val repoLicense = File("/Users/cem/Projects/AI_MY_GALLERY/LICENSE")
+        org.junit.Assume.assumeTrue("depo LICENSE dosyası bu makinede yok", repoLicense.isFile)
+        assertTrue(text("app-license.txt").contains(repoLicense.readText(Charsets.UTF_8).trimEnd()))
+    }
+
+    @Test
+    fun componentCount_isPinned() {
+        assertEquals("components.txt kayıt sayısı değişti; ekran ve test birlikte güncellenmeli", 17, load().components.size)
+    }
+
+    @Test
+    fun transitiveEntry_isPresent_withResolvedVersions() {
+        val e = load().components.single { it.name.contains("geçişli", ignoreCase = true) }
+        assertEquals("Apache-2.0", e.license)
+        for (part in listOf("startup", "profileinstaller", "emoji2", "sqlite", "savedstate", "collection", "tracing", "graphics-path", "Okio", "kotlinx.serialization", "JetBrains Compose")) {
+            assertTrue(part, (e.version + e.note).contains(part))
+        }
+        assertTrue(load().components.single { it.name == "Kotlin" }.note.contains("2.3.10"))
+    }
+
+    @Test
+    fun ortEntry_hasNoUnverifiedClaims() {
+        val ort = load().components.single { it.name.contains("ONNX Runtime") }
+        assertFalse(ort.note.contains("telemetri kapalıdır"))
+        assertTrue(ort.note.contains("ağ izni yoktur"))
+        assertTrue(ort.note.contains("ek telif bildirimleri içerebilir"))
+        assertFalse(text("mit-onnxruntime.txt").contains("Oracle"))
+    }
+
+    /** libs.versions.toml'a eklenen her dağıtılan kütüphane components.txt'te (sürümüyle) karşılık bulmalıdır. */
+    @Test
+    fun everyShippedLibraryInVersionCatalog_isCoveredByAComponentVersion() {
+        // Dağıtılan APK'ya girmeyen (test, araç, derleyici) kütüphane takma adları.
+        val notShipped = setOf(
+            "androidx-compose-ui-test-junit4", "androidx-compose-ui-test-manifest", "androidx-compose-ui-tooling",
+            "androidx-room-compiler", "androidx-room-testing", "androidx-work-testing", "junit",
+            "kotlinx-coroutines-test", "androidx-test-ext-junit", "androidx-test-runner",
+        )
+        val v = versions()
+        val libs = File(mobileDir, "gradle/libs.versions.toml").readLines()
+            .dropWhile { it.trim() != "[libraries]" }.drop(1).takeWhile { !it.trim().startsWith("[") }
+        val entries = libs.mapNotNull { Regex("^([A-Za-z0-9_-]+)\\s*=.*version\\.ref\\s*=\\s*\"([^\"]+)\"").find(it.trim()) }
+            .map { it.groupValues[1] to it.groupValues[2] }
+        assertTrue(entries.size >= 10)
+        val comps = load().components
+        for ((alias, ref) in entries) {
+            if (alias in notShipped) continue
+            val ver = requireNotNull(v[ref]) { "$ref sürümü yok" }
+            assertTrue("$alias ($ver) components.txt'te yok: kayıt ekleyin ya da notShipped'e alın", comps.any { it.version.contains(ver) })
+        }
+        // BOM ile yönetilen (sürüm.ref'siz) ui/material3 için BOM sürümü kayıtlıdır.
+        assertTrue(comps.any { it.version.contains(requireNotNull(v["composeBom"])) })
     }
 
     @Test

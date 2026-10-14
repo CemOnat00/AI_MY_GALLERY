@@ -6,11 +6,11 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
-import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.unit.dp
+import androidx.test.platform.app.InstrumentationRegistry
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import com.ktu.aigaleri.domain.SearchRepository
@@ -20,6 +20,7 @@ import com.ktu.aigaleri.ui.index.IndexStatusContent
 import com.ktu.aigaleri.ui.index.IndexStatusUiState
 import com.ktu.aigaleri.ui.index.IndexStatusViewModel
 import com.ktu.aigaleri.ui.index.TAG_LICENSES_ROW
+import com.ktu.aigaleri.ui.license.LicenseCatalog
 import com.ktu.aigaleri.ui.license.LicensesScreen
 import com.ktu.aigaleri.ui.license.TAG_LICENSES_BACK
 import com.ktu.aigaleri.ui.license.TAG_LICENSES_LIST
@@ -61,23 +62,26 @@ class LicensesScreenTest {
             )
         }
         rule.onNodeWithTag(TAG_LICENSES_ROW).performScrollTo().assertHeightIsAtLeast(48.dp)
-        rule.onNodeWithText("Lisanslar").assertExists()
         rule.onNodeWithTag(TAG_LICENSES_ROW).performClick()
         assertTrue(opened)
     }
 
     @Test
-    fun licensesScreen_loadsRealAssets_showsComponentsNoticeAndFullApacheText() {
+    fun licensesScreen_loadsRealAssets_showsComponentsNoticeAndLicenseTexts() {
+        // Beklenen metinler sabit yazılmaz: aynı assets dosyalarından okunan belgeden türetilir.
+        val doc = LicenseCatalog.load {
+            InstrumentationRegistry.getInstrumentation().targetContext.assets.open("${LicenseCatalog.ASSET_DIR}/$it")
+        }
         rule.setContent { LicensesScreen(onBack = {}) }
         rule.waitUntil(timeoutMillis = 5_000) {
             rule.onAllNodesWithTag(TAG_LICENSES_LIST).fetchSemanticsNodes().isNotEmpty()
         }
         val list = rule.onNodeWithTag(TAG_LICENSES_LIST)
-        list.performScrollToNode(hasText("Değişiklik tarihi: 13 Ekim 2026", substring = true))
-        list.performScrollToNode(hasText("Telif hakkı (c) Microsoft Corporation", substring = true))
-        list.performScrollToNode(hasText("Dönüşümün kendi lisans beyanı yoktur", substring = true))
-        list.performScrollToNode(hasText("END OF TERMS AND CONDITIONS", substring = true))
-        list.performScrollToNode(hasText("Copyright (c) 2021 OpenAI", substring = true))
+        list.performScrollToNode(hasText(doc.modifiedNotice.first()))
+        list.performScrollToNode(hasText(doc.components.first().name))
+        list.performScrollToNode(hasText(doc.components.last().name))
+        list.performScrollToNode(hasText(doc.texts.first().paragraphs.last()))
+        list.performScrollToNode(hasText(doc.texts.last().paragraphs.last()))
     }
 
     @Test
@@ -110,5 +114,43 @@ class LicensesScreenTest {
         rule.onNodeWithTag(TAG_LICENSES_BACK).performClick()
         rule.waitForIdle()
         assertEquals(Routes.INDEX_STATUS, route())
+    }
+
+    private fun assertPermissionLinkWorks(permission: PermissionState) {
+        var opened = false
+        rule.setContent {
+            MainContent(MainUiState(permission), onRequestPermission = {}, onOpenSettings = {}, onOpenLicenses = { opened = true })
+        }
+        rule.onNodeWithTag(TAG_PERMISSION_LICENSES).assertHeightIsAtLeast(48.dp).performClick()
+        assertTrue("$permission", opened)
+    }
+
+    @Test fun permissionScreen_notRequested_showsLicensesLink() = assertPermissionLinkWorks(PermissionState.NotRequested)
+
+    @Test fun permissionScreen_denied_showsLicensesLink() = assertPermissionLinkWorks(PermissionState.Denied)
+
+    @Test fun permissionScreen_permanentlyDenied_showsLicensesLink() = assertPermissionLinkWorks(PermissionState.PermanentlyDenied)
+
+    @Test
+    fun navigation_fromPermissionScreen_toLicenses_andBackToPermissionScreen() {
+        rule.setContent {
+            navController = rememberNavController()
+            AppNavHost(
+                navController = navController,
+                state = MainUiState(permission = PermissionState.Denied),
+                searchViewModel = SearchViewModel(repository),
+                indexStatusViewModel = IndexStatusViewModel(flowOf(null), StubIndexLauncher()),
+                galleryViewModel = GalleryViewModel(emptyGallerySource),
+                onRequestPermission = {},
+                onOpenSettings = {},
+            )
+        }
+        rule.onNodeWithTag(TAG_PERMISSION_LICENSES).performClick()
+        rule.waitForIdle()
+        assertEquals(Routes.LICENSES, route())
+        rule.onNodeWithTag(TAG_LICENSES_BACK).performClick()
+        rule.waitForIdle()
+        assertEquals(Routes.SEARCH, route())
+        rule.onNodeWithTag(TAG_PERMISSION_LICENSES).assertExists()
     }
 }

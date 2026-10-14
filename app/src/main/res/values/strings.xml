@@ -92,7 +92,7 @@
     <!-- Lisanslar (T-037, K-12) -->
     <string name="licenses_title">Lisanslar</string>
     <string name="licenses_row_summary">Açık kaynak bileşenler ve model lisansları</string>
-    <string name="licenses_intro">Ai-galeri tamamen cihaz üstünde çalışır. Aşağıdaki modeller ve yazılım bileşenleri kendi lisansları altındadır. Bu bilgiler uygulamanın içindedir, internet gerektirmez.</string>
+    <string name="licenses_intro">Ai-galeri tamamen cihaz üstünde çalışır. Aşağıda uygulamanın ana model ve yazılım bileşenleri listelenir; her biri kendi lisansı altındadır. Geçişli bileşenler tek kayıtta özetlenmiştir. Bu bilgiler uygulamanın içindedir, internet gerektirmez.</string>
     <string name="licenses_section_app">Bu uygulama</string>
     <string name="licenses_section_modified">Değiştirilmiş model bildirimi</string>
     <string name="licenses_section_components">Üçüncü taraf bileşenler</string>
