@@ -15,20 +15,21 @@ import org.junit.runner.RunWith
 
 /**
  * T-026: GERÇEK [OnnxTextEncoder] ile 76 altın sorgunun vektörleri, `tools/golden_text.py`'nin ORİJİNAL model
- * dosyalarıyla ürettiği altın vektörlere kosinüs >= [MIN_COSINE] olmalı (gerekçe: docs/golden-text.md).
- * T-027: aynı test BUDANMIŞ metin modeli/sözlüğü (Katman A) için cihaz kapısıdır; masaüstünde budanmış model altınla bit özdeş
- * (kosinüs 1,0), cihazda da >= [MIN_COSINE] beklenir (T-012 sonrası ölçülüp docs/golden-text.md'ye yazılır).
+ * dosyalarıyla (masaüstü, Apple Silicon, ORT 1.30.0) ürettiği altın vektörlere kosinüs >= [MIN_COSINE] olmalı.
  * Altın dosya `src/test/resources/ml/golden_text_vectors.tsv`, androidTest assets olarak paketlenir (build.gradle.kts).
  * Sorgu anahtarlarındaki görünmez/ayrışık karakterler `\uXXXX` kaçışlıdır; [unescape] ile çözülür.
  *
+ * EŞİK (T-035): [MIN_COSINE] = 0,995, bir "ÇEKİRDEK FARKI BANDI"dır; regresyon kapısı DEĞİLDİR. ARM cihaz (arm64 emülatör,
+ * ORT 1.30.0 AAR, KleidiAI kapalı, BUDANMIŞ model) ölçümü: min 0,99775, ort 0,99922, 75/76 sorgu < 0,9999, 20 sorgu < 0,999,
+ * 0,99 altında yok. Bu ~2e-3'lük fark budamadan değil int8 dinamik nicemleme çekirdek farkındandır: masaüstünde budanmış
+ * model orijinalle bit özdeştir, masaüstünde graf optimizasyonu BASIC/kapalıyken de 1-kosinüs ~2,2e-3 çıkar. Bu yüzden eski
+ * 0,9999 cihaz kapısı anlamsızdı. 0,9999 JVM/masaüstü kapılarında aynen geçerlidir (DEĞİŞMEDİ). Ölçümler, sıralama etkisi
+ * (resimli testte hit@5/MRR bozulmadı) ve gerekçe: docs/golden-text.md "Cihaz ölçümü".
+ * Bu test budama/.ort (T-027/T-030) regresyonunu TEK BAŞINA YAKALAMAZ: o kapı için aynı cihazda orijinal modelle
+ * karşılaştırma önerilir (docs/golden-text.md; T-030 ön koşulu). Fiziksel telefonda (KleidiAI açık) ölçülmedi.
+ *
  * DURUM: T-012'de Pixel_8 API 35 arm64 emülatöründe çalıştırıldı (emülatörde KleidiAI kapalı oturumla, bkz.
  * [OrtEmulatorWorkaround]). Model dosyaları APK'da yoksa test başarısız olur (sessiz atlama yok).
- *
- * PLATFORM UYARISI: altın, Apple Silicon masaüstünde pip `onnxruntime` 1.30.0 ile üretildi; bu test Android AAR
- * ORT'siyle (farklı derleme ve ARM çekirdekleri) çalışır. x86_64 emülatör, arm64 için nicemlenmiş modeli farklı bir
- * çekirdek yoluyla çalıştırabilir. Masaüstünde graf optimizasyonu BASIC/kapalıyken 1-kosinüs ~2,2e-3 ölçüldü; cihaz
- * tabanı ÖLÇÜLMEDİ (ilk cihaz ölçümü T-012'ye bağlı; sonuç docs/golden-text.md "Cihaz ölçümü" bölümüne yazılır).
- * Test ilk kez cihazda düşerse eşiği körlemesine gevşetmeyin: en kötü kosinüs ve dağılım belgeye işlenip karar verilir.
  * Sorgu metni ve vektör log'a yazılmaz (yalnızca sıra no ve kosinüs).
  */
 @RunWith(AndroidJUnit4::class)
@@ -104,6 +105,7 @@ class GoldenTextVectorsDeviceTest {
     }
 
     private companion object {
-        const val MIN_COSINE = 0.9999
+        /** Çekirdek farkı bandı (T-035); ölçülen min 0,99775. Gerekçe KDoc ve docs/golden-text.md. */
+        const val MIN_COSINE = 0.995
     }
 }

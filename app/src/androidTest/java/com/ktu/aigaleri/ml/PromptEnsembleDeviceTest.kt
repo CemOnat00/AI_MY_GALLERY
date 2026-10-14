@@ -20,9 +20,15 @@ import org.junit.runner.RunWith
  * paketlenir (build.gradle.kts, `src/test/resources`). Ayrıca `AppDependencies.searchTextEncoder`'ın şablon topluluğu olduğunu
  * ve çıplak kodlayıcıdan farklı vektör ürettiğini (yani arama yolunun çıplak kodlayıcıyı kullanmadığını) sınar.
  *
- * DURUM: YAZILDI ve derlendi; ÇALIŞTIRMAYI qa yapar (emülatör/cihaz). Model dosyaları APK'da yoksa test başarısız olur.
- * Eşik 0,999 (tek çıkarım altını için 0,9999'dan gevşek): varyantlar farklı uzunlukta olduğundan ve ortalama alındığından
- * cihaz-masaüstü çekirdek farkı biraz büyüyebilir; ilk cihaz ölçümünde en kötü kosinüs belgeye işlenir, eşik körlemesine gevşetilmez.
+ * EŞİK (T-035): [MIN_COSINE] = 0,995, "ÇEKİRDEK FARKI BANDI"dır (çıplak altın testiyle aynı eşik); regresyon kapısı DEĞİLDİR.
+ * ARM cihaz (arm64 emülatör, ORT 1.30.0 AAR, KleidiAI kapalı, budanmış model) ölçümü: min 0,99881, ort 0,99951; eski 0,999
+ * eşiği farkla kaçtı. Fark int8 dinamik nicemleme çekirdek farkıdır (~2e-3 gürültü; masaüstünde BASIC/kapalı graf
+ * optimizasyonunda da 1-kosinüs ~2,2e-3), budamadan değil. Sıralama etkisi: resimli testte TR ensemble hit@5 1,00, MRR 1,00.
+ * Masaüstü/JVM kapıları (`PromptEnsembleGoldenTest`, bileşen farkı < 2e-6) DEĞİŞMEDİ. Ayrıntı: docs/golden-text.md
+ * "Cihaz ölçümü". Budama/.ort regresyonu için "orijinal modelle AYNI cihazda" karşılaştırma ayrıca önerilir (T-030 ön koşulu).
+ *
+ * DURUM: qa emülatörde çalıştırdı (KleidiAI kapalı oturum, bkz. [OrtEmulatorWorkaround]); fiziksel telefonda ölçülmedi.
+ * Model dosyaları APK'da yoksa test başarısız olur.
  * Sorgu metni ve vektör log'a yazılmaz (yalnızca sıra no ve kosinüs).
  */
 @RunWith(AndroidJUnit4::class)
@@ -105,6 +111,7 @@ class PromptEnsembleDeviceTest {
     }
 
     private companion object {
-        const val MIN_COSINE = 0.999
+        /** Çekirdek farkı bandı (T-035); ölçülen min 0,99881. Gerekçe KDoc ve docs/golden-text.md. */
+        const val MIN_COSINE = 0.995
     }
 }

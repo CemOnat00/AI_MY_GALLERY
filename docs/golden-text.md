@@ -53,13 +53,13 @@ Yorum:
 - 2,2e-16 değeri model farkı değil float64 yuvarlama sınırıdır: aynı iki float32 vektörün float64 kosinüsü bile 1'e tam eşit çıkmaz (makine epsilon'u), yani ölçüm aracının tabanıdır; bu satırlarda vektörler bit özdeştir (`maks|fark|` = 0).
 - İş parçacığı sayısı ve tekrar çalıştırma vektörleri BİT ÖZDEŞ bırakır; gerçek gürültü tabanı aynı kodlar için 0'dır. qa prototipindeki "~2,4e-7", vektör farkı değil float32 nokta çarpımının yuvarlama hatasıdır (bu ölçümde 1,8e-7; neden: float32 toplamı, büyük olasılıkla ||a||^2'nin 1'e tam yuvarlanmaması; ayrıca doğrulanmadı). Bu yüzden eşiği 1e-6'nın altına çekmek anlamsızdır: ölçüm aracı gürültüsü ayrışma sinyalinden büyük olur.
 - TSV yazım kaybı (8 anlamlı hane): 1-kosinüs ~4e-16.
-- Graf optimizasyonunu (dolayısıyla kuantize çekirdek yolunu) değiştirmek kosinüsü 2e-3'e kadar düşürür. Çıkarım yolu değişirse (ör. ARM çekirdekleri, T-030 .ort dönüşümü) bu büyüklükte fark mümkündür. Cihaz (ARM) tabanı ÖLÇÜLMEDİ.
-- T-030 RİSKİ: BASIC/kapalıyken ölçülen 2,2e-3 fark hem 0,9999 hem T-030'un 0,99999 kapısını aşar. `OnnxTextEncoder.kt:113-117` graf optimizasyon düzeyini AÇIKÇA ayarlamaz (yalnızca iş parçacığı, bellek deseni ve arena; düzey ORT varsayılanı ENABLE_ALL). Bir .ort dönüşümü veya optimizasyon düzeyi değişikliği kuantize çekirdek yolunu değiştirebilir. ÖN KOŞUL: dönüşüm, ENABLE_ALL ile eşdeğer optimizasyon düzeyinde yapılmalı (çevrimdışı .ort'ta ORT çalışma zamanındaki aynı düzeyi uygulayacak biçimde, T-030'da doğrulanacak). Kapı düşerse bu bir REGRESYONDUR; eşik gevşetilmez.
+- Graf optimizasyonunu (dolayısıyla kuantize çekirdek yolunu) değiştirmek kosinüsü 2e-3'e kadar düşürür. Çıkarım yolu değişirse (ör. ARM çekirdekleri, T-030 .ort dönüşümü) bu büyüklükte fark mümkündür. Cihaz (ARM) tabanı T-035'te ölçüldü: aşağıdaki "Cihaz ölçümü" bölümü; gürültü bandı bu 2,2e-3 ile aynı büyüklüktedir.
+- T-030 RİSKİ (T-035'te güncellendi): BASIC/kapalıyken ölçülen 2,2e-3 fark hem 0,9999 hem T-030'un 0,99999 kapısını aşar ve ARM cihazdaki çekirdek-farkı gürültüsüyle (min kosinüs 0,99775 => 1-kosinüs 2,25e-3) AYNI büyüklüktedir. Sonuç: cihazda altına karşı 0,9999 kapısı anlamsızdı (budamadan bağımsız düşer) ve cihaz kapısı bir optimizasyon-düzeyi/dönüşüm regresyonunu AYIRT EDEMEZ: ARM cihazda "ENABLE_ALL ile BASIC" farkı gürültü bandının içinde kalır. T-030 regresyon kapısı bu yüzden cihaz-altın kosinüsüyle değil, aşağıdaki "orijinal modelle AYNI cihazda" karşılaştırmasıyla (veya masaüstünde bit özdeşlikle) kurulmalıdır. `OnnxTextEncoder.kt:113-117` graf optimizasyon düzeyini AÇIKÇA ayarlamaz (yalnızca iş parçacığı, bellek deseni ve arena; düzey ORT varsayılanı ENABLE_ALL). Bir .ort dönüşümü veya optimizasyon düzeyi değişikliği kuantize çekirdek yolunu değiştirebilir. ÖN KOŞUL: dönüşüm, ENABLE_ALL ile eşdeğer optimizasyon düzeyinde yapılmalı (çevrimdışı .ort'ta ORT çalışma zamanındaki aynı düzeyi uygulayacak biçimde, T-030'da doğrulanacak). Kapı düşerse bu bir REGRESYONDUR; eşik gevşetilmez.
 
 ## Neden 0,9999 (1e-4)
 
 - Aynı platformda aynı hesabın tabanı 0 (en kötü 2e-16, float32 nokta çarpımı gürültüsü 2e-7) olduğundan, budama gibi hesabı değiştirmeyen değişiklikler için 1e-4 sıfırdan çok uzak ve gevşek bir üst sınırdır; asıl kapı yine token METNİ eşitliğidir.
-- Kuantize çekirdek yolu farkının büyüklüğü (2e-3, ortalama 8e-4) 1e-4'ten büyüktür; yani eşik bilerek "çekirdek yolu değişmedi" ile "değişti" arasını ayırır. ARM cihaz testi (masaüstü (Apple Silicon arm64) altınına karşı; Android ARM çekirdekleri (dotprod/i8mm varlığı) farklı olabilir) bu nedenle düşebilir: o durumda en kötü kosinüs ve dağılım bu belgeye işlenir ve karar verilir, eşik körlemesine gevşetilmez.
+- Kuantize çekirdek yolu farkının büyüklüğü (2e-3, ortalama 8e-4) 1e-4'ten büyüktür; yani eşik bilerek "çekirdek yolu değişmedi" ile "değişti" arasını ayırır. ARM cihaz testi (masaüstü altınına karşı, farklı çekirdek) bu nedenle 0,9999'u TUTTURAMADI (T-035, "Cihaz ölçümü"): 0,9999 yalnızca JVM/masaüstü kapılarında (aynı platform, bit özdeş beklenir) geçerlidir; cihaz kapısı ölçüme dayalı ayrı bir eşiktir (>= 0,995). Eşik ölçümle, gerekçeyle belgelenerek ayarlandı, körlemesine gevşetilmedi.
 - Sıralama etkisi: iki birim vektör için |a-b| = sqrt(2(1-cos)); 1-cos = 1e-4 iken bir görüntü vektörüyle skor farkı en çok ~0,014. CLIP skorları dar aralıkta olduğundan bu, yakın komşuların sırasını değiştirebilir; bu yüzden kosinüs tek başına yetmez, top-K örtüşmesi ayrıca kapıdır. Tipik fark çok daha küçüktür.
 - Eşikler gevşetilmez; T-030 için todo'daki 0,99999 kapısı ayrı ve daha sıkıdır. Yukarıdaki T-030 riski nedeniyle bu kapı, optimizasyon düzeyi ENABLE_ALL korunmadıkça geçilemez; bu bir eşik sorunu değil dönüşüm hatasıdır.
 
@@ -71,7 +71,7 @@ Hepsi ORİJİNAL referansa karşı, aynı 76 sorgu (T-027 ayrıca büyük TR/EN 
 0. KAPI ÇALIŞTI MI: `GoldenTextTest` asıl kapısı (`tokenTexts_equalGolden_forAllGoldenQueries`, 76 sorgu) ve `unkCountAndRate_doNotExceedGoldenBaseline` sözlük dosyası yoksa `assumeTrue` ile ATLANIR. T-027 kapısı çalıştırılırken test raporunda GoldenTextTest için `skipped` sayısının 0 olduğuna bakılmalıdır; atlanmış kapı geçmiş sayılmaz. (`originalVocab_goldenIdsMatchExactly...` budanmış sözlükte KASITLI atlanır: beklenen skipped = 1.)
 1. ASIL KAPI: token METNİ dizisi eşitliği (`GoldenTextTest.tokenTexts_equalGolden_forAllGoldenQueries`). Id'lere bağlı değil; budama id'leri yeniden numaralar (`TokenVocab` metne çevirir). Orijinal sözlükte ek olarak id eşitliği de doğrulanır, budanmışta atlanır.
 2. `[UNK]` sayısı ve oranı altın tabanı (5 / 411) aşmaz (`unkCountAndRate_doNotExceedGoldenBaseline`).
-3. Kosinüs >= 0,9999 (76 vektör, `GoldenTextVectorsDeviceTest`, cihazda; JVM'de ORT Android olmadığı için masaüstü Python ile de aynı ölçüm betikle yapılabilir). Budama yalnızca gömme satırlarını seçtiği için masaüstünde beklenen kosinüs 1,0'dır.
+3. Kosinüs >= 0,9999 (76 vektör, MASAÜSTÜ/aynı platform: `tools/verify_pruned_text.py` ve aynı ölçümü yapan betikler; budama yalnızca gömme satırlarını seçtiği için masaüstünde beklenen kosinüs 1,0'dır, bit özdeş). Bu kapı DEĞİŞMEDİ. Cihazda (`GoldenTextVectorsDeviceTest`, masaüstü altınına karşı) kapı >= 0,995 "çekirdek farkı bandı"dır; bkz. "Cihaz ölçümü". Cihaz kapısı budama regresyonunu tek başına yakalamaz.
 4. Top-K örtüşmesi: sabit bir görüntü vektörü kümesine karşı orijinal ve değişmiş sorgu vektörlerinin top-10 ve top-50 kümeleri; öneri eşik top-10 >= 0,99 ve top-50 >= 0,98 (T-031'in koşullarıyla aynı). T-027'de ölçüldü: 10000 sentetik görüntü vektörü (kümelenmiş, sabit seed), 500 sorgu (76 altın + 424 sentetik cümle), top-10 ve top-50 örtüşmesi 1,0000 (`tools/verify_pruned_text.py`). Sentetik veri gerçek galeri dağılımını temsil etmez; gerçek galeride yeterlilik doğrulanmadı.
 
 ## Eski model dosyalarını yedekleme (repo dışı)
@@ -87,17 +87,32 @@ T-027 ile orijinaller `mobile/.model-cache/` önbelleğinde KALIR (`tools/fetch_
 
 Kaynak ve lisans: `model-setup.md` (metin: sentence-transformers/clip-ViT-B-32-multilingual-v1, Apache-2.0; görüntü: Xenova dönüşümü, OpenAI CLIP MIT çıkarım). Altın dosyalar bu modellerin çıktılarıdır; fotoğraf veya kullanıcı verisi içermez.
 
-## Cihaz ölçümü (T-012 sonrası doldurulacak)
+## Cihaz ölçümü (T-012 ölçtü, T-035 eşiği belgeledi)
 
-Altın, Apple Silicon masaüstünde pip `onnxruntime` 1.30.0 ile üretildi; `GoldenTextVectorsDeviceTest` Android AAR ORT'siyle (farklı derleme ve ARM çekirdekleri) çalışır. x86_64 emülatör, arm64 için nicemlenmiş modeli farklı bir çekirdek yoluyla çalıştırabilir; emülatör sonucu fiziksel ARM cihazı temsil etmeyebilir. İlk cihaz/emülatör ölçümü T-012'ye bağlıdır ve sonucu (cihaz, ABI, en kötü ve ortalama kosinüs) buraya yazılır:
+Altın, Apple Silicon masaüstünde pip `onnxruntime` 1.30.0 ile üretildi; `GoldenTextVectorsDeviceTest` Android AAR ORT'siyle (ORT 1.30.0 AAR, farklı derleme ve ARM çekirdekleri) çalışır. Ölçümler qa-tester'ın arm64 emülatör androidTest koşularıdır (commit e5c35b3, 2026-10-14; Pixel_8 API 35 arm64 emülatörü; budanmış metin modeli, T-027).
 
-| Tarih | Cihaz/emülatör, ABI | En kötü kosinüs | Ortalama | Sonuç |
-|---|---|---|---|---|
-| (ölçülmedi) | | | | |
+KleidiAI notu: emülatör konuğu SME/SVE2 bildirir ve KleidiAI çekirdeği orada SIGILL verdiği için emülatörde KleidiAI KAPALI çalıştırıldı (test tarafı geçici çözüm `OrtEmulatorWorkaround`; bilgi satırında `kleidiaiDisabledWorkaround=true`). Gerçek telefonda çalışma yolu farklı olabilir (KleidiAI/i8mm/dotprod çekirdekleri açık); emülatör sonucu fiziksel ARM cihazı temsil etmeyebilir ve fiziksel cihazda ölçüm YAPILMADI.
+
+| Tarih | Test (çıkarım) | n | En kötü kosinüs | Ortalama | Dağılım | Sonuç |
+|---|---|---|---|---|---|---|
+| 2026-10-14 | `GoldenTextVectorsDeviceTest` (çıplak metin vektörü, 76 altın sorgu) | 76 | 0,99775 | 0,99922 | 75/76 sorgu < 0,9999; 20 sorgu < 0,999; 0 sorgu < 0,99 | 0,9999 kapısı düştü; ölçüm gürültü bandıdır (aşağıda) |
+| 2026-10-14 | `PromptEnsembleDeviceTest.ensembleVectors_matchPythonReference` (ensemble) | 26 | 0,99881 | 0,99951 | 0,999 eşiği farkla kaçtı | 0,999 kapısı düştü; aynı bant |
+
+Yorum ve eşik gerekçesi (T-035):
+- Bu fark budamadan DEĞİL, int8 dinamik nicemleme çekirdek farkıdır (ARM çekirdeği ile masaüstü çekirdeği; hangi çekirdeğin hangi yuvarlamayı yaptığı ayrıca doğrulanmadı). Kanıt: masaüstünde budanmış model orijinalle bit özdeştir (T-027), ve masaüstünde graf optimizasyonu BASIC/kapalı yapılınca da 1-kosinüs ~2,2e-3 çıkar (yukarıdaki gürültü tablosu). Cihazdaki en kötü 1-kosinüs 2,25e-3 aynı büyüklüktedir; bu yüzden cihazda 0,9999 kapısı anlamsızdı.
+- Cihaz eşiği: HEM çıplak HEM ensemble için kosinüs >= 0,995 (`GoldenTextVectorsDeviceTest.MIN_COSINE` ve `PromptEnsembleDeviceTest.MIN_COSINE`; `appSearchEncoder_isEnsemble_andDiffersFromBareEncoder`'deki "altınla uyumsuz" denetimi de aynı sabiti kullanır). Ölçülen min 0,99775 / 0,99881 ile eşik arasında ~2,8e-3 / ~3,9e-3 pay vardır; ölçülen gürültü ~2e-3; 0,99 altında hiç sorgu yoktu. Eşik, çekirdek-farkı gürültüsünü kabul eder ama gerçek bir model/tokenizer bozulmasını (kosinüs tipik olarak << 0,99) yakalar.
+- Sıralama etkisi: gürültü sıralamayı bozmadı. qa'nın resimli testinde (`SearchQualityDeviceTest`, emülatör): TR T-033 (ensemble) hit@5 1,00, MRR 1,00; TR çıplak hit@5 0,90; EN hit@5 1,00. Yani ~2e-3 mertebesindeki cihaz gürültüsü bu kümede top-K sonucunu etkilemedi (küme küçük; gerçek galeri için garanti değil).
+- DEĞİŞMEYENLER: JVM/masaüstü kapıları (token metni eşitliği, bit özdeş vektör, masaüstü kosinüs >= 0,9999, `PromptEnsembleGoldenTest` bileşen farkı < 2e-6) aynen kalır; gevşetilen yalnızca cihaz-altın kosinüs eşikleridir.
+
+### Cihaz eşiği bir "çekirdek farkı bandı"dır, regresyon kapısı DEĞİLDİR
+
+>= 0,995 cihaz eşiği şunu söyler: "bu cihazın çekirdeği masaüstü altınından, bilinen çekirdek-farkı bandı içinde farklıdır". Bir değişikliğin (T-027 budama, T-028 mmap, T-030 .ort dönüşümü, optimizasyon düzeyi) YENİ bir fark getirdiğini AYIRT EDEMEZ: böyle bir regresyon da yaklaşık 2e-3 mertebesinde olur ve bant içinde kalır. Bu yüzden bu eşik budama/format regresyonu için kanıt sayılmaz.
+
+ÖNERİ (uygulanmadı; T-030 ÖN KOŞULU): regresyon kapısı için "orijinal modelle AYNI cihazda" karşılaştırma: aynı cihaz/emülatör ve aynı ORT oturum ayarlarında, ORİJİNAL model (135 MB, `tools/fetch_models.sh --text-only` önbelleği) ile değişmiş model (budanmış / .ort) 76 sorgu için karşılaştırılır; aynı çekirdek yolu olduğundan beklenen kosinüs ~1,0 (bit özdeşe yakın; budama için bit özdeş) ve kapı >= 0,9999 (T-030 için 0,99999) olabilir. Bunun androidTest'te çalışması orijinal modelin cihaza konmasını gerektirir (ör. `adb push` ile geçici dizin ya da yalnızca test APK'sına geçici asset; her ikisi de ağsızdır ama test APK'sını ~135 MB şişirir/ elle adım gerektirir). Orijinal model olmadan mümkün değildir; bu nedenle şimdi uygulanmadı. Alternatif: cihazda değişmiş modelle vektörleri `adb pull` ile alıp masaüstünde, aynı cihazın orijinal model vektörleriyle karşılaştırmak.
 
 ## Doğrulanmadı
 
-- Budanmış modelin cihazda (Android ARM, AAR ORT) kosinüsü: aynı androidTest, çalıştırılmadı (T-012). Masaüstünde budanmış model altınla bit özdeştir.
-- ARM cihazda kosinüs: androidTest yazıldı, `compileDebugAndroidTestKotlin` ile DERLENDİ, ÇALIŞTIRILMADI (cihaz/emülatör yok).
+- Fiziksel ARM telefonda kosinüs: ölçülmedi; yalnızca arm64 emülatör (KleidiAI kapalı) ölçüldü. KleidiAI/i8mm açık gerçek cihazda bant farklı olabilir; ölçülürse tabloya eklenir ve >= 0,995 eşiği yeniden değerlendirilir.
+- Cihazda budanmış vs orijinal model AYNI çekirdekte karşılaştırması (budamanın cihazda sıfır etkisinin doğrudan kanıtı): yapılmadı (T-030 ön koşulu önerisi). Dolaylı kanıt: masaüstü bit özdeşlik ve resimli arama testi.
 - Java ve Python Unicode sürüm farkları (sette tetiklenmedi).
 - Top-K örtüşme eşiklerinin gerçek galeride yeterliliği.
