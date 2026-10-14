@@ -74,8 +74,8 @@ class GalleryPermissionEdgeCaseTest {
     fun mediaStoreSource_runsOnIoDispatcherByDefault_andNeverOnMainThread() {
         val text = readMain("java/com/ktu/aigaleri/data/MediaStorePhotoSource.kt")
         assertTrue(text.contains("dispatcher: CoroutineDispatcher = Dispatchers.IO"))
-        // loadPhotos, count, loadIds ve loadByIds (T-006) dahil dört okuma.
-        assertEquals(4, Regex("withContext\\(dispatcher\\)").findAll(text).count())
+        // loadPhotos, count, loadIds, loadByIds (T-006) ile loadTimeline ve changeToken (T-036) dahil altı okuma.
+        assertEquals(6, Regex("withContext\\(dispatcher\\)").findAll(text).count())
         assertFalse(text.contains("Dispatchers.Main"))
     }
 

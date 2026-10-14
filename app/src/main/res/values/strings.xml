@@ -24,7 +24,6 @@
     <string name="search_hint">Ne arıyorsun? Örn. plajda gülen çocuk</string>
     <string name="search_button">Ara</string>
     <string name="search_clear">Aramayı temizle</string>
-    <string name="search_suggestions_title">Arama önerileri</string>
     <string name="search_suggestion_action">Bu istemle ara</string>
     <string name="search_loading">Aranıyor...</string>
     <string name="search_results_title">En yakın eşleşmeler</string>
@@ -44,6 +43,7 @@
     <string name="gallery_loading">Fotoğraflar yükleniyor</string>
     <string name="gallery_empty">Galeride fotoğraf yok</string>
     <string name="gallery_empty_detail">Fotoğraf çektiğinde veya eklediğinde burada görünür.</string>
+    <string name="gallery_permission_required">Galeri izni gerekli</string>
     <string name="gallery_error">Fotoğraflar okunamadı.</string>
     <string name="gallery_error_detail">Lütfen tekrar dene.</string>
     <string name="gallery_error_retry">Tekrar dene</string>

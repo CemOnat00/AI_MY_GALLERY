@@ -36,6 +36,7 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import com.ktu.aigaleri.R
+import com.ktu.aigaleri.data.PhotoTimeline
 import com.ktu.aigaleri.ui.formatDate
 import com.ktu.aigaleri.ui.image.PhotoImage
 import com.ktu.aigaleri.ui.search.CenteredColumn
@@ -48,6 +49,7 @@ const val TAG_GALLERY_LOADING = "gallery_loading"
 const val TAG_GALLERY_EMPTY = "gallery_empty"
 const val TAG_GALLERY_ERROR = "gallery_error"
 const val TAG_GALLERY_RETRY = "gallery_retry"
+const val TAG_GALLERY_PERMISSION = "gallery_permission"
 
 private const val SKELETON_CELL_COUNT = 30
 
@@ -68,10 +70,20 @@ fun GalleryContent(
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val bottomInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom)
+    // Grid dışı durumlar yatay ve alt boşluğu kendisi uygular; grid kenardan kenaradır (yalnızca alt contentPadding).
+    val sideInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom)
     when (state) {
-        GalleryUiState.Loading -> GallerySkeleton(modifier.windowInsetsPadding(bottomInsets))
-        GalleryUiState.Empty -> CenteredColumn(modifier.windowInsetsPadding(bottomInsets).testTag(TAG_GALLERY_EMPTY)) {
+        GalleryUiState.Loading -> GallerySkeleton(modifier.windowInsetsPadding(sideInsets))
+        GalleryUiState.PermissionRequired -> CenteredColumn(modifier.windowInsetsPadding(sideInsets).testTag(TAG_GALLERY_PERMISSION)) {
+            IconCircle(AppIcons.Lock, size = AiGaleriDimens.IconCircleMedium, glyph = AiGaleriDimens.IconCircleMediumGlyph)
+            Text(
+                stringResource(R.string.gallery_permission_required),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                textAlign = TextAlign.Center,
+            )
+        }
+        GalleryUiState.Empty -> CenteredColumn(modifier.windowInsetsPadding(sideInsets).testTag(TAG_GALLERY_EMPTY)) {
             IconCircle(AppIcons.PhotoLibrary, size = AiGaleriDimens.IconCircleMedium, glyph = AiGaleriDimens.IconCircleMediumGlyph)
             Text(
                 stringResource(R.string.gallery_empty),
@@ -86,7 +98,7 @@ fun GalleryContent(
                 textAlign = TextAlign.Center,
             )
         }
-        GalleryUiState.Error -> CenteredColumn(modifier.windowInsetsPadding(bottomInsets).testTag(TAG_GALLERY_ERROR)) {
+        GalleryUiState.Error -> CenteredColumn(modifier.windowInsetsPadding(sideInsets).testTag(TAG_GALLERY_ERROR)) {
             IconCircle(AppIcons.ErrorOutline, size = AiGaleriDimens.IconCircleMedium, glyph = AiGaleriDimens.IconCircleMediumGlyph)
             Text(
                 stringResource(R.string.gallery_error),
@@ -113,7 +125,7 @@ fun GalleryContent(
 
 @Composable
 private fun GalleryGrid(
-    photos: GalleryPhotos,
+    photos: PhotoTimeline,
     gridState: LazyGridState,
     onOpenPhoto: (Long, Long?) -> Unit,
     modifier: Modifier,

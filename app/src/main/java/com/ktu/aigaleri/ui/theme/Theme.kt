@@ -180,12 +180,14 @@ object AiGaleriDimens {
     val SearchBarHeight: Dp = 56.dp
     val SearchBarCorner: Dp = 28.dp
     val ButtonCorner: Dp = 20.dp
-    val ProgressLineThin: Dp = 2.dp
 
     /** Öneri çipi (DESIGN.md "Filter & Context Chips"): görsel yükseklik 32dp, köşe 8dp; dokunma alanı [MinTouchTarget]. */
     val ChipHeight: Dp = 32.dp
     val ChipCorner: Dp = 8.dp
     val ChipPaddingHorizontal: Dp = 12.dp
+    val ChipBorder: Dp = 1.dp
+
+    val ProgressLineThin: Dp = 2.dp
     val ProgressLine: Dp = 4.dp
     val ProgressGap: Dp = 0.dp
     val StatusDot: Dp = 8.dp

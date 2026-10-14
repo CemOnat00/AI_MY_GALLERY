@@ -41,6 +41,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -110,15 +111,18 @@ fun SearchContent(
     onOpenGalleryPhoto: (photoId: Long, dateTaken: Long?) -> Unit = { _, _ -> },
     onGalleryRetry: () -> Unit = {},
 ) {
-    // Galeri kaydırma konumu burada tutulur (rememberSaveable): arama sonucuna geçip grid'e dönünce, büyük görünümden
-    // dönünce ve yön değişiminde korunur.
+    // Galeri kaydırma konumu burada tutulur (rememberLazyGridState kaydedilebilirdir, içeride rememberSaveable kullanır):
+    // arama sonucuna geçip grid'e dönünce, büyük görünümden dönünce ve yön değişiminde korunur.
     val galleryGridState = rememberLazyGridState()
+    val horizontalInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal)
+    // Yalnızca üst boşluk dış katmandadır: grid'ler kenardan kenara kalsın (çentik/yatay yönde de); arama alanı, çipler ve
+    // diğer metin satırları yatay boşluğu kendileri alır.
     Column(
-        modifier = Modifier.fillMaxSize()
-            .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)),
+        modifier = Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top)),
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(start = AiGaleriDimens.Margin, top = AiGaleriDimens.SpaceSm, end = AiGaleriDimens.SpaceSm),
+            modifier = Modifier.fillMaxWidth().windowInsetsPadding(horizontalInsets)
+                .padding(start = AiGaleriDimens.Margin, top = AiGaleriDimens.SpaceSm, end = AiGaleriDimens.SpaceSm),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             SearchPill(
@@ -136,18 +140,19 @@ fun SearchContent(
                 )
             }
         }
-        InlineValidation(state)
+        InlineValidation(state, Modifier.windowInsetsPadding(horizontalInsets))
         if (indexing != null) {
             IndexingBannerContent(
                 banner = indexing,
                 onOpen = onOpenIndexStatus,
-                modifier = Modifier.padding(horizontal = AiGaleriDimens.Margin, vertical = AiGaleriDimens.SpaceSm),
+                modifier = Modifier.windowInsetsPadding(horizontalInsets)
+                    .padding(horizontal = AiGaleriDimens.Margin, vertical = AiGaleriDimens.SpaceSm),
             )
         }
         // Klavye (IME) ve gezinti çubuğu içeriği örtmesin; sonuç ve galeri grid'leri kenardan kenara kaydığı için kendi alt
-        // boşluklarını (contentPadding) kullanır, bu yüzden boşluk yalnızca grid dışı durumlara uygulanır (boştaki galeri
-        // kendi içinde yönetir).
-        val bottomInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom)
+        // boşluklarını (contentPadding) kullanır, bu yüzden yatay+alt boşluk yalnızca grid dışı durumlara uygulanır (boştaki
+        // galeri kendi içinde yönetir).
+        val bottomInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom)
         val isIdle = state.status is SearchStatus.Idle || state.status is SearchStatus.InvalidQuery
         val isGrid = state.status is SearchStatus.Success || isIdle
         Box(modifier = Modifier.fillMaxSize().then(if (isGrid) Modifier else Modifier.windowInsetsPadding(bottomInsets))) {
@@ -158,6 +163,7 @@ fun SearchContent(
                             onQueryChange(suggestion)
                             onSearch()
                         },
+                        modifier = Modifier.windowInsetsPadding(horizontalInsets),
                     )
                     GalleryContent(
                         state = gallery,
@@ -255,7 +261,7 @@ private fun SearchPill(
 
 /** Alanın altında satır içi doğrulama: geçersiz istem nedeni veya karakter sınırı. */
 @Composable
-private fun InlineValidation(state: SearchUiState) {
+private fun InlineValidation(state: SearchUiState, modifier: Modifier = Modifier) {
     val status = state.status
     val message = when {
         status is SearchStatus.InvalidQuery -> stringResource(invalidQueryMessage(status.reason))
@@ -263,7 +269,7 @@ private fun InlineValidation(state: SearchUiState) {
         else -> null
     } ?: return
     Row(
-        modifier = Modifier.fillMaxWidth()
+        modifier = modifier.fillMaxWidth()
             .padding(horizontal = AiGaleriDimens.Margin + AiGaleriDimens.SpaceMd, vertical = AiGaleriDimens.SpaceXs)
             .semantics { liveRegion = LiveRegionMode.Polite },
         verticalAlignment = Alignment.CenterVertically,
@@ -281,39 +287,36 @@ private fun InlineValidation(state: SearchUiState) {
 
 /**
  * Boşta durumu: tek satır yatay kayan küçük öneri çipleri (DESIGN.md "Filter & Context Chips": 32dp, 8dp köşe,
- * Outline-Variant çerçeve). Dokunma alanı 48dp; çipe dokununca istem yazılır ve aranır.
+ * Outline-Variant çerçeve). Yerleşim yüksekliği 48dp ([minimumInteractiveComponentSize]); tıklama ve dalga etkisi yalnızca
+ * çip şeklindedir (48dp dikdörtgen boyanmaz). Çipe dokununca istem yazılır ve aranır. Satıra ayrı bir erişilebilirlik
+ * düğümü/odağı eklenmez: her çip kendi başına "Bu istemle ara" eylemli bir düğmedir.
  */
 @Composable
-private fun SuggestionChips(onPick: (String) -> Unit) {
-    val rowDescription = stringResource(R.string.search_suggestions_title)
+private fun SuggestionChips(onPick: (String) -> Unit, modifier: Modifier = Modifier) {
     val actionLabel = stringResource(R.string.search_suggestion_action)
     val shape = RoundedCornerShape(AiGaleriDimens.ChipCorner)
     LazyRow(
-        modifier = Modifier.fillMaxWidth().testTag(TAG_SUGGESTION_CHIPS).semantics { contentDescription = rowDescription },
+        modifier = modifier.fillMaxWidth().testTag(TAG_SUGGESTION_CHIPS),
         contentPadding = PaddingValues(horizontal = AiGaleriDimens.Margin),
         horizontalArrangement = Arrangement.spacedBy(AiGaleriDimens.SpaceSm),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         items(SearchSuggestions.ALL) { suggestion ->
             Box(
-                modifier = Modifier.heightIn(min = AiGaleriDimens.MinTouchTarget)
-                    .clickable(role = Role.Button, onClickLabel = actionLabel) { onPick(suggestion) },
+                modifier = Modifier.minimumInteractiveComponentSize()
+                    .heightIn(min = AiGaleriDimens.ChipHeight)
+                    .clip(shape)
+                    .border(AiGaleriDimens.ChipBorder, MaterialTheme.colorScheme.outlineVariant, shape)
+                    .clickable(role = Role.Button, onClickLabel = actionLabel) { onPick(suggestion) }
+                    .padding(horizontal = AiGaleriDimens.ChipPaddingHorizontal),
                 contentAlignment = Alignment.Center,
             ) {
-                Box(
-                    modifier = Modifier.heightIn(min = AiGaleriDimens.ChipHeight)
-                        .clip(shape)
-                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant, shape)
-                        .padding(horizontal = AiGaleriDimens.ChipPaddingHorizontal),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        suggestion,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                    )
-                }
+                Text(
+                    suggestion,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                )
             }
         }
     }
@@ -355,6 +358,7 @@ private fun ResultGrid(status: SearchStatus.Success, onOpenPhoto: (Long) -> Unit
     Column(modifier = Modifier.fillMaxSize()) {
         Row(
             modifier = Modifier.fillMaxWidth()
+                .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
                 .padding(horizontal = AiGaleriDimens.Margin, vertical = AiGaleriDimens.SpaceSm),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(AiGaleriDimens.SpaceSm),

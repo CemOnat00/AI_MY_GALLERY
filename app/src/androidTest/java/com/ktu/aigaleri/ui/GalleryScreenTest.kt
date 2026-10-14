@@ -1,6 +1,7 @@
 package com.ktu.aigaleri.ui
 
 import androidx.compose.ui.test.assertHeightIsAtLeast
+import androidx.compose.ui.test.assertTouchHeightIsEqualTo
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onChildren
@@ -23,13 +24,14 @@ import com.ktu.aigaleri.data.MediaPhoto
 import com.ktu.aigaleri.data.MediaPhotoSource
 import com.ktu.aigaleri.domain.SearchRepository
 import com.ktu.aigaleri.domain.SearchResult
-import com.ktu.aigaleri.ui.gallery.GalleryPhotos
 import com.ktu.aigaleri.ui.gallery.GalleryUiState
+import com.ktu.aigaleri.data.PhotoTimeline
 import com.ktu.aigaleri.ui.gallery.GalleryViewModel
 import com.ktu.aigaleri.ui.gallery.TAG_GALLERY_EMPTY
 import com.ktu.aigaleri.ui.gallery.TAG_GALLERY_ERROR
 import com.ktu.aigaleri.ui.gallery.TAG_GALLERY_GRID
 import com.ktu.aigaleri.ui.gallery.TAG_GALLERY_LOADING
+import com.ktu.aigaleri.ui.gallery.TAG_GALLERY_PERMISSION
 import com.ktu.aigaleri.ui.gallery.TAG_GALLERY_RETRY
 import com.ktu.aigaleri.ui.index.IndexStatusViewModel
 import com.ktu.aigaleri.ui.search.SearchContent
@@ -59,7 +61,7 @@ internal val emptyGallerySource = object : MediaPhotoSource {
 class GalleryScreenTest {
     @get:Rule val rule = createComposeRule()
 
-    private val photos = GalleryPhotos(longArrayOf(30L, 20L, 10L), longArrayOf(1_790_000_000_000L, 1_780_000_000_000L, -1L))
+    private val photos = PhotoTimeline(longArrayOf(30L, 20L, 10L), longArrayOf(1_790_000_000_000L, 1_780_000_000_000L, -1L))
     private val ready = GalleryUiState.Ready(photos)
 
     private fun search(
@@ -88,7 +90,7 @@ class GalleryScreenTest {
     fun idle_showsChipsAndGalleryGrid() {
         search()
         rule.onNodeWithTag(TAG_SUGGESTION_CHIPS).assertExists()
-        for (s in SearchSuggestions.ALL) rule.onNodeWithText(s).assertExists().assertHeightIsAtLeast(48.dp)
+        for (s in SearchSuggestions.ALL) rule.onNodeWithText(s).assertExists().assertTouchHeightIsEqualTo(48.dp)
         rule.onNodeWithTag(TAG_GALLERY_GRID).assertExists()
         rule.onNodeWithTag(TAG_RESULT_GRID).assertDoesNotExist()
     }
@@ -128,6 +130,13 @@ class GalleryScreenTest {
     }
 
     @Test
+    fun galleryPermissionRequired_showsShortText_notSkeleton() {
+        search(gallery = GalleryUiState.PermissionRequired)
+        rule.onNodeWithTag(TAG_GALLERY_PERMISSION).assertExists()
+        rule.onNodeWithTag(TAG_GALLERY_LOADING).assertDoesNotExist()
+    }
+
+    @Test
     fun galleryError_showsRetry_andRetryCallsBack() {
         var retried = false
         search(gallery = GalleryUiState.Error, onGalleryRetry = { retried = true })
@@ -157,7 +166,7 @@ class GalleryScreenTest {
 
     @Test
     fun gridState_survivesSearchAndBack() {
-        val many = GalleryUiState.Ready(GalleryPhotos(LongArray(300) { 1000L - it }, LongArray(300) { 1_790_000_000_000L - it }))
+        val many = GalleryUiState.Ready(PhotoTimeline(LongArray(300) { 1000L - it }, LongArray(300) { 1_790_000_000_000L - it }))
         var state by mutableStateOf(SearchUiState())
         rule.setContent {
             AiGaleriTheme {

@@ -35,4 +35,18 @@ interface MediaPhotoSource {
         val wanted = ids.toHashSet()
         return loadPhotos().filter { it.id in wanted }
     }
+
+    /**
+     * Galeri grid'i için hafif liste (T-036): yalnızca kimlik ve etkin tarih, en yeniden eskiye sıralı. [loadPhotos]'tan
+     * farklı olarak fotoğraf başına nesne/URI üretilmez (50 bin fotoğrafta ~800 KB). Varsayılan gerçekleme [loadPhotos]'a
+     * düşer; gerçek kaynak yalnızca kimlik/tarih sütunlarını okuyup dizilerde sıralar. Hata sözleşmesi [loadPhotos] ile aynı.
+     */
+    suspend fun loadTimeline(): PhotoTimeline = PhotoTimeline.fromPhotos(loadPhotos())
+
+    /**
+     * Galerinin değişip değişmediğini anlamak için ucuz imza (sayı + en yeni kimlik). İki çağrıda aynıysa liste
+     * büyük olasılıkla değişmemiştir (aynı sayıda ekleme+silme en yeni kimliği değiştirir; yerinde düzenleme
+     * yakalanmaz, bir sonraki değişimde düzelir). Varsayılan gerçekleme yalnızca [count]'a dayanır.
+     */
+    suspend fun changeToken(): Long = count().toLong()
 }

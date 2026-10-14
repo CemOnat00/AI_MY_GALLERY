@@ -2,6 +2,7 @@ package com.ktu.aigaleri.data
 
 import android.content.ContentResolver
 import android.database.Cursor
+import android.os.Bundle
 import android.provider.MediaStore
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -52,6 +53,48 @@ class MediaStorePhotoSource(
         }
         // Etkin tarihe göre (DATE_TAKEN yedeği DATE_ADDED) sıralama SQL'de ifade edilemediğinden bellekte yapılır.
         MediaPhotoMapping.sortNewestFirst(result)
+    }
+
+    override suspend fun loadTimeline(): PhotoTimeline = withContext(dispatcher) {
+        val projection = arrayOf(
+            MediaStore.Images.Media._ID,
+            MediaStore.Images.Media.DATE_TAKEN,
+            MediaStore.Images.Media.DATE_ADDED,
+        )
+        openCursor(projection).use { cursor ->
+            val idCol = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
+            val takenCol = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATE_TAKEN)
+            val addedCol = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATE_ADDED)
+            var ids = LongArray(cursor.count)
+            var dates = LongArray(ids.size)
+            var n = 0
+            while (cursor.moveToNext() && n < ids.size) {
+                ensureActive()
+                ids[n] = cursor.getLong(idCol)
+                dates[n] = MediaPhotoMapping.effectiveDate(cursor.longOrNull(takenCol), cursor.longOrNull(addedCol))
+                    ?: PhotoTimeline.UNKNOWN_DATE
+                n++
+            }
+            if (n != ids.size) {
+                ids = ids.copyOf(n)
+                dates = dates.copyOf(n)
+            }
+            PhotoTimeline.ofUnsorted(ids, dates)
+        }
+    }
+
+    override suspend fun changeToken(): Long = withContext(dispatcher) {
+        val count = count()
+        // En yeni kimlik: kimliğe göre azalan, tek satır (QUERY_ARG_* API 26+; minSdk 26).
+        val args = Bundle().apply {
+            putStringArray(ContentResolver.QUERY_ARG_SORT_COLUMNS, arrayOf(MediaStore.Images.Media._ID))
+            putInt(ContentResolver.QUERY_ARG_SORT_DIRECTION, ContentResolver.QUERY_SORT_DIRECTION_DESCENDING)
+            putInt(ContentResolver.QUERY_ARG_LIMIT, 1)
+        }
+        val newestId = contentResolver.query(collection, arrayOf(MediaStore.Images.Media._ID), args, null)
+            ?.use { if (it.moveToFirst()) it.getLong(0) else 0L }
+            ?: throw IllegalStateException("MediaStore sorgusu null cursor döndürdü")
+        count * 1_000_003L xor newestId
     }
 
     override suspend fun loadIds(): LongArray = withContext(dispatcher) {

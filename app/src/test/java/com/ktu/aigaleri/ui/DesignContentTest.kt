@@ -84,7 +84,7 @@ class DesignContentTest {
         assertEquals("En yakın eşleşmeler", text("search_results_title"))
         assertEquals("%s fotoğraf", text("search_result_count"))
         assertEquals("Ne arıyorsun? Örn. plajda gülen çocuk", text("search_hint"))
-        assertEquals("Arama önerileri", text("search_suggestions_title"))
+        assertEquals("Bu istemle ara", text("search_suggestion_action")) // T-036: görünür "Arama önerileri" başlığı yok, çipler eylem etiketi taşır
         assertEquals("Detay", text("indexing_banner_detail"))
         // Hata ve boş durum açıklaması çelişmez ve birbirinden farklıdır.
         assertTrue(text("search_empty") != text("search_error"))

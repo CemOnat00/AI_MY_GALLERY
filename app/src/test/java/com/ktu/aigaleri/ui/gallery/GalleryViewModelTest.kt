@@ -2,6 +2,8 @@ package com.ktu.aigaleri.ui.gallery
 
 import com.ktu.aigaleri.data.FakeMediaPhotoSource
 import com.ktu.aigaleri.data.MediaPhoto
+import com.ktu.aigaleri.data.PhotoTimeline
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -26,17 +28,16 @@ class GalleryViewModelTest {
 
     private fun vm(source: FakeMediaPhotoSource) = GalleryViewModel(source, dispatcher)
 
-    private fun GalleryViewModel.photos(): GalleryPhotos = (state.value as GalleryUiState.Ready).photos
+    private fun GalleryViewModel.photos(): PhotoTimeline = (state.value as GalleryUiState.Ready).photos
 
-    private fun GalleryPhotos.ids() = List(size) { idAt(it) }
+    private fun PhotoTimeline.ids() = List(size) { idAt(it) }
 
     @Test
-    fun initialState_isLoading_andDoesNotReadWithoutPermission() {
+    fun initialState_isLoading_andDoesNotReadBeforeRefresh() {
         val source = FakeMediaPhotoSource(listOf(photo(1, 10)))
         val vm = vm(source)
         assertEquals(GalleryUiState.Loading, vm.state.value)
-        vm.refresh(granted = false)
-        assertEquals(GalleryUiState.Loading, vm.state.value)
+        assertEquals(0, source.loadCalls)
     }
 
     @Test
@@ -47,7 +48,6 @@ class GalleryViewModelTest {
         val vm = vm(source)
         vm.refresh(granted = true)
         val photos = vm.photos()
-        // tarihsizler sonda, eşitlikte kimlik azalan
         assertEquals(listOf(3L, 4L, 1L, 5L, 2L), photos.ids())
         assertEquals(300L, photos.dateAt(0))
         assertNull(photos.dateAt(3))
@@ -55,9 +55,15 @@ class GalleryViewModelTest {
     }
 
     @Test
+    fun equalDates_orderedByIdDescending() {
+        val vm = vm(FakeMediaPhotoSource(listOf(photo(1, 50), photo(7, 50), photo(3, 50))))
+        vm.refresh(true)
+        assertEquals(listOf(7L, 3L, 1L), vm.photos().ids())
+    }
+
+    @Test
     fun sourceAlreadySorted_orderIsKept() {
-        val source = FakeMediaPhotoSource(listOf(photo(9, 90), photo(8, 80), photo(7, 70)))
-        val vm = vm(source)
+        val vm = vm(FakeMediaPhotoSource(listOf(photo(9, 90), photo(8, 80), photo(7, 70))))
         vm.refresh(true)
         assertEquals(listOf(9L, 8L, 7L), vm.photos().ids())
     }
@@ -80,12 +86,48 @@ class GalleryViewModelTest {
         assertEquals(listOf(1L), vm.photos().ids())
     }
 
+    // ---- izin ----
+
     @Test
-    fun securityException_doesNotCrash_andIsNotShownAsError() {
+    fun securityException_withoutList_isPermissionRequired_notEndlessSkeleton() {
         val vm = vm(FakeMediaPhotoSource(listOf(photo(1, 10)), failWith = SecurityException("izin")))
         vm.refresh(true)
-        assertEquals(GalleryUiState.Loading, vm.state.value)
+        assertEquals(GalleryUiState.PermissionRequired, vm.state.value)
     }
+
+    @Test
+    fun securityException_dropsExistingList_andRecoversWhenGrantedAgain() {
+        val source = FakeMediaPhotoSource(listOf(photo(1, 10)))
+        val vm = vm(source)
+        vm.refresh(true)
+        source.failWith = SecurityException("izin")
+        vm.refresh(true)
+        assertEquals(GalleryUiState.PermissionRequired, vm.state.value)
+        source.failWith = null
+        vm.refresh(true)
+        assertEquals(listOf(1L), vm.photos().ids())
+    }
+
+    @Test
+    fun permissionDenied_isPermissionRequired_andDoesNotRead() {
+        val source = FakeMediaPhotoSource(listOf(photo(1, 10)))
+        val vm = vm(source)
+        vm.refresh(granted = false)
+        assertEquals(GalleryUiState.PermissionRequired, vm.state.value)
+        assertEquals(0, source.loadCalls)
+        assertEquals(0, source.tokenCalls)
+    }
+
+    @Test
+    fun permissionRevoked_dropsList() {
+        val vm = vm(FakeMediaPhotoSource(listOf(photo(1, 10))))
+        vm.refresh(true)
+        assertTrue(vm.state.value is GalleryUiState.Ready)
+        vm.refresh(false)
+        assertEquals(GalleryUiState.PermissionRequired, vm.state.value)
+    }
+
+    // ---- yenileme ----
 
     @Test
     fun refresh_picksUpNewPhotos_withoutShowingSkeleton() {
@@ -98,7 +140,71 @@ class GalleryViewModelTest {
     }
 
     @Test
-    fun refreshFailure_keepsExistingList() {
+    fun refresh_unchangedGallery_skipsFullRead() {
+        val source = FakeMediaPhotoSource(listOf(photo(2, 20), photo(1, 10)))
+        val vm = vm(source)
+        vm.refresh(true)
+        val first = vm.state.value
+        vm.refresh(true)
+        vm.refresh(true)
+        assertEquals(1, source.loadCalls)
+        assertEquals(3, source.tokenCalls)
+        assertEquals(first, vm.state.value)
+    }
+
+    @Test
+    fun refresh_emptyGalleryUnchanged_skipsFullRead_thenPicksUpFirstPhoto() {
+        val source = FakeMediaPhotoSource(emptyList())
+        val vm = vm(source)
+        vm.refresh(true)
+        vm.refresh(true)
+        assertEquals(1, source.loadCalls)
+        source.photos = listOf(photo(5, 50))
+        vm.refresh(true)
+        assertEquals(listOf(5L), vm.photos().ids())
+    }
+
+    @Test
+    fun refresh_deletedAndAddedSameCount_isDetected() {
+        val source = FakeMediaPhotoSource(listOf(photo(1, 10), photo(2, 20)))
+        val vm = vm(source)
+        vm.refresh(true)
+        source.photos = listOf(photo(2, 20), photo(3, 30))
+        vm.refresh(true)
+        assertEquals(listOf(3L, 2L), vm.photos().ids())
+    }
+
+    @Test
+    fun overlappingRefresh_coalesces_runningReadIsNotRestarted() {
+        val source = FakeMediaPhotoSource(listOf(photo(1, 10)))
+        source.gate = CompletableDeferred()
+        val vm = vm(source)
+        vm.refresh(true) // okuma başladı, geçitte bekliyor
+        vm.refresh(true) // onResume + izin callback'i gibi art arda çağrılar
+        vm.refresh(true)
+        assertEquals(1, source.loadCalls) // yeni okuma başlamadı
+        source.gate!!.complete(Unit)
+        assertEquals(listOf(1L), vm.photos().ids())
+        // Bekleyen çağrılar için yalnızca ucuz kontrol yapıldı; tam okuma tekrarlanmadı.
+        assertEquals(1, source.loadCalls)
+    }
+
+    @Test
+    fun overlappingRefresh_changeDuringRead_isPickedUpByPendingCall() {
+        val source = FakeMediaPhotoSource(listOf(photo(1, 10)))
+        source.gate = CompletableDeferred()
+        val vm = vm(source)
+        vm.refresh(true)
+        source.photos = listOf(photo(1, 10), photo(2, 20))
+        vm.refresh(true)
+        source.gate!!.complete(Unit)
+        assertEquals(listOf(2L, 1L), vm.photos().ids())
+    }
+
+    // ---- hata: eldeki durum korunur ----
+
+    @Test
+    fun refreshFailure_keepsReadyList() {
         val source = FakeMediaPhotoSource(listOf(photo(1, 10)))
         val vm = vm(source)
         vm.refresh(true)
@@ -108,38 +214,35 @@ class GalleryViewModelTest {
     }
 
     @Test
-    fun refresh_withSameContent_keepsEqualState() {
-        val source = FakeMediaPhotoSource(listOf(photo(2, 20), photo(1, 10)))
+    fun refreshFailure_keepsEmpty_notError() {
+        val source = FakeMediaPhotoSource(emptyList())
         val vm = vm(source)
         vm.refresh(true)
-        val first = vm.state.value
+        source.failWith = IllegalStateException("x")
         vm.refresh(true)
-        assertEquals(first, vm.state.value) // içerik eşitliği: gereksiz yeniden çizim yok
+        assertEquals(GalleryUiState.Empty, vm.state.value)
     }
 
     @Test
-    fun permissionRevoked_resetsToLoading() {
-        val vm = vm(FakeMediaPhotoSource(listOf(photo(1, 10))))
+    fun failedFullRead_afterSuccess_isRetriedOnNextRefresh() {
+        val source = FakeMediaPhotoSource(listOf(photo(1, 10)))
+        val vm = vm(source)
         vm.refresh(true)
-        assertTrue(vm.state.value is GalleryUiState.Ready)
-        vm.refresh(false)
-        assertEquals(GalleryUiState.Loading, vm.state.value)
+        source.photos = listOf(photo(1, 10), photo(2, 20))
+        source.failWith = IllegalStateException("x")
+        vm.refresh(true)
+        source.failWith = null
+        vm.refresh(true)
+        assertEquals(listOf(2L, 1L), vm.photos().ids())
     }
 
     @Test
     fun largeGallery_keepsOnlyIdAndDate_andOrdersCorrectly() {
         val n = 50_000
-        val source = FakeMediaPhotoSource(List(n) { photo(it + 1L, (it % 1000).toLong() + 1) })
-        val vm = vm(source)
+        val vm = vm(FakeMediaPhotoSource(List(n) { photo(it + 1L, (it % 1000).toLong() + 1) }))
         vm.refresh(true)
         val photos = vm.photos()
         assertEquals(n, photos.size)
         for (i in 1 until n) assertTrue(photos.dateAt(i - 1)!! >= photos.dateAt(i)!!)
-    }
-
-    @Test
-    fun galleryPhotos_requiresSameSizedArrays() {
-        val result = runCatching { GalleryPhotos(longArrayOf(1, 2), longArrayOf(1)) }
-        assertTrue(result.exceptionOrNull() is IllegalArgumentException)
     }
 }

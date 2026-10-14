@@ -10,6 +10,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -126,6 +127,8 @@ class SearchViewModel(
                 // Genel hata: istem ve ayrıntı loglanmaz.
                 SearchStatus.Error
             }
+            // İptal edilmiş (ör. istem temizlenmiş) aramanın geç gelen sonucu güncel durumu ezmez.
+            ensureActive()
             _state.update { it.copy(status = status) }
         }
     }

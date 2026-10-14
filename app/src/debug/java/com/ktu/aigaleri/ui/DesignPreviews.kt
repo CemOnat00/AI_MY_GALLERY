@@ -7,8 +7,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
 import com.ktu.aigaleri.domain.InvalidQueryException
 import com.ktu.aigaleri.domain.SearchResult
-import com.ktu.aigaleri.ui.gallery.GalleryPhotos
 import com.ktu.aigaleri.ui.gallery.GalleryUiState
+import com.ktu.aigaleri.data.PhotoTimeline
 import com.ktu.aigaleri.ui.index.IndexStatusContent
 import com.ktu.aigaleri.ui.index.IndexStatusUiState
 import com.ktu.aigaleri.ui.index.IndexingBanner
@@ -60,7 +60,7 @@ private fun PermissionPermanentlyDeniedPreview() = Frame {
 }
 
 private val sampleGallery = GalleryUiState.Ready(
-    GalleryPhotos(LongArray(60) { 100L - it }, LongArray(60) { 1_790_000_000_000L - it * 86_400_000L }),
+    PhotoTimeline(LongArray(60) { 100L - it }, LongArray(60) { 1_790_000_000_000L - it * 86_400_000L }),
 )
 
 @Composable
