@@ -52,6 +52,7 @@ import androidx.navigation.navArgument
 import com.ktu.aigaleri.R
 import com.ktu.aigaleri.ui.index.IndexStatusContent
 import com.ktu.aigaleri.ui.index.IndexStatusViewModel
+import com.ktu.aigaleri.ui.gallery.GalleryViewModel
 import com.ktu.aigaleri.ui.index.indexingBanner
 import com.ktu.aigaleri.ui.search.SearchContent
 import com.ktu.aigaleri.ui.search.SearchStatus
@@ -96,7 +97,7 @@ fun NavController.safeBack() {
 private fun NavController.open(route: String) = navigate(route) { launchSingleTop = true }
 
 /**
- * Navigasyon kökü: arama (başlangıç) -> büyük görünüm / indeks durumu. Geri tuşu NavHost'un geri
+ * Navigasyon kökü: arama + galeri grid'i (başlangıç) -> büyük görünüm / indeks durumu. Geri tuşu NavHost'un geri
  * yığınıyla çalışır; arama ekranında geri uygulamadan çıkar. İzin yokken arama ve indeks ekranları
  * izin açıklamasını ([MainContent]) gösterir, arama/indeks çağrısı yapılmaz.
  */
@@ -105,6 +106,7 @@ fun MainScreen(
     viewModel: MainViewModel,
     searchViewModel: SearchViewModel,
     indexStatusViewModel: IndexStatusViewModel,
+    galleryViewModel: GalleryViewModel,
     onRequestPermission: () -> Unit,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -116,6 +118,7 @@ fun MainScreen(
                 state = state,
                 searchViewModel = searchViewModel,
                 indexStatusViewModel = indexStatusViewModel,
+                galleryViewModel = galleryViewModel,
                 onRequestPermission = onRequestPermission,
                 onOpenSettings = {
                     context.startActivity(
@@ -134,6 +137,7 @@ fun AppNavHost(
     state: MainUiState,
     searchViewModel: SearchViewModel,
     indexStatusViewModel: IndexStatusViewModel,
+    galleryViewModel: GalleryViewModel,
     onRequestPermission: () -> Unit,
     onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier,
@@ -145,6 +149,7 @@ fun AppNavHost(
                 val searchState by searchViewModel.state.collectAsStateWithLifecycle()
                 val indexUiState by indexStatusViewModel.state.collectAsStateWithLifecycle()
                 val indexRunState by indexStatusViewModel.runState.collectAsStateWithLifecycle()
+                val galleryState by galleryViewModel.state.collectAsStateWithLifecycle()
                 SearchContent(
                     state = searchState,
                     indexing = indexingBanner(indexUiState, indexRunState),
@@ -153,6 +158,9 @@ fun AppNavHost(
                     onQueryFocused = searchViewModel::warmUp,
                     onOpenPhoto = { navController.open(Routes.viewer(it, dateTakenOf(searchState.status, it))) },
                     onOpenIndexStatus = { navController.open(Routes.INDEX_STATUS) },
+                    gallery = galleryState,
+                    onOpenGalleryPhoto = { id, date -> navController.open(Routes.viewer(id, date)) },
+                    onGalleryRetry = galleryViewModel::retry,
                 )
             } else {
                 MainContent(state, onRequestPermission, onOpenSettings)

@@ -7,6 +7,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
 import com.ktu.aigaleri.domain.InvalidQueryException
 import com.ktu.aigaleri.domain.SearchResult
+import com.ktu.aigaleri.ui.gallery.GalleryPhotos
+import com.ktu.aigaleri.ui.gallery.GalleryUiState
 import com.ktu.aigaleri.ui.index.IndexStatusContent
 import com.ktu.aigaleri.ui.index.IndexStatusUiState
 import com.ktu.aigaleri.ui.index.IndexingBanner
@@ -57,8 +59,12 @@ private fun PermissionPermanentlyDeniedPreview() = Frame {
     MainContent(MainUiState(PermissionState.PermanentlyDenied), onRequestPermission = {}, onOpenSettings = {})
 }
 
+private val sampleGallery = GalleryUiState.Ready(
+    GalleryPhotos(LongArray(60) { 100L - it }, LongArray(60) { 1_790_000_000_000L - it * 86_400_000L }),
+)
+
 @Composable
-private fun Search(state: SearchUiState, indexing: IndexingBanner? = null) = Frame {
+private fun Search(state: SearchUiState, indexing: IndexingBanner? = null, gallery: GalleryUiState = sampleGallery) = Frame {
     SearchContent(
         state = state,
         onQueryChange = {},
@@ -66,6 +72,7 @@ private fun Search(state: SearchUiState, indexing: IndexingBanner? = null) = Fra
         onOpenPhoto = {},
         onOpenIndexStatus = {},
         indexing = indexing,
+        gallery = gallery,
     )
 }
 
@@ -80,6 +87,18 @@ private fun SearchIdleIndexingPreview() = Search(SearchUiState(), IndexingBanner
 @DesignPreview
 @Composable
 private fun SearchIdleWaitingPreview() = Search(SearchUiState(), IndexingBanner(null, null, waiting = true))
+
+@DesignPreview
+@Composable
+private fun GalleryLoadingPreview() = Search(SearchUiState(), gallery = GalleryUiState.Loading)
+
+@DesignPreview
+@Composable
+private fun GalleryEmptyPreview() = Search(SearchUiState(), gallery = GalleryUiState.Empty)
+
+@DesignPreview
+@Composable
+private fun GalleryErrorPreview() = Search(SearchUiState(), gallery = GalleryUiState.Error)
 
 @DesignPreview
 @Composable

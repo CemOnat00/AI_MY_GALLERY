@@ -16,6 +16,7 @@ import com.ktu.aigaleri.domain.SearchRepository
 import com.ktu.aigaleri.domain.SearchResult
 import com.ktu.aigaleri.ui.index.IndexStatusContent
 import com.ktu.aigaleri.ui.index.IndexStatusUiState
+import com.ktu.aigaleri.ui.gallery.GalleryViewModel
 import com.ktu.aigaleri.ui.index.IndexStatusViewModel
 import com.ktu.aigaleri.ui.index.TAG_REINDEX_BUTTON
 import com.ktu.aigaleri.ui.search.SearchContent
@@ -56,6 +57,7 @@ class T022QaScreensTest {
                 state = MainUiState(permission = permission),
                 searchViewModel = SearchViewModel(repository),
                 indexStatusViewModel = IndexStatusViewModel(flowOf(null), StubIndexLauncher()),
+                galleryViewModel = GalleryViewModel(emptyGallerySource),
                 onRequestPermission = {},
                 onOpenSettings = {},
             )

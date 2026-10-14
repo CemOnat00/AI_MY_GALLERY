@@ -59,7 +59,7 @@ class DesignScreensTest {
     }
 
     @Test
-    fun idle_showsFiveSuggestions_andTapFillsQueryAndSearches() {
+    fun idle_showsFiveSuggestionChips_andTapFillsQueryAndSearches() {
         var query: String? = null
         var searched = false
         search(SearchUiState(), onQueryChange = { query = it }, onSearch = { searched = true })

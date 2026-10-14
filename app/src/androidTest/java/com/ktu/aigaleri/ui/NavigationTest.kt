@@ -13,6 +13,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import com.ktu.aigaleri.domain.SearchRepository
 import com.ktu.aigaleri.domain.SearchResult
+import com.ktu.aigaleri.ui.gallery.GalleryViewModel
 import com.ktu.aigaleri.ui.index.IndexStatusViewModel
 import com.ktu.aigaleri.ui.index.TAG_INDEXING_BANNER
 import com.ktu.aigaleri.ui.search.SearchViewModel
@@ -51,6 +52,7 @@ class NavigationTest {
                 state = MainUiState(permission = permission),
                 searchViewModel = SearchViewModel(repository),
                 indexStatusViewModel = IndexStatusViewModel(flowOf(null), launcher),
+                galleryViewModel = GalleryViewModel(emptyGallerySource),
                 onRequestPermission = {},
                 onOpenSettings = {},
             )

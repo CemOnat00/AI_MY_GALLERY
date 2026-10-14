@@ -14,3 +14,7 @@ internal fun formatCount(value: Int, locale: Locale = TURKISH): String = NumberF
 /** "6 Eki 2026 14:32" biçimi (tarih orta, saat kısa). */
 internal fun formatDateTime(epochMillis: Long, locale: Locale = TURKISH): String =
     DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT, locale).format(Date(epochMillis))
+
+/** "6 Eki 2026" biçimi (yalnızca tarih, orta). */
+internal fun formatDate(epochMillis: Long, locale: Locale = TURKISH): String =
+    DateFormat.getDateInstance(DateFormat.MEDIUM, locale).format(Date(epochMillis))

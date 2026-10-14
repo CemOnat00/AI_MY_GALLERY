@@ -10,6 +10,7 @@ import androidx.activity.viewModels
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import com.ktu.aigaleri.ui.gallery.GalleryViewModel
 import com.ktu.aigaleri.ui.index.IndexStatusViewModel
 import com.ktu.aigaleri.ui.search.SearchViewModel
 
@@ -26,6 +27,10 @@ class MainActivity : ComponentActivity() {
         viewModelFactory { initializer { SearchViewModel(deps.searchRepository, deps::warmUpSearch) } }
     }
 
+    private val galleryViewModel: GalleryViewModel by viewModels {
+        viewModelFactory { initializer { GalleryViewModel(deps.photoSource) } }
+    }
+
     private val indexStatusViewModel: IndexStatusViewModel by viewModels {
         viewModelFactory { initializer { IndexStatusViewModel(deps.indexState, deps.indexLauncher) } }
     }
@@ -33,6 +38,7 @@ class MainActivity : ComponentActivity() {
     private val requestPermission =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
             viewModel.onPermissionResult(granted, shouldShowRequestPermissionRationale(permission))
+            galleryViewModel.refresh(granted)
         }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -43,6 +49,7 @@ class MainActivity : ComponentActivity() {
                 viewModel = viewModel,
                 searchViewModel = searchViewModel,
                 indexStatusViewModel = indexStatusViewModel,
+                galleryViewModel = galleryViewModel,
                 onRequestPermission = { requestPermission.launch(permission) },
             )
         }
@@ -51,6 +58,9 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         // Ayarlardan dönüşte de gerçek durumla uzlaştırır.
-        viewModel.onResume(ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED)
+        val granted = ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED
+        viewModel.onResume(granted)
+        // Galeri listesi her ön plana gelişte yenilenir (kameradan dönünce yeni fotoğraflar görünür).
+        galleryViewModel.refresh(granted)
     }
 }

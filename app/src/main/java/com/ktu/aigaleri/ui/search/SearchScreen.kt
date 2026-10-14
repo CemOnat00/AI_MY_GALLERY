@@ -2,10 +2,12 @@ package com.ktu.aigaleri.ui.search
 
 import android.net.Uri
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
@@ -20,9 +22,12 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -31,7 +36,6 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
@@ -64,9 +68,12 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import com.ktu.aigaleri.R
 import com.ktu.aigaleri.domain.InvalidQueryException
 import com.ktu.aigaleri.ui.formatCount
+import com.ktu.aigaleri.ui.gallery.GalleryContent
+import com.ktu.aigaleri.ui.gallery.GalleryUiState
 import com.ktu.aigaleri.ui.image.PhotoImage
 import com.ktu.aigaleri.ui.index.IndexingBanner
 import com.ktu.aigaleri.ui.index.IndexingBannerContent
@@ -77,16 +84,18 @@ const val TAG_QUERY_FIELD = "query_field"
 const val TAG_SEARCH_BUTTON = "search_button"
 const val TAG_RESULT_GRID = "result_grid"
 const val TAG_CLEAR_BUTTON = "clear_button"
-const val TAG_SUGGESTION_LIST = "suggestion_list"
+const val TAG_SUGGESTION_CHIPS = "suggestion_chips"
 const val TAG_EMPTY_INDEX_LINK = "empty_index_link"
 const val TAG_ERROR_RETRY = "search_error_retry"
 
 private const val SKELETON_CELL_COUNT = 12
 
 /**
- * Durumsuz arama ekranı (T-022 tasarımı): pill arama alanı, indeksleme bandı ve duruma göre örnek istemler /
- * yükleniyor / sonuç grid'i / sonuç yok / hata. Arama tetikleyicisi (TAG_SEARCH_BUTTON) alanın başındaki arama
- * simgesidir; klavyedeki arama tuşu da aynı işi yapar.
+ * Durumsuz arama ekranı (T-022 tasarımı): pill arama alanı, indeksleme bandı ve duruma göre boşta (öneri çipleri +
+ * cihazdaki tüm fotoğrafların galeri grid'i, T-036) / yükleniyor / sonuç grid'i / sonuç yok / hata. Arama
+ * tetikleyicisi (TAG_SEARCH_BUTTON) alanın başındaki arama simgesidir; klavyedeki arama tuşu da aynı işi yapar.
+ *
+ * @param gallery boştaki galeri grid'inin durumu; [onOpenGalleryPhoto] galeri öğesi için kimlik ve çekim tarihi verir.
  */
 @Composable
 fun SearchContent(
@@ -97,7 +106,13 @@ fun SearchContent(
     onOpenIndexStatus: () -> Unit,
     indexing: IndexingBanner? = null,
     onQueryFocused: () -> Unit = {},
+    gallery: GalleryUiState = GalleryUiState.Loading,
+    onOpenGalleryPhoto: (photoId: Long, dateTaken: Long?) -> Unit = { _, _ -> },
+    onGalleryRetry: () -> Unit = {},
 ) {
+    // Galeri kaydırma konumu burada tutulur (rememberSaveable): arama sonucuna geçip grid'e dönünce, büyük görünümden
+    // dönünce ve yön değişiminde korunur.
+    val galleryGridState = rememberLazyGridState()
     Column(
         modifier = Modifier.fillMaxSize()
             .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)),
@@ -129,18 +144,29 @@ fun SearchContent(
                 modifier = Modifier.padding(horizontal = AiGaleriDimens.Margin, vertical = AiGaleriDimens.SpaceSm),
             )
         }
-        // Klavye (IME) ve gezinti çubuğu içeriği örtmesin; sonuç grid'i kenardan kenara kaydığı için kendi alt boşluğunu
-        // (contentPadding) kullanır, bu yüzden boşluk yalnızca grid dışı durumlara uygulanır.
+        // Klavye (IME) ve gezinti çubuğu içeriği örtmesin; sonuç ve galeri grid'leri kenardan kenara kaydığı için kendi alt
+        // boşluklarını (contentPadding) kullanır, bu yüzden boşluk yalnızca grid dışı durumlara uygulanır (boştaki galeri
+        // kendi içinde yönetir).
         val bottomInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom)
-        val isGrid = state.status is SearchStatus.Success
+        val isIdle = state.status is SearchStatus.Idle || state.status is SearchStatus.InvalidQuery
+        val isGrid = state.status is SearchStatus.Success || isIdle
         Box(modifier = Modifier.fillMaxSize().then(if (isGrid) Modifier else Modifier.windowInsetsPadding(bottomInsets))) {
             when (val status = state.status) {
-                SearchStatus.Idle, is SearchStatus.InvalidQuery -> SuggestionList(
-                    onPick = { suggestion ->
-                        onQueryChange(suggestion)
-                        onSearch()
-                    },
-                )
+                SearchStatus.Idle, is SearchStatus.InvalidQuery -> Column(modifier = Modifier.fillMaxSize()) {
+                    SuggestionChips(
+                        onPick = { suggestion ->
+                            onQueryChange(suggestion)
+                            onSearch()
+                        },
+                    )
+                    GalleryContent(
+                        state = gallery,
+                        gridState = galleryGridState,
+                        onOpenPhoto = onOpenGalleryPhoto,
+                        onRetry = onGalleryRetry,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
                 SearchStatus.Loading -> LoadingState()
                 SearchStatus.Empty -> EmptyState(onOpenIndexStatus)
                 SearchStatus.Error -> ErrorState(canRetry = state.canSearch, onRetry = onSearch)
@@ -253,43 +279,41 @@ private fun InlineValidation(state: SearchUiState) {
     }
 }
 
-/** Boşta durumu: basit satırlar (kutu yok, simgesiz dekor yok), satır dokununca istem yazılır ve aranır. */
+/**
+ * Boşta durumu: tek satır yatay kayan küçük öneri çipleri (DESIGN.md "Filter & Context Chips": 32dp, 8dp köşe,
+ * Outline-Variant çerçeve). Dokunma alanı 48dp; çipe dokununca istem yazılır ve aranır.
+ */
 @Composable
-private fun SuggestionList(onPick: (String) -> Unit) {
-    Column(
-        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())
-            .padding(horizontal = AiGaleriDimens.Margin, vertical = AiGaleriDimens.SpaceSm)
-            .testTag(TAG_SUGGESTION_LIST),
+private fun SuggestionChips(onPick: (String) -> Unit) {
+    val rowDescription = stringResource(R.string.search_suggestions_title)
+    val actionLabel = stringResource(R.string.search_suggestion_action)
+    val shape = RoundedCornerShape(AiGaleriDimens.ChipCorner)
+    LazyRow(
+        modifier = Modifier.fillMaxWidth().testTag(TAG_SUGGESTION_CHIPS).semantics { contentDescription = rowDescription },
+        contentPadding = PaddingValues(horizontal = AiGaleriDimens.Margin),
+        horizontalArrangement = Arrangement.spacedBy(AiGaleriDimens.SpaceSm),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(
-            stringResource(R.string.search_suggestions_title),
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.semantics { heading() },
-        )
-        Text(
-            stringResource(R.string.search_suggestions_subtitle),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(top = AiGaleriDimens.SpaceXs, bottom = AiGaleriDimens.SpaceSm),
-        )
-        SearchSuggestions.ALL.forEachIndexed { index, suggestion ->
-            if (index > 0) HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-            Row(
-                modifier = Modifier.fillMaxWidth()
-                    .heightIn(min = AiGaleriDimens.MinTouchTarget)
-                    .clickable(role = Role.Button, onClickLabel = stringResource(R.string.search_suggestion_action)) { onPick(suggestion) }
-                    .padding(vertical = AiGaleriDimens.SpaceSm),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(AiGaleriDimens.SpaceSm),
+        items(SearchSuggestions.ALL) { suggestion ->
+            Box(
+                modifier = Modifier.heightIn(min = AiGaleriDimens.MinTouchTarget)
+                    .clickable(role = Role.Button, onClickLabel = actionLabel) { onPick(suggestion) },
+                contentAlignment = Alignment.Center,
             ) {
-                Icon(
-                    AppIcons.Search,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(AiGaleriDimens.IconSmall),
-                )
-                Text(suggestion, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
+                Box(
+                    modifier = Modifier.heightIn(min = AiGaleriDimens.ChipHeight)
+                        .clip(shape)
+                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant, shape)
+                        .padding(horizontal = AiGaleriDimens.ChipPaddingHorizontal),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        suggestion,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                    )
+                }
             }
         }
     }
@@ -440,9 +464,9 @@ private fun ErrorState(canRetry: Boolean, onRetry: () -> Unit) {
 }
 
 @Composable
-private fun CenteredColumn(content: @Composable () -> Unit) {
+internal fun CenteredColumn(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
     Column(
-        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())
+        modifier = modifier.fillMaxSize().verticalScroll(rememberScrollState())
             .padding(horizontal = AiGaleriDimens.Margin, vertical = AiGaleriDimens.SpaceLg),
         verticalArrangement = Arrangement.spacedBy(AiGaleriDimens.SpaceSm, Alignment.CenterVertically),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -457,7 +481,7 @@ private fun CenteredColumn(content: @Composable () -> Unit) {
 
 /** Yuvarlak, tonlu simge kapsayıcısı (boş durum). */
 @Composable
-private fun IconCircle(icon: ImageVector, size: Dp, glyph: Dp) {
+internal fun IconCircle(icon: ImageVector, size: Dp, glyph: Dp) {
     Box(
         modifier = Modifier.size(size).background(MaterialTheme.colorScheme.surfaceContainerHigh, CircleShape),
         contentAlignment = Alignment.Center,

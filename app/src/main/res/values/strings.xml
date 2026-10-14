@@ -25,7 +25,6 @@
     <string name="search_button">Ara</string>
     <string name="search_clear">Aramayı temizle</string>
     <string name="search_suggestions_title">Arama önerileri</string>
-    <string name="search_suggestions_subtitle">Cihazınızdaki fotoğrafları doğal cümlelerle arayın.</string>
     <string name="search_suggestion_action">Bu istemle ara</string>
     <string name="search_loading">Aranıyor...</string>
     <string name="search_results_title">En yakın eşleşmeler</string>
@@ -41,6 +40,13 @@
     <string name="search_max_length">En fazla %d karakter girebilirsin.</string>
     <string name="photo_content_description">Fotoğraf</string>
     <string name="photo_open_label">Fotoğrafı büyüt</string>
+    <string name="gallery_photo_description">Fotoğraf, %s</string>
+    <string name="gallery_loading">Fotoğraflar yükleniyor</string>
+    <string name="gallery_empty">Galeride fotoğraf yok</string>
+    <string name="gallery_empty_detail">Fotoğraf çektiğinde veya eklediğinde burada görünür.</string>
+    <string name="gallery_error">Fotoğraflar okunamadı.</string>
+    <string name="gallery_error_detail">Lütfen tekrar dene.</string>
+    <string name="gallery_error_retry">Tekrar dene</string>
 
     <!-- Büyük görünüm -->
     <string name="viewer_not_found">Fotoğraf bulunamadı</string>

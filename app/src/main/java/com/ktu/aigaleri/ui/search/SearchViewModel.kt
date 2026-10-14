@@ -92,8 +92,18 @@ class SearchViewModel(
      * İstem [MAX_QUERY_LENGTH] UTF-16 birimiyle kısıtlanır (fazlası kesilir). Kesme noktası bir
      * surrogate çiftinin ortasına denk gelirse çiftin yüksek yarısı da atılır (yarım emoji kalmaz);
      * yani sonuç en fazla [MAX_QUERY_LENGTH] birim, bazen bir eksik olur.
+     *
+     * İstem tamamen silinince (boş metin; temizle düğmesi veya klavye) süren arama iptal edilir ve durum [SearchStatus.Idle]'a
+     * döner: ekran sonuç/hata/boş durumundan galeri grid'ine (T-036) geçer. Yalnızca boşluktan oluşan istem durumu değiştirmez.
      */
-    fun onQueryChange(text: String) = _state.update { it.copy(query = truncateQuery(text)) }
+    fun onQueryChange(text: String) {
+        if (text.isEmpty()) {
+            searchJob?.cancel()
+            _state.update { SearchUiState() }
+        } else {
+            _state.update { it.copy(query = truncateQuery(text)) }
+        }
+    }
 
     fun search() {
         val query = _state.value.query.trim()
