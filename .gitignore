@@ -6,3 +6,22 @@ app/src/main/assets/models/
 # T-027: orijinal (budanmamış) metin modeli önbelleği (tools/fetch_models.sh); model ağırlıkları asla commit'lenmez.
 .model-cache/
 __pycache__/
+
+# T-038: yeni repoda bu dosya kök .gitignore olur; eski kök .gitignore'daki yerleşimden bağımsız desenler de burada.
+.gradle/
+build/
+local.properties
+.idea/
+*.iml
+.DS_Store
+*.apk
+*.aab
+
+# Güvenlik: anahtar, parola, ortam dosyaları ve model ağırlıkları asla commit'lenmez
+*.jks
+*.keystore
+.env
+.env.*
+*.onnx
+*.safetensors
+*.log
