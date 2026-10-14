@@ -13,8 +13,9 @@ const val DEFAULT_SEARCH_LIMIT = 50
  *   kullanmak zorundadır.
  * - Sonuçlar [SearchResult.score] azalan sırada döner; eşit skorda [SearchResult.photoId]
  *   artan sıra kullanılır (deterministik).
- * - En fazla [limit] sonuç döner; indeks boşsa boş liste (hata değil). Asgari skor eşiği
- *   davranışı T-008'de belirlenecek; o zamana kadar eşik yoktur.
+ * - En fazla [limit] sonuç döner; indeks boşsa boş liste (hata değil). Uygulama (T-013), belirgin alakasız
+ *   sonuçları eleyebilir: hiç eşleşme yoksa (en iyi skor çok düşük) da boş liste döner ("bulunamadı"); boş liste
+ *   artık yalnızca "indeks boş" anlamına gelmez. Eleme kuralları data.SearchPolicy'dedir.
  * - [limit] <= 0 ise [IllegalArgumentException] fırlatılır.
  * - Sorgu metninin uzunluk/karakter doğrulaması bu arayüzün dışındadır (T-007, çağıran taraf).
  * - İstem ve sonuçlar log'a yazılmaz.

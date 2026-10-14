@@ -59,16 +59,15 @@ import kotlinx.coroutines.withContext
  * - Tutarlılık: sayfalar arası işlem yoktur; tarama sürerken indeksleyici yazarsa yeni satır görünebilir veya
  *   görünmeyebilir, hiçbir kimlik iki kez işlenmez.
  *
- * ## Asgari skor eşiği kararı: varsayılan YOK ([minScore] = null), her zaman top-K döner
- * CLIP türü modellerde metin-görüntü kosinüs skorları genelde dar bir aralıkta toplanır ve sorguya göre kayar; bu,
- * literatür/genel deneyime dayanan bir beklentidir, BU model ve bu galeri için ÖLÇÜLMEMİŞTİR (sayısal aralık verilmez).
- * Doğru ve yanlış eşleşmelerin skor aralıklarının örtüşmesi, çok dilli damıtılmış metin kodlayıcının (Türkçe) ve int8
- * görüntü nicemlemesinin dağılımı kaydırması olasıdır. Gerçek galeri/Türkçe istem ölçümü yok (model-research.md
- * Bölüm 4); ölçümsüz mutlak bir eşik ya iyi sonuçları keser ya da hiçbir şeyi elemez. Bu yüzden eşik yoktur, sıralama sorumluluğu rank'tadır.
- * Ölçüm yapıldığında eşik [minScore] ile (yapıcı parametresi) kod değişmeden açılabilir.
- * UI etkisi: eşik yokken "sonuç yok" (`SearchStatus.Empty`) yalnızca indeks boşken (hiç/henüz güncel modelle
- * indekslenmiş fotoğraf yok) görünür; indeksli galeride geçerli her istem en çok `limit` sonuç döndürür,
- * anlamsız istemde de alakasız sonuçlar listelenir. Eşik açılırsa "Empty" gerçek "eşleşme yok" anlamı da kazanır.
+ * ## Skor eşikleri: [minScore] (kayıt başına, varsayılan YOK) ve [policy] (sonuç listesi, T-013)
+ * CLIP türü modellerde metin-görüntü kosinüs skorları dar bir aralıkta toplanır ve sorguya göre kayar. T-008'de ölçümsüz
+ * mutlak eşik güvenilmez bulunup eşik konmadı ([minScore] = null: her kayıt adaydır; yapıcı parametresiyle açılabilir,
+ * eşik altı kayıtlar taramada elenir). T-013'te emülatörde ölçüldü (60 foto, 10 sınıf; `docs/search-threshold.md`): mutlak
+ * taban ilgili ve ilgisiz sorguları AYIRMIYOR (top1 değerleri örtüşüyor), ancak belirgin çöp için emniyet ağı mümkün.
+ * [SearchPolicy] taramanın ÜSTÜNDE iki kural uygular: (i) top1 tabanın altındaysa liste BOŞ, (ii) skoru `top1 - marj` altında
+ * kalan sonuçlar elenir. Sınıf varsayılanı [SearchPolicy.OFF]'tur (eskisiyle bit-bit aynı, her zaman top-K); uygulamada
+ * `AppDependencies` [SearchPolicy.DEFAULT] bağlar. UI etkisi: eşikler açıkken `SearchStatus.Empty` yalnızca indeks boşken
+ * değil, "eşleşme yok" (top1 taban altı) iken de görünür.
  *
  * ## Oturum yönetimi ve indeksleme sürerken arama maliyeti
  * Metin (arama) ve görüntü (indeksleme) ONNX oturumları tek oturum kuralıyla ([com.ktu.aigaleri.ml.SingleSessionSlot])
@@ -94,6 +93,7 @@ class RoomSearchRepository(
     private val pageSize: Int = DEFAULT_PAGE_SIZE,
     private val minScore: Float? = null,
     private val dispatcher: CoroutineDispatcher = Dispatchers.Default,
+    private val policy: SearchPolicy = SearchPolicy.OFF,
 ) : SearchRepository {
     init {
         require(pageSize in 1..MAX_PAGE_SIZE) { "pageSize 1..$MAX_PAGE_SIZE olmalı" }
@@ -107,7 +107,7 @@ class RoomSearchRepository(
         check(q.size == spec.dimension) { "sorgu vektörü boyutu spec ile uyuşmuyor" }
         check(q.all { it.isFinite() }) { "sorgu vektörü sonlu değil" }
         check(abs(norm(q) - 1.0) <= QUERY_NORM_TOLERANCE) { "sorgu vektörü birim norma sahip değil" }
-        return withContext(dispatcher) { scan(spec.modelVersion, q, limit) }
+        return policy.apply(withContext(dispatcher) { scan(spec.modelVersion, q, limit) })
     }
 
     /**

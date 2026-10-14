@@ -9,6 +9,7 @@ import com.ktu.aigaleri.data.MediaPhotoSource
 import com.ktu.aigaleri.data.MediaStorePhotoSource
 import com.ktu.aigaleri.data.RoomPhotoIndexer
 import com.ktu.aigaleri.data.RoomSearchRepository
+import com.ktu.aigaleri.data.SearchPolicy
 import com.ktu.aigaleri.data.RoomTransactionRunner
 import com.ktu.aigaleri.domain.PhotoIndexer
 import com.ktu.aigaleri.domain.SearchRepository
@@ -83,7 +84,11 @@ class AppDependencies private constructor(context: Context) {
     }
 
     val searchRepository: SearchRepository by lazy {
-        RoomSearchRepository(encoder = searchTextEncoder, dao = database.photoEmbeddingDao())
+        RoomSearchRepository(
+            encoder = searchTextEncoder,
+            dao = database.photoEmbeddingDao(),
+            policy = SearchPolicy.DEFAULT, // T-013: konservatif taban + göreli kesim (docs/search-threshold.md)
+        )
     }
 
     /**
