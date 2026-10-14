@@ -88,4 +88,21 @@
     <string name="indexing_banner_detail">Detay</string>
     <string name="index_run_state_running">Durum: Çalışıyor</string>
     <string name="index_run_state_waiting">Durum: Beklemede; birazdan ya da cihaz uygun olunca başlayacak</string>
+
+    <!-- Lisanslar (T-037, K-12) -->
+    <string name="licenses_title">Lisanslar</string>
+    <string name="licenses_row_summary">Açık kaynak bileşenler ve model lisansları</string>
+    <string name="licenses_intro">Ai-galeri tamamen cihaz üstünde çalışır. Aşağıdaki modeller ve yazılım bileşenleri kendi lisansları altındadır. Bu bilgiler uygulamanın içindedir, internet gerektirmez.</string>
+    <string name="licenses_section_app">Bu uygulama</string>
+    <string name="licenses_section_modified">Değiştirilmiş model bildirimi</string>
+    <string name="licenses_section_components">Üçüncü taraf bileşenler</string>
+    <string name="licenses_section_texts">Lisans metinleri</string>
+    <string name="licenses_version">Sürüm: %1$s</string>
+    <string name="licenses_license">Lisans: %1$s</string>
+    <string name="licenses_source">Kaynak: %1$s</string>
+    <string name="licenses_load_error">Lisans bilgileri okunamadı.</string>
+    <string name="licenses_loading">Lisans bilgileri yükleniyor</string>
+    <string name="license_text_apache">Apache License 2.0</string>
+    <string name="license_text_mit_openai">MIT License (CLIP, OpenAI)</string>
+    <string name="license_text_mit_onnxruntime">MIT License (ONNX Runtime)</string>
 </resources>

@@ -56,6 +56,7 @@ const val TAG_REINDEX_BUTTON = "reindex_button"
 const val TAG_RETRY_BUTTON = "retry_button"
 const val TAG_RUN_STATE = "index_run_state"
 const val TAG_BACK_BUTTON = "index_back_button"
+const val TAG_LICENSES_ROW = "index_licenses_row"
 
 /** "6 Eki 2026 14:32" biçimi (tarih orta, saat kısa). */
 internal fun formatLastRun(epochMillis: Long, locale: Locale = TURKISH): String = formatDateTime(epochMillis, locale)
@@ -93,6 +94,7 @@ fun IndexStatusContent(
     onBack: () -> Unit,
     reindexError: Boolean = false,
     runState: IndexRunState = IndexRunState.IDLE,
+    onOpenLicenses: () -> Unit = {},
 ) {
     Column(
         modifier = Modifier.fillMaxSize()
@@ -130,6 +132,7 @@ fun IndexStatusContent(
             }
             if (reindexError) InlineError(stringResource(R.string.reindex_failed))
             Hint(state, runState, reindexAvailable)
+            LicensesRow(onOpenLicenses)
             Box(Modifier.windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom)).size(AiGaleriDimens.SpaceMd))
         }
     }
@@ -325,6 +328,31 @@ private fun ErrorCard(onRetry: () -> Unit) {
                     modifier = Modifier.heightIn(min = AiGaleriDimens.MinTouchTarget).testTag(TAG_RETRY_BUTTON),
                 ) { Text(stringResource(R.string.retry_button), style = MaterialTheme.typography.labelLarge) }
             }
+        }
+    }
+}
+
+/** "Lisanslar" satırı (T-037, K-12): üçüncü taraf lisans metinleri ve değiştirilmiş model bildirimi ekranına gider. */
+@Composable
+private fun LicensesRow(onClick: () -> Unit) {
+    val colors = MaterialTheme.colorScheme
+    Surface(
+        onClick = onClick,
+        color = colors.surfaceContainerLow,
+        shape = MaterialTheme.shapes.medium,
+        modifier = Modifier.fillMaxWidth().heightIn(min = AiGaleriDimens.MinTouchTarget).testTag(TAG_LICENSES_ROW),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = AiGaleriDimens.SpaceMd, vertical = AiGaleriDimens.SpaceSm),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(AiGaleriDimens.SpaceMd),
+        ) {
+            Icon(AppIcons.Info, contentDescription = null, tint = colors.secondary)
+            Column(modifier = Modifier.weight(1f)) {
+                Text(stringResource(R.string.licenses_title), style = MaterialTheme.typography.bodyLarge, color = colors.onSurface)
+                Text(stringResource(R.string.licenses_row_summary), style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
+            }
+            Icon(AppIcons.ChevronRight, contentDescription = null, tint = colors.onSurfaceVariant)
         }
     }
 }

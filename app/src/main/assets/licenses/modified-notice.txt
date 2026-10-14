@@ -1,0 +1,13 @@
+Bu uygulamadaki metin modeli, Apache License 2.0 altında dağıtılan sentence-transformers/clip-ViT-B-32-multilingual-v1 modelinin (revizyon 58edf8cada9e398793dca955574a48cbb7f18be2) DEĞİŞTİRİLMİŞ bir sürümüdür. Orijinal model değildir.
+
+Değişiklik tarihi: 13 Ekim 2026. Değiştiren: Ai-galeri projesi (Cem Onat Satır).
+
+Yapılan değişiklikler (başka hiçbir ağırlık, düğüm veya ölçek değiştirilmemiştir):
+
+1. Gömme tablosu satır dilimlemesi: model dosyasındaki kelime gömme tablosu (embeddings.word_embeddings.weight_quantized, 119547 x 768 değer) 69830 x 768 değere indirilmiştir; tutulan satırlar bayt bayt aynıdır, ölçek ve sıfır noktası aynıdır.
+
+2. Sözlük budaması: distilbert-base-multilingual-cased sözlüğü (119547 satır) Latin harfli sözcük parçaları, rakamlar, noktalama ve sembollerle sınırlı 69830 satırlık bir alt kümeye indirilmiştir; satır sırası korunmuştur. Latin dışı yazı sistemlerindeki (Kiril, Arapça, CJK, Hangul vb.) sözcükler bu nedenle tanınmaz ("bilinmeyen" olarak işlenir); Türkçe ve diğer Latin harfli diller etkilenmez.
+
+3. Dense katmanı (2_Dense) ağırlığı değer değiştirilmeden ham float32 dosyaya çevrilmiştir (yalnızca biçim dönüşümü).
+
+Orijinal model ve sözlüğün telif ve lisans bildirimleri korunmuştur; Apache License 2.0 metni aşağıda tam olarak verilmiştir. Görüntü modeli (OpenAI CLIP ViT-B/32) bu değişikliklerden etkilenmemiştir.

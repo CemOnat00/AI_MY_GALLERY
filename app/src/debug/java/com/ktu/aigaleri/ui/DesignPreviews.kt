@@ -12,6 +12,12 @@ import com.ktu.aigaleri.data.PhotoTimeline
 import com.ktu.aigaleri.ui.index.IndexStatusContent
 import com.ktu.aigaleri.ui.index.IndexStatusUiState
 import com.ktu.aigaleri.ui.index.IndexingBanner
+import com.ktu.aigaleri.ui.license.LicenseComponent
+import com.ktu.aigaleri.ui.license.LicenseDocument
+import com.ktu.aigaleri.ui.license.LicenseText
+import com.ktu.aigaleri.ui.license.LicensesContent
+import com.ktu.aigaleri.ui.license.LicensesUiState
+import com.ktu.aigaleri.R
 import com.ktu.aigaleri.ui.search.SearchContent
 import com.ktu.aigaleri.ui.search.SearchStatus
 import com.ktu.aigaleri.ui.search.SearchUiState
@@ -163,3 +169,29 @@ private fun IndexStatusErrorPreview() = IndexStatus(IndexStatusUiState.Error, re
 @DesignPreview
 @Composable
 private fun ViewerNotFoundPreview() = Frame { PhotoViewerScreen(photoId = null, onBack = {}) }
+
+/* T-037: Lisanslar ekranı önizlemeleri (örnek veri; gerçek içerik assets/licenses/ altındadır). */
+
+private val sampleLicenses = LicenseDocument(
+    appLicense = listOf("Ai-galeri, KTÜ Mobil Programlama dersi dönem projesidir. Telif © 2026 Cem Onat Satır."),
+    modifiedNotice = listOf("Metin modeli DEĞİŞTİRİLMİŞ bir sürümdür: gömme tablosu satır dilimlemesi ve sözlük budaması."),
+    components = listOf(
+        LicenseComponent("ONNX Runtime", "1.30.0", "MIT", "mit-onnxruntime.txt", "https://github.com/microsoft/onnxruntime", "Telif hakkı (c) Microsoft Corporation."),
+        LicenseComponent("Coil", "3.4.0", "Apache-2.0", "apache-2.0.txt", "https://github.com/coil-kt/coil", "Küçük resimleri cihazdan yükler."),
+    ),
+    texts = listOf(
+        LicenseText(R.string.license_text_apache, "apache-2.0.txt", listOf("Apache License Version 2.0, January 2004", "TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION")),
+    ),
+)
+
+@DesignPreview
+@Composable
+private fun LicensesLoadedPreview() = Frame { LicensesContent(LicensesUiState.Loaded(sampleLicenses), onBack = {}) }
+
+@DesignPreview
+@Composable
+private fun LicensesLoadingPreview() = Frame { LicensesContent(LicensesUiState.Loading, onBack = {}) }
+
+@DesignPreview
+@Composable
+private fun LicensesErrorPreview() = Frame { LicensesContent(LicensesUiState.Error, onBack = {}) }

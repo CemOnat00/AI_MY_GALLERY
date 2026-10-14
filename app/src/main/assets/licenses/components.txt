@@ -1,0 +1,115 @@
+# Üçüncü taraf bileşen listesi (Lisanslar ekranı okur). Kayıtlar boş satırla ayrılır; satır biçimi "anahtar: değer".
+# Anahtarlar: ad, surum, lisans, metin (lisans metni dosyası, aynı klasörde), kaynak (URL, yalnızca gösterilir), not.
+# Sürümler mobile/gradle/libs.versions.toml ile aynı olmalıdır (birim test denetler).
+
+ad: OpenAI CLIP ViT-B/32 (görüntü modeli)
+surum: ViT-B/32; Xenova/clip-vit-base-patch32 ONNX int8 dönüşümü, revizyon d15189d7028b43f1d3e65039190477f6af591c2a
+lisans: MIT
+metin: mit-openai-clip.txt
+kaynak: https://github.com/openai/CLIP
+not: Telif hakkı (c) 2021 OpenAI. Cihazdaki dosya, orijinal ağırlıkların https://huggingface.co/Xenova/clip-vit-base-patch32 deposundaki int8 ONNX dönüşümüdür. Dönüşümün kendi lisans beyanı yoktur; MIT lisansı yalnızca kaynak OpenAI CLIP deposunun lisansından çıkarılmıştır.
+
+ad: sentence-transformers/clip-ViT-B-32-multilingual-v1 (metin modeli)
+surum: revizyon 58edf8cada9e398793dca955574a48cbb7f18be2, int8 arm64 ONNX
+lisans: Apache-2.0
+metin: apache-2.0.txt
+kaynak: https://huggingface.co/sentence-transformers/clip-ViT-B-32-multilingual-v1
+not: DEĞİŞTİRİLMİŞ SÜRÜM: gömme tablosu satır dilimlemesi ve sözlük budaması uygulanmıştır (13 Ekim 2026); ayrıntı "Değiştirilmiş model bildirimi" bölümündedir.
+
+ad: distilbert-base-multilingual-cased (metin sözlüğü)
+surum: revizyon 45c032ab32cc946ad88a166f7cb282f58c753c2e
+lisans: Apache-2.0
+metin: apache-2.0.txt
+kaynak: https://huggingface.co/distilbert/distilbert-base-multilingual-cased
+not: Metin modelinin sözlüğüdür. DEĞİŞTİRİLMİŞ SÜRÜM: 119547 satırdan 69830 satıra budanmıştır (satır sırası korunmuştur).
+
+ad: ONNX Runtime (onnxruntime-android)
+surum: 1.30.0
+lisans: MIT
+metin: mit-onnxruntime.txt
+kaynak: https://github.com/microsoft/onnxruntime
+not: Telif hakkı (c) Microsoft Corporation. Modelleri cihaz üstünde çalıştırır; uygulamada ağ ve telemetri kapalıdır.
+
+ad: Coil
+surum: 3.4.0
+lisans: Apache-2.0
+metin: apache-2.0.txt
+kaynak: https://github.com/coil-kt/coil
+not: Fotoğraf küçük resimlerini cihazdan yükler (ağ bileşeni yoktur).
+
+ad: Jetpack Compose (ui, foundation, runtime)
+surum: Compose BOM 2026.02.01
+lisans: Apache-2.0
+metin: apache-2.0.txt
+kaynak: https://developer.android.com/jetpack/compose
+not: Android Open Source Project.
+
+ad: Material 3 (Compose)
+surum: Compose BOM 2026.02.01
+lisans: Apache-2.0
+metin: apache-2.0.txt
+kaynak: https://developer.android.com/jetpack/androidx/releases/compose-material3
+not: Android Open Source Project.
+
+ad: AndroidX Room
+surum: 2.8.5
+lisans: Apache-2.0
+metin: apache-2.0.txt
+kaynak: https://developer.android.com/jetpack/androidx/releases/room
+not: Cihaz üstü SQLite indeksi için kullanılır.
+
+ad: AndroidX WorkManager
+surum: 2.11.2
+lisans: Apache-2.0
+metin: apache-2.0.txt
+kaynak: https://developer.android.com/jetpack/androidx/releases/work
+not: İndeksleme işini arka planda çalıştırır.
+
+ad: AndroidX Navigation Compose
+surum: 2.9.7
+lisans: Apache-2.0
+metin: apache-2.0.txt
+kaynak: https://developer.android.com/jetpack/androidx/releases/navigation
+not: Ekranlar arası geçiş.
+
+ad: AndroidX Lifecycle (runtime-compose)
+surum: 2.9.4
+lisans: Apache-2.0
+metin: apache-2.0.txt
+kaynak: https://developer.android.com/jetpack/androidx/releases/lifecycle
+not: Yaşam döngüsüne duyarlı durum toplama.
+
+ad: AndroidX Activity Compose
+surum: 1.12.4
+lisans: Apache-2.0
+metin: apache-2.0.txt
+kaynak: https://developer.android.com/jetpack/androidx/releases/activity
+not: Compose giriş etkinliği.
+
+ad: AndroidX Core KTX
+surum: 1.17.0
+lisans: Apache-2.0
+metin: apache-2.0.txt
+kaynak: https://developer.android.com/jetpack/androidx/releases/core
+not: Android çekirdek uzantıları.
+
+ad: AndroidX ExifInterface
+surum: 1.4.2
+lisans: Apache-2.0
+metin: apache-2.0.txt
+kaynak: https://developer.android.com/jetpack/androidx/releases/exifinterface
+not: Fotoğraf yönü (EXIF) okuma.
+
+ad: Kotlin
+surum: 2.2.10
+lisans: Apache-2.0
+metin: apache-2.0.txt
+kaynak: https://github.com/JetBrains/kotlin
+not: Derleyici sürümü 2.2.10; çalışma zamanı kütüphanesi (kotlin-stdlib) bağımlılık çözümlemesinde daha yeni bir sürüme yükselir.
+
+ad: kotlinx.coroutines
+surum: 1.11.0
+lisans: Apache-2.0
+metin: apache-2.0.txt
+kaynak: https://github.com/Kotlin/kotlinx.coroutines
+not: Eşzamanlı (asenkron) işler.

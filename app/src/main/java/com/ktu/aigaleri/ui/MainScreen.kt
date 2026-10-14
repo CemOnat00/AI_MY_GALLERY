@@ -54,6 +54,7 @@ import com.ktu.aigaleri.ui.index.IndexStatusContent
 import com.ktu.aigaleri.ui.index.IndexStatusViewModel
 import com.ktu.aigaleri.ui.gallery.GalleryViewModel
 import com.ktu.aigaleri.ui.index.indexingBanner
+import com.ktu.aigaleri.ui.license.LicensesScreen
 import com.ktu.aigaleri.ui.search.SearchContent
 import com.ktu.aigaleri.ui.search.SearchStatus
 import com.ktu.aigaleri.ui.search.SearchViewModel
@@ -66,6 +67,7 @@ import com.ktu.aigaleri.ui.viewer.PhotoViewerScreen
 object Routes {
     const val SEARCH = "search"
     const val INDEX_STATUS = "index_status"
+    const val LICENSES = "licenses"
     const val PHOTO_ARG = "photoId"
     const val DATE_ARG = "dateTaken"
 
@@ -197,11 +199,14 @@ fun AppNavHost(
                     onReindex = indexStatusViewModel::reindex,
                     onRetry = indexStatusViewModel::retry,
                     onBack = { navController.safeBack() },
+                    onOpenLicenses = { navController.open(Routes.LICENSES) },
                 )
             } else {
                 MainContent(state, onRequestPermission, onOpenSettings)
             }
         }
+        // T-037 (K-12): izin gerektirmez, tamamen yerel düz metin.
+        composable(Routes.LICENSES) { LicensesScreen(onBack = { navController.safeBack() }) }
     }
 }
 

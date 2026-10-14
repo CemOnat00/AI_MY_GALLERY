@@ -1,0 +1,6 @@
+Ai-galeri, KTÜ Mobil Programlama dersi dönem projesidir.
+Telif © 2026 Cem Onat Satır.
+
+Proje lisansı henüz belirlenmedi; bu metin geçici bir yer tutucudur ve herhangi bir açık kaynak lisansı verildiği anlamına GELMEZ. Lisans belirlenince bu dosya güncellenecektir.
+
+Aşağıda listelenen üçüncü taraf bileşenler kendi lisansları altındadır; bu yer tutucu metin onların lisanslarını değiştirmez.
