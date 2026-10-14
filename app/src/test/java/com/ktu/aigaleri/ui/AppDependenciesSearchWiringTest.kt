@@ -57,6 +57,15 @@ class AppDependenciesSearchWiringTest {
     }
 
     @Test
+    fun searchRepository_policyIsOff_untilReMeasuredOnPhone() {
+        // T-013 PO kararı: eşik altyapısı kalır ama uygulamada KAPALI bağlanır (K-7 hedefi ölçümle sağlanamadı).
+        val block = Regex("""RoomSearchRepository\((.*?)\n        \)""", RegexOption.DOT_MATCHES_ALL).find(deps)?.groupValues?.get(1)
+        assertTrue("RoomSearchRepository bağlantısı bulunamadı", block != null)
+        assertTrue(Regex("""policy = SearchPolicy\.OFF,""").containsMatchIn(block!!))
+        assertTrue(!block.contains("SearchPolicy.DEFAULT"))
+    }
+
+    @Test
     fun warmUpIsTriggeredByQueryFieldFocus_notByScreenOpen() {
         val screen = File(mainSrc, "ui/MainScreen.kt").readText()
         assertTrue(screen.contains("onQueryFocused = searchViewModel::warmUp"))

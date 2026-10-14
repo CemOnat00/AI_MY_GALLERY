@@ -64,13 +64,15 @@ data class SearchPolicy(
         val OFF = SearchPolicy()
 
         /**
-         * Uygulamada aramaya bağlanan KONSERVATİF değerler (T-013 ölçümü, `docs/search-threshold.md`; emülatör, 60 foto):
+         * KONSERVATİF aday değerler (T-013 ölçümü, `docs/search-threshold.md`; emülatör, 60 foto). Uygulamada şu an
+         * BAĞLI DEĞİL: `AppDependencies` [OFF] kullanır (PO kararı); Cem'in telefonunda yeniden ölçümden sonra açılır.
          * - taban 0,20: ölçülen en düşük VAR-sorgu top1'inin (0,2264) ~0,026 altı, ARM gürültüsünün (~2e-3) ~13 katı. Mutlak
          *   taban VAR ile YOK/anlamsız sorguyu AYIRMADI (ikisi 0,22-0,29 aralığında örtüşüyor); yalnızca belirgin çöp
          *   (hiçbir şeye benzemeyen, top1 < 0,20) için emniyet ağıdır.
-         * - marj 0,12: ölçülen en büyük "top1 - en düşük ilgili skor" (0,0936) üstüne ~0,026 güvenlik payı; ilgili sonuç
-         *   elenmez, hit@5/MRR değişmez. 60 fotoğraflık sette hiçbir sorguyu daraltmaz; büyük galeride yalnızca top-50'nin
-         *   top1'den 0,12'den fazla geride kalan belirgin kuyruğunu keser.
+         * - marj 0,12: ölçülen en büyük "top1 - en düşük ilgili skor" (0,0936) üstüne ~0,026 güvenlik payı. Bu YALNIZCA 60
+         *   fotoğraflık ölçüm kümesi için geçerlidir (orada ilgili sonuç elenmedi, hit@5/MRR değişmedi; 50'lik listede
+         *   VAR çok sözcüklü sorgularda ortalama 50 -> 43,6 sonuç kaldı). Büyük galeride kötü çekilmiş ilgili bir fotoğraf
+         *   top1'den 0,12'den fazla geride kalabilir ve elenebilir; garanti DEĞİLDİR.
          */
         val DEFAULT = SearchPolicy(minTop1Score = 0.20f, margin = 0.12f)
     }

@@ -87,7 +87,10 @@ class AppDependencies private constructor(context: Context) {
         RoomSearchRepository(
             encoder = searchTextEncoder,
             dao = database.photoEmbeddingDao(),
-            policy = SearchPolicy.DEFAULT, // T-013: konservatif taban + göreli kesim (docs/search-threshold.md)
+            // T-013 PO kararı: politika altyapısı hazır ama KAPALI (K-7 hedefi emülatör ölçümüyle sağlanamadı; yanlış
+            // "bulunamadı" riski ölçülmedi). Cem'in telefonunda yeniden ölçüm sonrası aday sabite (DEFAULT) çevrilir
+            // (tek satır; docs/search-threshold.md).
+            policy = SearchPolicy.OFF,
         )
     }
 

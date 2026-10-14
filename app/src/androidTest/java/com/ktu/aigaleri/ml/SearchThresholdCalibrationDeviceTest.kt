@@ -370,6 +370,7 @@ class SearchThresholdCalibrationDeviceTest {
                 "medyan=${cs[cs.size / 2]} maks=${cs.last()} bos=${a.empty}")
         }
         out("VAR sorgularda politikanin eledigi toplam ilgili sonuc sayisi: $relDropped (50 limitli listede; ilgili = etiketi dogru)")
+        assertEquals("politika ölçüm kümesinde ilgili sonuç elememeli", 0, relDropped)
         // Muhafazakar kapı: VAR sorgularda hit@5 ve MRR düşmemeli.
         for (g in groups.filter { it.startsWith("VAR_") }) {
             val b = aggB.getValue(g)

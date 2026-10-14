@@ -36,7 +36,7 @@ class SearchPolicyTest {
 
     @Test
     fun floor_top1EqualToFloor_keepsList() {
-        assertSame(list.size, SearchPolicy(minTop1Score = 0.5f).apply(list).size)
+        assertEquals(list.size, SearchPolicy(minTop1Score = 0.5f).apply(list).size)
         assertEquals(ids(list), ids(SearchPolicy(minTop1Score = 0.25f).apply(list)))
     }
 
@@ -141,11 +141,30 @@ class SearchPolicyTest {
     )
 
     @Test
-    fun repository_defaultPolicyIsOff_sameAsExplicitOff() = runBlocking {
+    fun repository_withoutPolicyArgument_matchesIndependentReference_andExplicitOff() = runBlocking {
+        // Bağımsız referans: bilinen skorlar (3: 0,75; 5 ve 9: 0,5; 1: 0,25; 7: -0,5), skor azalan, eşitlikte id artan.
+        val reference = listOf(3L to 0.75f, 5L to 0.5f, 9L to 0.5f, 1L to 0.25f, 7L to -0.5f)
         val implicit = repo(dao(), null).search("x")
-        val explicitOff = repo(dao(), SearchPolicy.OFF).search("x")
-        assertEquals(listOf(3L, 5L, 9L, 1L, 7L), ids(implicit))
-        assertEquals(implicit, explicitOff)
+        assertEquals(reference.map { it.first }, ids(implicit))
+        assertEquals(reference.map { it.second }, implicit.map { it.score })
+        assertEquals(implicit, repo(dao(), SearchPolicy.OFF).search("x"))
+        // limit varsayılan politika dışında da eski davranışla aynı: ilk 2.
+        assertEquals(listOf(3L, 5L), ids(repo(dao(), null).search("x", limit = 2)))
+    }
+
+    @Test
+    fun floorAndMargin_together_nonBinaryExactBoundary() {
+        // 0,2264f - 0,12f ikili-tam DEĞİL; sınır Float aritmetiğiyle top - margin olarak hesaplanır: tam sınırdaki kalır,
+        // bir ulp altı elenir. Taban (0,20) top1 0,2264 üstünde olduğundan liste boşalmaz.
+        val top = 0.2264f
+        val cut = top - 0.12f
+        val l = listOf(r(1, top), r(2, cut), r(3, Math.nextDown(cut)), r(4, 0.05f))
+        assertEquals(listOf(1L, 2L), ids(SearchPolicy.DEFAULT.apply(l)))
+        // Taban aynı top1 için sınırda: top1 == 0,2264f ise 0,2264f tabanı korur, bir ulp üstü boşaltır.
+        assertEquals(listOf(1L, 2L), ids(SearchPolicy(minTop1Score = top, margin = 0.12f).apply(l)))
+        assertEquals(emptyList<SearchResult>(), SearchPolicy(minTop1Score = Math.nextUp(top), margin = 0.12f).apply(l))
+        // Taban kuralı marjdan önce: top1 tabanın altındaysa marj ne olursa olsun boş.
+        assertEquals(emptyList<SearchResult>(), SearchPolicy.DEFAULT.apply(listOf(r(1, 0.1999f), r(2, 0.1999f))))
     }
 
     @Test
