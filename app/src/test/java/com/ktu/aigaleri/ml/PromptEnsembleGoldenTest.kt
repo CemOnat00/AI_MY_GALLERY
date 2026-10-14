@@ -41,7 +41,7 @@ class PromptEnsembleGoldenTest {
         out
     }
 
-    private class LookupBase(val table: Map<String, FloatArray>) : TextEncoder {
+    private open class LookupBase(val table: Map<String, FloatArray>) : TextEncoder {
         override val embeddingSpec = EmbeddingSpec(512, "golden")
         val calls = mutableListOf<String>()
         override suspend fun encode(query: String): FloatArray {
@@ -51,11 +51,23 @@ class PromptEnsembleGoldenTest {
         }
     }
 
+    /** Üretimdeki [OnnxTextEncoder] gibi toplu yolu da sunan kodlayıcı: varyantlar TEK encodeAll çağrısında gelir. */
+    private class BatchLookupBase(table: Map<String, FloatArray>) : LookupBase(table), BatchTextEncoder {
+        var batchCalls = 0
+        override suspend fun encodeAll(queries: List<String>): List<FloatArray> {
+            batchCalls++
+            return queries.map { encode(it) }
+        }
+    }
+
+    private fun Entry.isBare() = variants.size == 1 && variants.keys.single() == QueryPreprocessor.normalize(query)
+
     @Test
     fun goldenFile_hasExpectedShape() {
         assertTrue("en az 15 sorgu", entries.size >= 15)
-        assertTrue("şablonlu sorgular", entries.count { it.variants.size == 2 } >= 12)
-        assertTrue("çıplak (şablonsuz) sorgular", entries.count { it.variants.size == 1 } >= 2)
+        assertTrue("iki şablonlu sorgular", entries.count { it.variants.size == 2 } >= 12)
+        assertTrue("tek varyantlı (ön/son ek kuralı) sorgular", entries.count { it.variants.size == 1 && !it.isBare() } >= 5)
+        assertTrue("çıplak (şablonsuz) sorgular", entries.count { it.isBare() } >= 3)
         for (e in entries) {
             val x = e.expect!!
             assertEquals(1.0, sqrt(x.sumOf { it.toDouble() * it }), 1e-6)
@@ -68,6 +80,12 @@ class PromptEnsembleGoldenTest {
             val base = LookupBase(e.variants)
             val got = PromptEnsembleTextEncoder(base).encode(e.query)
             assertEquals("varyant metinleri/sırası: '${e.query}'", e.variants.keys.toList(), base.calls)
+            // Toplu yol (üretimdeki OnnxTextEncoder gibi): aynı metinler, tek encodeAll, aynı sonuç.
+            val batch = BatchLookupBase(e.variants)
+            val gotBatch = PromptEnsembleTextEncoder(batch).encode(e.query)
+            assertEquals(e.variants.keys.toList(), batch.calls)
+            assertEquals(if (e.isBare()) 0 else 1, batch.batchCalls)
+            for (i in got.indices) assertEquals(got[i], gotBatch[i], 0f)
             val expect = e.expect!!
             var maxDiff = 0.0
             var dot = 0.0
@@ -82,7 +100,7 @@ class PromptEnsembleGoldenTest {
 
     @Test
     fun bareQueries_returnExactlyTheBareVector() = runTest {
-        for (e in entries.filter { it.variants.size == 1 }) {
+        for (e in entries.filter { it.isBare() }) {
             val got = PromptEnsembleTextEncoder(LookupBase(e.variants)).encode(e.query)
             val bare = e.variants.values.single()
             for (i in got.indices) assertEquals(bare[i], got[i], 0f)

@@ -16,9 +16,13 @@ Sorgu sablon topluluğu (prompt ensemble, bkz. docs/query-ensemble.md) icin iki 
 Model: ORIJINAL metin modeli (sentence-transformers/clip-ViT-B-32-multilingual-v1, Apache-2.0; golden_text.py ile ayni
 dogrulama kapilari: mobile/.model-cache + SHA-256). Gereken: python3 + numpy + onnxruntime==1.30.0 (docs/golden-text.md).
 
-Kullanim (mobile/ icinden):
-  python3 -I tools/query_ensemble.py --golden
-  python3 -I tools/query_ensemble.py --eval [--image-vecs /yol/imgvecs.npy]
+Kullanim (mobile/ icinden; python = onnxruntime+numpy kurulu venv, docs/golden-text.md kurulumu, repo DISINDA):
+  ~/venvs/aigaleri-ort/bin/python -I tools/query_ensemble.py --golden
+  ~/venvs/aigaleri-ort/bin/python -I tools/query_ensemble.py --eval [--image-vecs /yol/imgvecs.npy]
+(T-033 kosularinda oturum scratchpad'indeki ort_venv/bin/python kullanildi; ayni onnxruntime 1.30.0 + numpy.)
+
+Kural (PromptEnsembleTextEncoder.variantsFor ile AYNI): sablon bir/sayi sozcugu/rakamla baslayan sorguya on ek, foto/resim sozcugu ile
+biten sorguya son ek almaz; ensemble'in sirasi/varyantlari altin dosyada kilitlidir.
 
 Gizlilik: yalnizca bu dosyadaki sabit test sorgulari islenir; fotograf yok (goruntu vektorleri disaridan, isteğe bagli).
 """
@@ -47,6 +51,7 @@ GOLDEN_QUERIES = [
     "kedi", "köpek", "araba", "deniz", "bardak", "fincan", "tabak", "plaj",
     "su bardağı", "çay bardağı", "bir bardak çay", "sahilde gülen çocuk",
     "KIRMIZI ARABA", "İSTANBUL", "ISPARTA", "  su   bardağı  ",
+    "bir kedi", "kedi fotoğrafı", "iki kişi", "üç çocuk", "5 araba", "deniz resmi", "bir kedi fotoğrafı",  # ön/son ek kuralı
     "dağda yürüyüş yapan insanlar",  # 4 sözcük: şablonsuz (çıplak)
     "çok uzun bir sözcük çok uzun bir sözcük çok uzun bir sözcük çok uzun",  # > MAX_CHARS ve > MAX_WORDS: çıplak
     "abcdefghijklmnopqrstuvwxyz abcdefghijklmnopqrstuvwxyz abcde",  # 3 sözcük ama > 55 karakter, <= 64: şablonlu uç durum
@@ -79,6 +84,12 @@ PAIRS_MULTI = [("su bardağı", "a glass of water"), ("çay bardağı", "a tea g
     ("eski bir taş köprünün üzerinden geçen tren", "a train crossing an old stone bridge"), ("mutfakta yemek yapan yaşlı bir adam", "an old man cooking in the kitchen"),
     ("kalabalık bir caddede yürüyen insanlar", "people walking on a crowded street"), ("büyük bir ağacın altında oturan çocuk", "a child sitting under a big tree"),
     ("gece yanan şehir ışıkları", "glowing city lights at night")]
+
+# Ön/son ek kuralı ölçümü (bölüm 7): TR sorgu -> tam İngilizce referans cümlesi
+RULE_PAIRS = [("bir kedi", "a photo of a cat"), ("kedi fotoğrafı", "a photo of a cat"), ("iki kişi", "a photo of two people"),
+    ("üç çocuk", "a photo of three children"), ("dört kedi", "a photo of four cats"), ("5 araba", "a photo of five cars"),
+    ("10 kişi", "a photo of ten people"), ("bir bardak çay", "a photo of a cup of tea"), ("deniz resmi", "a photo of the sea"),
+    ("bir köpek fotoğrafı", "a photo of a dog"), ("bir deniz resmi", "a photo of a sea"), ("bir bardak", "a photo of a cup")]
 
 CANDIDATES = {
     "bare (şablonsuz)": ["{q}"],
@@ -113,13 +124,30 @@ class Model:
         return self.cache[n]
 
 
-def variants_of(query):
-    """PromptEnsembleTextEncoder.variantsFor ile AYNI kural. Doner: sablonlu varyant metinleri veya None (cıplak)."""
-    n = gt.normalize(query)
+COUNT_WORDS = {"bir", "iki", "üç", "dört", "beş", "altı", "yedi", "sekiz", "dokuz", "on"}
+PHOTO_WORDS = {"fotoğraf", "fotoğrafı", "foto", "resim", "resmi"}
+
+
+def variants_for(n, templates, drop_prefix_rule=True, drop_suffix_rule=True):
+    """PromptEnsembleTextEncoder.variantsFor ile AYNI kural (normalize edilmis sorgu icin). Doner: varyantlar veya None (cıplak).
+    On ek (sablonda {q}'dan once) sorgu bir/sayi sozcugu/rakamla basliyorsa, son ek sorgu foto/resim sozcugu ile bitiyorsa
+    eklenmez; cıplakla ayni veya tekrar eden varyant elenir; hic kalmazsa cıplak."""
     words = n.count(" ") + 1
     if words > MAX_WORDS or len(n.encode("utf-16-le")) // 2 > MAX_CHARS:
         return None
-    return [t.replace("{q}", n) for t in TEMPLATES]
+    drop_p = drop_prefix_rule and (n[0].isdecimal() or n.split(" ")[0] in COUNT_WORDS)
+    drop_s = drop_suffix_rule and n.split(" ")[-1] in PHOTO_WORDS
+    out = []
+    for t in templates:
+        pre, suf = t.split("{q}")
+        v = ("" if drop_p else pre) + n + ("" if drop_s else suf)
+        if v != n and v not in out:
+            out.append(v)
+    return out or None
+
+
+def variants_of(query):
+    return variants_for(gt.normalize(query), TEMPLATES)
 
 
 def ensemble_from(vecs):
@@ -225,7 +253,7 @@ def run_eval(image_vecs):
         ov = "%.1f" % (len(top(e, 5) & top(b, 5)) / 5) if V is not None else "-"
         print("| %s | %d | %s | %.3f | %s |" % (q, len(q.split()), "evet" if variants_of(q) else "hayır", e @ b, ov))
 
-    print("\n## 5a. Altın sorgularda (tools/golden_text_queries.tsv) sapma: küme A HER sözcük sayısında uygulanmış olsaydı cos(A, çıplak)")
+    print("\n## 5. Altın sorgularda (tools/golden_text_queries.tsv) sapma: küme A HER sözcük sayısında uygulanmış olsaydı cos(A, çıplak)")
     print("| sözcük | sorgu | ort. | en düşük |")
     print("|---|---|---|---|")
     byw = {}
@@ -240,8 +268,28 @@ def run_eval(image_vecs):
     for k in sorted(byw):
         print("| %s | %d | %.3f | %.3f |" % (str(k) if k < 5 else "5+", len(byw[k]), np.mean(byw[k]), np.min(byw[k])))
 
+    print("\n## 6. Ön/son ek kuralı: TR sorgusunun tam İngilizce referansına kosinüsü ve %d referans arasında sırası" % len(RULE_PAIRS))
+    print("| sorgu | EN referans | çıplak cos (sıra) | kuralsız A cos (sıra) | kurallı A cos (sıra) | kurallı varyantlar |")
+    print("|---|---|---|---|---|---|")
+    ens_en = np.array([m.base(b).astype(np.float64) for a, b in RULE_PAIRS])
+
+    def rank_of(v, i):
+        sc = ens_en @ v
+        return int((sc > sc[i]).sum() + 1)
+
+    for i, (a, b) in enumerate(RULE_PAIRS):
+        n = gt.normalize(a)
+        bare = m.base(n).astype(np.float64)
+        naive_t = [t.replace("{q}", n) for t in TEMPLATES]
+        naive = ensemble_from([m.base(v) for v in naive_t]).astype(np.float64)
+        rv = variants_of(a)
+        rule = ensemble_from([m.base(v) for v in rv]).astype(np.float64) if rv else bare
+        print("| %s | %s | %.3f (%d) | %.3f (%d) | %.3f (%d) | %s |" % (
+            a, b, bare @ ens_en[i], rank_of(bare, i), naive @ ens_en[i], rank_of(naive, i), rule @ ens_en[i], rank_of(rule, i),
+            " / ".join(rv) if rv else "(çıplak)"))
+
     if V is not None:
-        print("\n## 5. Hub (merkezcilik): 60 tek sözcüklü sorgunun top-5 görüntü kümesi")
+        print("\n## 7. Hub (merkezcilik): 60 tek sözcüklü sorgunun top-5 görüntü kümesi")
         print("| vektör | farklı görüntü sayısı (/%d) | tek görüntünün en çok görüldüğü sorgu sayısı |" % len(V))
         print("|---|---|---|")
         import collections
@@ -252,7 +300,7 @@ def run_eval(image_vecs):
                 cnt.update(top(np.asarray(f(a, b), dtype=np.float64), 5))
             print("| %s | %d | %d |" % (name, len(cnt), max(cnt.values())))
 
-    print("\n## 6. Masaüstü çıkarım süresi (BİLGİ: Apple Silicon Mac, ORT 1.30.0, 2 iş parçacığı; telefon DEĞİL)")
+    print("\n## 8. Masaüstü çıkarım süresi (BİLGİ: Apple Silicon Mac, ORT 1.30.0, 2 iş parçacığı; telefon DEĞİL)")
     ids = m.tok.encode(gt.normalize("bir su bardağı fotoğrafı"))
     for _ in range(10):
         gt.embed(m.sess, m.dense, ids)

@@ -55,7 +55,7 @@ class OnnxTextEncoder(
      * oturumunu açınca) slot kilidi altında çağrılır; kısa ve askıya alınmaz olmalı. Isınma bayrağını sıfırlamak içindir (T-016).
      */
     private val onSessionClosed: () -> Unit = {},
-) : TextEncoder {
+) : TextEncoder, BatchTextEncoder {
     override val embeddingSpec: EmbeddingSpec = ModelManifest.EMBEDDING_SPEC
 
     // Yalnızca slot kilidi altında okunur/yazılır (withSession bloğu, onClosed ve release).
@@ -67,8 +67,21 @@ class OnnxTextEncoder(
     /** @throws com.ktu.aigaleri.domain.InvalidQueryException geçersiz sorgu; @throws ModelException model/ORT hatası. */
     override suspend fun encode(query: String): FloatArray {
         // Doğrulama önce: geçersiz sorguda model dosyalarına/oturuma dokunulmaz.
-        val normalized = QueryPreprocessor.normalize(query)
-        return withContext(dispatcher) {
+        return embedAll(listOf(QueryPreprocessor.normalize(query))).single()
+    }
+
+    /**
+     * Toplu kodlama (T-033, [BatchTextEncoder]): tüm sorgular önce doğrulanır, sonra TEK slot kilidi/oturum altında
+     * ardışık çıkarılır; her çıkarımdan önce iptal denetlenir. Çıkarım sayısı sorgu sayısı kadardır.
+     */
+    override suspend fun encodeAll(queries: List<String>): List<FloatArray> {
+        val normalized = queries.map { QueryPreprocessor.normalize(it) } // hepsi önce doğrulanır
+        if (normalized.isEmpty()) return emptyList()
+        return embedAll(normalized)
+    }
+
+    private suspend fun embedAll(normalized: List<String>): List<FloatArray> =
+        withContext(dispatcher) {
             val job = currentCoroutineContext().job
             val cancelCheck = { job.ensureActive() }
             slot.withSession(
@@ -76,10 +89,13 @@ class OnnxTextEncoder(
                 open = { openSession(cancelCheck) },
                 onClosed = { dropReferences(); onSessionClosed() },
             ) { session ->
-                pipelineFor(session, cancelCheck).embed(normalized)
+                val p = pipelineFor(session, cancelCheck)
+                normalized.map { q ->
+                    cancelCheck()
+                    p.embed(q)
+                }
             }
         }
-    }
 
     /**
      * Isınma: model dosyalarını doğrular, oturumu açar ve sabit bir ifadeyle bir çıkarım yapar; böylece ilk gerçek

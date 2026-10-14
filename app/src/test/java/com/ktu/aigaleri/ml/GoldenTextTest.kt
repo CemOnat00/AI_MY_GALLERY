@@ -119,11 +119,13 @@ class GoldenTextTest {
 
     @Test
     fun originalVocab_goldenIdsMatchExactly_andIdsMapToGoldenText() {
-        val v = vocab
-        assumeTrue("text_vocab.txt yok (tools/fetch_models.sh)", v != null)
-        // Yalnızca BUDANMAMIŞ sözlükte anlamlı: Python altın id'leri Kotlin ile birebir aynı olmalı. Budanmış sözlükte atlanır.
-        assumeTrue("sözlük budanmış (id'ler değişti); id karşılaştırması atlandı", v!!.size == GoldenText.ORIGINAL_VOCAB_SIZE)
-        val tok = tokenizer(v)
+        // Python altın id'leri, Kotlin tokenizer + ORİJİNAL (budanmamış) sözlükle birebir aynı olmalı. Orijinal sözlük depodaki
+        // `original_vocab.txt.gz`'den gelir (SHA-256 + satır sayısı PrunedVocabEquivalenceTest.originalLines'ta doğrulanır);
+        // assets'teki sözlük budanmış olsa bile test atlanmaz (T-033 düzeltmesi).
+        val lines = PrunedVocabEquivalenceTest.originalLines
+        assertEquals(GoldenText.ORIGINAL_VOCAB_SIZE, lines.size)
+        val v = TokenVocab(lines)
+        val tok = WordPieceTokenizer.fromVocabStream(lines.joinToString("\n", postfix = "\n").byteInputStream(Charsets.UTF_8))
         for (g in golden) {
             assertEquals("id -> metin eşlemesi: ${g.query}", g.tokens, v.tokensOf(g.originalIds))
             assertArrayEquals(g.query, g.originalIds.toIntArray(), tok.encode(QueryPreprocessor.normalize(g.query)))

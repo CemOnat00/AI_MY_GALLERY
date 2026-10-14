@@ -48,4 +48,42 @@ class OnnxTextEncoderTest {
         }
         assertEquals(0, File(tmp.root, "models").list()?.size ?: 0)
     }
+
+    // T-033: BatchTextEncoder.encodeAll (ORT JVM'de çalışmaz; yalnızca doğrulama/hata yolları)
+
+    @Test
+    fun encodeAll_validatesEveryQueryBeforeAnyModelWork() = runTest {
+        val enc = OnnxTextEncoder(ModelStore(tmp.root, forbiddenAssets))
+        try {
+            enc.encodeAll(listOf("kedi", "   ", "köpek")) // ikinci geçersiz: ilki için bile model çalışmaz
+            fail("reddedilmeliydi")
+        } catch (e: InvalidQueryException) {
+            assertEquals(InvalidQueryException.Reason.EMPTY, e.reason)
+        }
+        assertEquals(0, File(tmp.root, "models").list()?.size ?: 0)
+    }
+
+    @Test
+    fun encodeAll_emptyListReturnsEmptyWithoutTouchingModel() = runTest {
+        val enc = OnnxTextEncoder(ModelStore(tmp.root, forbiddenAssets))
+        assertTrue(enc.encodeAll(emptyList()).isEmpty())
+        assertEquals(0, File(tmp.root, "models").list()?.size ?: 0)
+    }
+
+    @Test
+    fun encodeAll_missingModelFiles_surfaceAsModelException() = runTest {
+        val missing = AssetOpener { throw java.io.FileNotFoundException(it) }
+        val enc = OnnxTextEncoder(ModelStore(tmp.root, missing), dispatcher = kotlinx.coroutines.Dispatchers.IO)
+        try {
+            enc.encodeAll(listOf("gizli bir", "gizli iki"))
+            fail()
+        } catch (e: ModelException.Missing) {
+            assertTrue(!e.message!!.contains("gizli"))
+        }
+    }
+
+    @Test
+    fun onnxTextEncoder_isBatchTextEncoder_soEnsembleUsesOneSessionLock() {
+        assertTrue(OnnxTextEncoder(ModelStore(tmp.root, forbiddenAssets)) is BatchTextEncoder)
+    }
 }
