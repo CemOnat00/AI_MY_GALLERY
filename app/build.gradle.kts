@@ -97,4 +97,7 @@ dependencies {
 
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
+    // Yalnızca debug/androidTest: room-testing (JSON şema okuyucu) kotlinx-serialization-json 1.8.1 getirir; app
+    // APK'sındaki core 1.7.3 ile AbstractMethodError verir (AiGaleriMigrationTest). Release bağımlılıkları değişmez.
+    debugImplementation("org.jetbrains.kotlinx:kotlinx-serialization-core:1.8.1")
 }
